@@ -1,0 +1,67 @@
+"use client";
+import React, { Fragment, Suspense, useEffect, useState } from "react";
+import { AlertError } from "../alert/Error"; // Adjust path as needed
+import Loader from "@/app/loading";
+import { ENUM_ROLE } from "@/lib/types/enums";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+
+type userNode = {
+  admin: React.ReactNode;
+  superAdmin: React.ReactNode;
+};
+
+type STATUS = "loading" | "completed" | "error";
+
+const DashboardView = ({ type }: { type: userNode }) => {
+  const [status, setStatus] = useState<STATUS>("loading");
+  const [role, setRole] = useState<ENUM_ROLE | null>(null);
+  const userData = useSelector((state: RootState) => state.user);
+
+  const { user, loading } = userData;
+
+  useEffect(() => {
+    if (user) {
+      const userRole =
+        user.role === ENUM_ROLE.SUPERADMIN && user.view_as
+          ? user.view_as
+          : user.role;
+
+      if (Object.values(ENUM_ROLE).includes(userRole)) {
+        setRole(userRole);
+        setStatus("completed");
+      } else {
+        setStatus("error");
+      }
+    } else {
+      setStatus("error");
+    }
+  }, [user]);
+
+  // Select the view based on role
+  const view = role && type[role as keyof userNode];
+
+  return (
+    <Fragment>
+      <Suspense fallback={<Loader />}>
+        {(status === "loading" || loading) && <Loader />}
+        {status === "completed" && view && <main>{view}</main>}
+        {status === "error" && !loading && !user && (
+          <NotLoggedIn message='Invalid or missing role' />
+        )}
+      </Suspense>
+    </Fragment>
+  );
+};
+
+function NotLoggedIn({ message }: { message: string }) {
+  return (
+    <article className='flex w-full items-center justify-center h-screen'>
+      <div className='w-[400px]'>
+        <AlertError message={message} />
+      </div>
+    </article>
+  );
+}
+
+export default DashboardView;

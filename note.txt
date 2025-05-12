@@ -1,0 +1,6 @@
+create modal ad fomr for parents is next ensure ations on parent table withing students
+remeber me form backend and frontned how?
+
+create fetch me route and fire on succesful login or better still collect response and dispatch after login but den fire fetch me on evey refresh
+invalid role screen with login login tht auto logs out and redirects to login
+logout endpoint to clear all cookies

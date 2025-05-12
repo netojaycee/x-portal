@@ -1,0 +1,680 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronsUpDown,
+  Search,
+  Filter,
+  MoreVertical,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+// Define types for the table data and configuration
+interface TableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
+interface FilterConfig {
+  showSearch?: boolean;
+  showFilter?: boolean;
+}
+
+interface ActionOption {
+  label: string;
+  type: "confirmation" | "edit" | "custom";
+  handler: (row: any) => void;
+}
+
+interface CustomTableProps {
+  columns: TableColumn[];
+  data: any[];
+  filters?: FilterConfig;
+  rowsPerPageOptions?: number[];
+  pagination?: boolean;
+  showRowsPerPage?: boolean;
+  showResultsInfo?: boolean;
+  showActionButton?: boolean;
+  actionButtonText?: string;
+  actionButtonIcon?: React.ReactNode;
+  title?: string;
+  actionOptions?: ActionOption[];
+}
+
+const CustomTable: React.FC<CustomTableProps> = ({
+  columns,
+  data,
+  filters = { showSearch: true, showFilter: false },
+  rowsPerPageOptions = [10, 50, 100, 200, 1000],
+  pagination = true,
+  showRowsPerPage = true,
+  showResultsInfo = true,
+  showActionButton = false,
+  actionButtonText = "Action",
+  actionButtonIcon = <Filter className='h-4 w-4' />,
+  title,
+  actionOptions = [],
+}) => {
+  // State for filters, sorting, and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0] || 10);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [modalType, setModalType] = useState<
+    | "confirmation"
+    | "editSchool"
+    | "editSubscription"
+    | "assignPermission"
+    | null
+  >(null);
+  const [selectedRow, setSelectedRow] = useState<any>(null);
+  const [actionLabel, setActionLabel] = useState<string>("");
+
+  // Extract unique filter values (e.g., status or plan)
+  const filterOptions = useMemo(() => {
+    const statuses = Array.from(
+      new Set(data.map((item) => item.status))
+    ).filter(Boolean);
+    const plans = Array.from(
+      new Set(data.map((item) => item.plan || item.subPlan))
+    ).filter(Boolean);
+    return [...statuses, ...plans];
+  }, [data]);
+
+  // Filter and sort data
+  const filteredData = useMemo(() => {
+    let result = [...data];
+
+    // Apply search filter
+    if (filters.showSearch && searchTerm) {
+      result = result.filter(
+        (item) =>
+          item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.school?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply filter (e.g., status or plan)
+    if (filters.showFilter && selectedFilter) {
+      result = result.filter(
+        (item) =>
+          item.status === selectedFilter ||
+          item.plan === selectedFilter ||
+          item.subPlan === selectedFilter
+      );
+    }
+
+    // Apply sorting
+    if (sortColumn) {
+      result.sort((a, b) => {
+        const aValue = a[sortColumn] || "";
+        const bValue = b[sortColumn] || "";
+        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [data, searchTerm, selectedFilter, sortColumn, sortDirection, filters]);
+
+  // Pagination logic
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / rowsPerPage);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  // Handle sorting
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection("asc");
+    }
+  };
+
+  // Status color mapping
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "inactive":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Modal handlers
+  const handleActionClick = (row: any, action: ActionOption) => {
+    setSelectedRow(row);
+    setActionLabel(action.label);
+    if (action.type === "confirmation") {
+      setModalType("confirmation");
+    } else if (action.type === "edit") {
+      setModalType(row.package ? "editSubscription" : "editSchool");
+    } else if (
+      action.type === "custom" &&
+      action.label === "Assign Permission"
+    ) {
+      setModalType("assignPermission");
+    }
+  };
+
+  const handleConfirmation = async () => {
+    // Mock API call
+    console.log(`Performing ${actionLabel} for`, selectedRow);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+    setModalType(null);
+    setSelectedRow(null);
+    setActionLabel("");
+  };
+
+  const handleEditSchool = async (updatedData: any) => {
+    // Mock API call
+    console.log(`Updating school ${selectedRow.name} with`, updatedData);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+    setModalType(null);
+    setSelectedRow(null);
+  };
+
+  const handleEditSubscription = async (updatedData: any) => {
+    // Mock API call
+    console.log(
+      `Updating subscription ${selectedRow.package} with`,
+      updatedData
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+    setModalType(null);
+    setSelectedRow(null);
+  };
+
+  const handleAssignPermission = async (permissions: string[]) => {
+    // Mock API call
+    console.log(`Assigning permissions to ${selectedRow.name}:`, permissions);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+    setModalType(null);
+    setSelectedRow(null);
+  };
+
+  return (
+    <div className='space-y-4'>
+      {/* Top: Search, Filter, Action Button */}
+      <div className='flex items-center justify-between gap-2'>
+        {filters.showSearch && (
+          <div className='relative w-64'>
+            <Input
+              placeholder='Search...'
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className='pl-10 rounded-2xl'
+            />
+            <Search className='absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
+          </div>
+        )}
+        <div className='flex items-center gap-2'>
+          {filters.showFilter && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='outline'
+                  className='rounded-md flex items-center gap-2'
+                >
+                  Filter <ChevronDown className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className='w-[200px] '>
+                <DropdownMenuItem onClick={() => setSelectedFilter(null)}>
+                  All
+                </DropdownMenuItem>
+                {filterOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option}
+                    onClick={() => setSelectedFilter(option)}
+                  >
+                    {option}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {showActionButton && (
+            <Button className='rounded-md flex items-center gap-2 bg-primary text-white'>
+              {actionButtonIcon}
+              {actionButtonText}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Title */}
+      {title && (
+        <h2 className='text-base md:text-xl font-semibold font-lato'>
+          {title}
+        </h2>
+      )}
+
+      {/* Table */}
+      <Table className='bg-white rounded-2xl'>
+        <TableHeader className='bg-[#E1E8F8]'>
+          <TableRow className=''>
+            {columns.map((column) => (
+              <TableHead
+                key={column.key}
+                className={`${
+                  column.sortable ? "cursor-pointer" : ""
+                } font-semibold text-gray-700 `}
+                onClick={() => column.sortable && handleSort(column.key)}
+              >
+                <div className='flex items-center'>
+                  {column.label}
+                  {column.sortable && (
+                    <ChevronsUpDown className='ml-1 h-3 w-3' />
+                  )}
+                </div>
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody className=''>
+          {paginatedData.length > 0 ? (
+            paginatedData.map((row, index) => (
+              <TableRow key={index}>
+                {columns.map((column) => (
+                  <TableCell key={column.key}>
+                    {column.key === "status" || column.key === "subStatus" ? (
+                      <span
+                        className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
+                          row[column.key]
+                        )}`}
+                      >
+                        {row[column.key] || "--"}
+                      </span>
+                    ) : column.key === "actions" && actionOptions.length > 0 ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-8 w-8 p-0'
+                          >
+                            <MoreVertical className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          {actionOptions.map((action) => (
+                            <DropdownMenuItem
+                              key={action.label}
+                              onClick={() => handleActionClick(row, action)}
+                            >
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : column.key === "dueDate" ||
+                      column.key === "startedDate" ||
+                      column.key === "createDate" ? (
+                      row[column.key] || "--"
+                    ) : column.key === "studentLimit" &&
+                      row[column.key] === "Unlimited" ? (
+                      "Unlimited"
+                    ) : (
+                      row[column.key] || "--"
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columns.length} className='text-center py-4'>
+                No data found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+
+      {/* Bottom: Rows Per Page, Pagination, Results Info */}
+      {(showRowsPerPage || pagination || showResultsInfo) && (
+        <div className='flex items-center justify-between'>
+          {showRowsPerPage && (
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-gray-600'>Show Rows</span>
+              <Select
+                value={rowsPerPage.toString()}
+                onValueChange={(value) => {
+                  setRowsPerPage(Number(value));
+                  setCurrentPage(1); // Reset to first page
+                }}
+              >
+                <SelectTrigger className='w-[100px] rounded-2xl'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rowsPerPageOptions.map((option) => (
+                    <SelectItem key={option} value={option.toString()}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {pagination && totalItems > rowsPerPage && (
+            <div className='flex space-x-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage((prev) => prev - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size='sm'
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronsRight className='h-4 w-4' />
+              </Button>
+            </div>
+          )}
+
+          {showResultsInfo && (
+            <div className='text-sm text-gray-600'>
+              Showing {(currentPage - 1) * rowsPerPage + 1} -{" "}
+              {Math.min(currentPage * rowsPerPage, totalItems)} of {totalItems}{" "}
+              Results
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      
+      <Dialog
+        open={modalType === "confirmation"}
+        onOpenChange={() => setModalType(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm {actionLabel}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to {actionLabel.toLowerCase()} for{" "}
+              {selectedRow?.name ||
+                selectedRow?.school ||
+                selectedRow?.package ||
+                "--"}
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setModalType(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmation}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit School Modal */}
+      <Dialog
+        open={modalType === "editSchool"}
+        onOpenChange={() => setModalType(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit School</DialogTitle>
+            <DialogDescription>
+              Update details for {selectedRow?.name || "--"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='name' className='text-right'>
+                Name
+              </Label>
+              <Input
+                id='name'
+                defaultValue={selectedRow?.name || ""}
+                className='col-span-3'
+              />
+            </div>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='email' className='text-right'>
+                Email
+              </Label>
+              <Input
+                id='email'
+                defaultValue={selectedRow?.email || ""}
+                className='col-span-3'
+              />
+            </div>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='contact' className='text-right'>
+                Contact
+              </Label>
+              <Input
+                id='contact'
+                defaultValue={selectedRow?.contact || ""}
+                className='col-span-3'
+              />
+            </div>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='subPlan' className='text-right'>
+                Sub. Plan
+              </Label>
+              <Input
+                id='subPlan'
+                defaultValue={selectedRow?.subPlan || ""}
+                className='col-span-3'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setModalType(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                handleEditSchool({
+                  name: (document.getElementById("name") as HTMLInputElement)
+                    ?.value,
+                  email: (document.getElementById("email") as HTMLInputElement)
+                    ?.value,
+                  contact: (
+                    document.getElementById("contact") as HTMLInputElement
+                  )?.value,
+                  subPlan: (
+                    document.getElementById("subPlan") as HTMLInputElement
+                  )?.value,
+                })
+              }
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subscription Modal */}
+      <Dialog
+        open={modalType === "editSubscription"}
+        onOpenChange={() => setModalType(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Subscription</DialogTitle>
+            <DialogDescription>
+              Update details for {selectedRow?.package || "--"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='package' className='text-right'>
+                Package
+              </Label>
+              <Input
+                id='package'
+                defaultValue={selectedRow?.package || ""}
+                className='col-span-3'
+              />
+            </div>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='duration' className='text-right'>
+                Duration
+              </Label>
+              <Input
+                id='duration'
+                defaultValue={selectedRow?.duration || ""}
+                className='col-span-3'
+              />
+            </div>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='studentLimit' className='text-right'>
+                Student Limit
+              </Label>
+              <Input
+                id='studentLimit'
+                defaultValue={selectedRow?.studentLimit || ""}
+                className='col-span-3'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setModalType(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                handleEditSubscription({
+                  package: (
+                    document.getElementById("package") as HTMLInputElement
+                  )?.value,
+                  duration: (
+                    document.getElementById("duration") as HTMLInputElement
+                  )?.value,
+                  studentLimit: (
+                    document.getElementById("studentLimit") as HTMLInputElement
+                  )?.value,
+                })
+              }
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Permission Modal */}
+      <Dialog
+        open={modalType === "assignPermission"}
+        onOpenChange={() => setModalType(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Permissions</DialogTitle>
+            <DialogDescription>
+              Assign permissions for {selectedRow?.name || "--"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <div className='grid grid-cols-4 items-center gap-4'>
+              <Label htmlFor='permissions' className='text-right'>
+                Permissions
+              </Label>
+              <Input
+                id='permissions'
+                placeholder='e.g., admin, editor'
+                className='col-span-3'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setModalType(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                handleAssignPermission([
+                  (document.getElementById("permissions") as HTMLInputElement)
+                    ?.value,
+                ])
+              }
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+};
+
+export default CustomTable;
