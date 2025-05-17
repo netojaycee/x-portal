@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import {
   ChevronsUpDown,
   GalleryVerticalEnd,
+  Loader2,
   Search,
   UserCog,
 } from "lucide-react";
@@ -31,6 +32,7 @@ import { School } from "@/lib/types/school";
 import { RootState } from "@/redux/store";
 import { useDebounce } from "use-debounce";
 import { ENUM_ROLE } from "@/lib/types/enums";
+import NoData from "../NoData";
 
 export function SchoolSwitcher() {
   const { isMobile } = useSidebar();
@@ -219,16 +221,7 @@ export function SchoolSwitcher() {
                     </div>
                   ))
                 ) : (
-                  <div className='flex flex-col items-center justify-center p-4 text-center text-sm text-muted-foreground'>
-                    <Image
-                      width={80}
-                      height={80}
-                      src='/no-schools-found.svg'
-                      alt='No schools found'
-                      className='mb-4 h-20 w-20 bg-gray-700'
-                    />
-                    <p>No schools found</p>
-                  </div>
+                  <NoData text={"No Scool Found"} />
                 )}
                 {hasMore && (
                   <Button
@@ -237,6 +230,7 @@ export function SchoolSwitcher() {
                     onClick={() => setPage((prev) => prev + 1)}
                     disabled={isFetching}
                   >
+                    {isFetching && <Loader2 className='animate-spin w-4 h-4' />}
                     {isFetching ? "Loading..." : "Load More"}
                   </Button>
                 )}

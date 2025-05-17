@@ -1,49 +1,42 @@
 "use client";
 import { useLogoutMutation } from "@/redux/api";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Loader2, LogOut } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { setAuthenticated, setUser } from "@/redux/slices/userSlice";
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { toast } from "sonner";
 
 export default function Logout() {
-  const [logout, { isLoading, isSuccess, isError, error }] =
-    useLogoutMutation();
-  const dispatch = useDispatch();
+  const [logout] = useLogoutMutation();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
       await logout().unwrap();
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // 4) Then navigate
+      router.replace("/");
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Logout error:", err);
+      let msg = "Unable to log out. Please try again.";
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "data" in err &&
+        typeof (err as any).data === "object" &&
+        (err as any).data !== null &&
+        "message" in (err as any).data
+      ) {
+        msg = (err as any).data.message;
+      }
+      toast.error(msg, { position: "top-right" });
     }
   };
 
-  useEffect(() => {
-    if (isSuccess) {
-      dispatch(setUser(null));
-      dispatch(setAuthenticated(false));
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
-    } else if (isError && error) {
-      const errorMessage =
-        "data" in error &&
-        typeof error.data === "object" &&
-        error.data &&
-        "error" in error.data
-          ? (error.data as { message?: string }).message
-          : "An error occurred. Please try again.";
-      toast.error(errorMessage, { position: "top-right" });
-    }
-  }, [isSuccess, isError, error, router, dispatch]);
-
   return (
     <DropdownMenuItem className='cursor-pointer' onClick={handleLogout}>
-      {isLoading ? <Loader2 className='animate-spin' /> : <LogOut />}
+      <LogOut />
       Log out
     </DropdownMenuItem>
   );

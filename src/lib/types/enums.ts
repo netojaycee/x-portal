@@ -8,3 +8,10 @@ export enum ENUM_GENDER {
     MALE = 'male',
     FEMALE = 'female',
 }
+
+export enum ENUM_MODULES {
+    SCHOOL = "school",
+    STUDENT = "student",
+    SUBSCRIPTION = "subscription",
+    SUBROLE = "subrole",
+}

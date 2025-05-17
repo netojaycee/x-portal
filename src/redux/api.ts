@@ -11,7 +11,7 @@ import { CreateSchoolInput, GetSchoolsQuery, GetSchoolsResponse, School, UpdateS
 
 const BASE_URL =
     process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_API_URL || "https://x-portal-frontend.vercel.app"
+        ? process.env.NEXT_PUBLIC_API_URL || "https://x-portal-server-x2uk.onrender.com"
         : `http://localhost:${process.env.PORT || 3000}`;
 
 // Base query with TypeScript annotations
@@ -99,7 +99,7 @@ export const api = createApi({
         getSchools: builder.query<GetSchoolsResponse, GetSchoolsQuery>({
             query: ({ search, page = 1, limit = 5 }) => {
                 const params = new URLSearchParams();
-                if (search) params.append('search', search);
+                if (search) params.append('search', search.toLowerCase());
                 params.append('page', page.toString());
                 params.append('limit', limit.toString());
                 return {
@@ -137,14 +137,14 @@ export const api = createApi({
         }),
         deleteSchool: builder.mutation<{ message: string }, string>({
             query: (id) => ({
-                url: `/school/${id}`,
+                url: `/schools/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, id) => [{ type: 'Schools', id }, { type: 'Schools', id: 'LIST' }],
         }),
         toggleSchoolActive: builder.mutation<School, string>({
             query: (id) => ({
-                url: `/school/${id}/toggle-active`,
+                url: `/schools/${id}/toggle-active`,
                 method: 'PATCH',
             }),
             invalidatesTags: (result) => (result ? [{ type: 'Schools', id: result.id }, { type: 'Schools', id: 'LIST' }] : []),

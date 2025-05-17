@@ -82,7 +82,7 @@ export const adminMenu = [
     {
         title: "Users",
         icon: UserCog,
-        url: "/users",
+        url: "/users/all-users",
         isActive: true
     },
     {

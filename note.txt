@@ -4,3 +4,8 @@ remeber me form backend and frontned how?
 create fetch me route and fire on succesful login or better still collect response and dispatch after login but den fire fetch me on evey refresh
 invalid role screen with login login tht auto logs out and redirects to login
 logout endpoint to clear all cookies
+attach loader on pagnation switch rows ans current page
+add subscription statu filtering to school also add sorting asc or descending by alphabet
+remove country code form school form
+
+convert all subrole to small letter backend

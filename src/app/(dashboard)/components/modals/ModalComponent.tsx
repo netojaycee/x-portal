@@ -1,8 +1,8 @@
-import { ConfirmationModal } from "./ConfirmationModal";
-import { EditSchoolModal } from "./EditSchoolModal";
-import { EditSubscriptionModal } from "./EditSubscriptionModal";
+// import { ConfirmationModal } from "./ConfirmationModal";
+// import { EditSchoolModal } from "./EditSchoolModal";
+// import { EditSubscriptionModal } from "./EditSubscriptionModal";
 import { AssignPermissionModal } from "./AssignPermissionModal";
-import { EditStudentModal } from "./EditStudentModal";
+// import { EditStudentModal } from "./EditStudentModal";
 
 interface ModalComponentProps {
   modalType: string | null;
@@ -19,57 +19,61 @@ interface ModalComponentProps {
 export function ModalComponent({
   modalType,
   selectedRow,
-  actionLabel,
+  // actionLabel,
   onClose,
-  onConfirm,
-  onEditSchool,
-  onEditSubscription,
+  // onConfirm,
+  // onEditSchool,
+  // onEditSubscription,
   onAssignPermission,
-  onEditStudent
+  // onEditStudent
 }: ModalComponentProps) {
   if (!modalType) return null;
 
   switch (modalType) {
     case "confirmation":
       return (
-        <ConfirmationModal
-          title={`Confirm ${actionLabel}`}
-          itemName={
-            selectedRow?.name ||
-            selectedRow?.school ||
-            selectedRow?.package ||
-            "--"
-          }
-          endpoint={`/${selectedRow?.name ? "schools" : "subscriptions"}/${
-            selectedRow?.sn
-          }`}
-          onConfirm={onConfirm}
-          onCancel={onClose}
-        />
+        // <ConfirmationModal
+        //   title={`Confirm ${actionLabel}`}
+        //   itemName={
+        //     selectedRow?.name ||
+        //     selectedRow?.school ||
+        //     selectedRow?.package ||
+        //     "--"
+        //   }
+        //   endpoint={`/${selectedRow?.name ? "schools" : "subscriptions"}/${
+        //     selectedRow?.sn
+        //   }`}
+        //   onConfirm={onConfirm}
+        //   onCancel={onClose}
+        // />
+        <>hello3</>
       );
     case "editSchool":
       return (
-        <EditSchoolModal
-          selectedRow={selectedRow}
-          onSave={onEditSchool}
-          onCancel={onClose}
-        />
+        // <EditSchoolModal
+        //   selectedRow={selectedRow}
+        //   onSave={onEditSchool}
+        //   onCancel={onClose}
+        // />
+        <>HELLO</>
       );
     case "editStudent":
       return (
-        <EditStudentModal
-          selectedRow={selectedRow}
-          onSave={onEditStudent}
-          onCancel={onClose}
-        />
+        // <EditStudentModal
+        //   selectedRow={selectedRow}
+        //   onSave={onEditStudent}
+        //   onCancel={onClose}
+        // />
+        <>HELLO 2</>
       );
     case "editSubscription":
       return (
-        <EditSubscriptionModal
-          selectedRow={selectedRow}
-          onSave={onEditSubscription}
-          onCancel={onClose}
-        />
+        // <EditSubscriptionModal
+        //   selectedRow={selectedRow}
+        //   onSave={onEditSubscription}
+        //   onCancel={onClose}
+        // />
+        <>HELLO 3</>
       );
     case "assignPermission":
       return (

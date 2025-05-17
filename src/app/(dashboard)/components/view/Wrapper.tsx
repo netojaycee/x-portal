@@ -46,7 +46,7 @@ export default function Wrapper({
             <SidebarTrigger className='-ml-1' />
             <Separator orientation='vertical' className='mr-2 h-4' />
             <p className='text-sm font-semibold text-muted-foreground font-lato'>
-              {role === "superAdmin" ? "Welcome Super Admin" : "Welcome Admin"}
+              Welcome, {userData?.firstname}
             </p>
           </div>
 
@@ -76,7 +76,6 @@ export default function Wrapper({
                         alt={userData.firstname}
                       />
                     )}
-                    
                   </Avatar>{" "}
                   {userData ? (
                     <span className='hidden md:inline-flex font-lato font-semibold text-sm'>

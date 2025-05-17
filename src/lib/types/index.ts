@@ -52,3 +52,11 @@ export interface Parent {
     status: "Linked" | "Un-Linked";
 }
 
+
+
+export type ModalType = "add" | "edit" | "delete" | "permission" | "status" | null;
+
+export interface ModalState {
+  type: ModalType;
+  data?: any;
+}

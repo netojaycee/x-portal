@@ -50,9 +50,9 @@ const subscriptionSchema = z.object({
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
 
 interface SubscriptionFormProps {
-  subscription?: SubscriptionFormData & { sn: string }; // For edit mode
+  subscription?: SubscriptionFormData & { id: string }; // For edit mode
   isEditMode?: boolean;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
 export default function SubscriptionForm({
@@ -97,8 +97,8 @@ export default function SubscriptionForm({
 
   const onSubmit = async (values: SubscriptionFormData) => {
     try {
-      if (isEditMode && subscription?.sn) {
-        await updateSubscription({ sn: subscription.sn, ...values }).unwrap();
+      if (isEditMode && subscription?.id) {
+        await updateSubscription({ id: subscription.id, ...values }).unwrap();
       } else {
         await addSubscription(values).unwrap();
       }

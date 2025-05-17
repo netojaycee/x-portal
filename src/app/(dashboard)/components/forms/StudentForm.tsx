@@ -57,9 +57,9 @@ const studentSchema = z.object({
 type StudentFormData = z.infer<typeof studentSchema>;
 
 interface StudentFormProps {
-  student?: StudentFormData & { sn: string }; // For edit mode
+  student?: StudentFormData & { id: string }; // For edit mode
   isEditMode?: boolean;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
 export default function StudentForm({
@@ -111,8 +111,8 @@ export default function StudentForm({
   const onSubmit = async (values: StudentFormData) => {
     try {
       console.log(values)
-      if (isEditMode && student?.sn) {
-        await updateStudent({ sn: student.sn, ...values }).unwrap();
+      if (isEditMode && student?.id) {
+        await updateStudent({ id: student.id, ...values }).unwrap();
       } else {
         await addStudent(values).unwrap();
       }

@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import { useCreateSchoolMutation, useUpdateSchoolMutation } from "@/redux/api"; // Adjust path to your RTK Query API slice
 import { School } from "@/lib/types/school";
+import PhoneInput from "react-phone-input-2";
+import { stripCountryCode } from "@/lib/utils";
 
 // Define the form schema
 const schoolSchema = z.object({
@@ -35,8 +37,8 @@ const schoolSchema = z.object({
   email: z.string().email("Invalid email address"),
   contact: z
     .string()
-    .min(1, "Contact is required")
-    .max(20, "Contact must be less than 20 characters"),
+    .min(14, "Contact must be 11 characters, please start with a 0")
+    .max(14, "Contact must be 11 characters, please start with a 0"),
   address: z.string().optional(),
 
   // status: z.enum(["Active", "Inactive"], {
@@ -49,7 +51,7 @@ type SchoolFormData = z.infer<typeof schoolSchema>;
 interface SchoolFormProps {
   school?: School & { id: string }; // For edit mode
   isEditMode?: boolean;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
 export default function SchoolForm({
@@ -93,12 +95,19 @@ export default function SchoolForm({
     },
   });
 
+  // console.log(school && school);
+
   const onSubmit = async (values: SchoolFormData) => {
     try {
+      const credentials = {
+        ...values,
+        contact: stripCountryCode(values.contact),
+      };
       if (isEditMode && school?.id) {
-        await updateSchool({ id: school.id, input: values }).unwrap();
+        await updateSchool({ id: school.id, input: credentials }).unwrap();
       } else {
-        await addSchool(values).unwrap();
+        // console.log(values, credentials);
+        await addSchool(credentials).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Add"} school error:`, error);
@@ -141,7 +150,7 @@ export default function SchoolForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
           {/* Name Field */}
-          <div className='flex items-center w-full gap-5'>
+          <div className='grid grid-cols-2 items-center gap-3'>
             <FormField
               control={form.control}
               name='name'
@@ -181,18 +190,38 @@ export default function SchoolForm({
             />
           </div>
           {/* Contact Field */}
-          <div className='flex items-center w-full gap-5'>
+          <div className='items-center grid grid-cols-2 gap-3'>
             <FormField
               control={form.control}
               name='contact'
               render={({ field }) => (
-                <FormItem className='w-full'>
+                <FormItem className=''>
                   <FormLabel className='text-gray-700'>Contact</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='e.g., +1 234 567 8900'
-                      {...field}
-                      className='border-gray-300 focus:border-primary focus:ring-primary'
+                  <FormControl className=''>
+                    <PhoneInput
+                      inputProps={{
+                        name: "contact",
+                        required: true,
+                        autoFocus: true,
+                      }}
+                      countryCodeEditable={false}
+                      value={field.value}
+                      onChange={field.onChange}
+                      prefix='+'
+                      country='ng'
+                      onlyCountries={["ng"]}
+                      inputStyle={{
+                        width: "100%",
+                        borderColor: "#D1D5DB", // border-gray-300
+                        outline: "none",
+                        boxShadow: "none",
+                        height: "2.5rem", // h-10
+                        borderRadius: "0.375rem", // rounded-md
+                        paddingLeft: "2.5rem", // pl-10 (to match input icon spacing)
+                        paddingRight: "0.75rem", // pr-3
+                        fontSize: "1rem", // text-base
+                        transition: "border-color 0.2s, box-shadow 0.2s",
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -240,11 +269,11 @@ export default function SchoolForm({
               control={form.control}
               name='address'
               render={({ field }) => (
-                <FormItem className='w-full'>
+                <FormItem className=''>
                   <FormLabel className='text-gray-700'>
                     School Address
                   </FormLabel>
-                  <FormControl>
+                  <FormControl className=''>
                     <Input
                       placeholder='e.g., 456 Oak Ave'
                       {...field}

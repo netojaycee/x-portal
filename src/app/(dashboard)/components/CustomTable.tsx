@@ -33,10 +33,13 @@ import {
   Filter,
   MoreVertical,
 } from "lucide-react";
-import { ModalComponent } from "./modals/ModalComponent";
-import { AddSubscriptionModal } from "./modals/AddSubsriptionModal";
-import { AddSchoolModal } from "./modals/AddSchoolModal";
-import { AddStudentModal } from "./modals/AddStudentModals";
+// import { ModalComponent } from "./modals/ModalComponent";
+// import { AddSubscriptionModal } from "./modals/AddSubsriptionModal";
+// import { AddSchoolModal } from "./modals/AddSchoolModal";
+// import { AddStudentModal } from "./modals/AddStudentModals";
+import { ENUM_MODULES } from "@/lib/types/enums";
+import { CustomModal } from "./modals/CustomModal";
+import NoData from "./NoData";
 
 // Define types for the table data and configuration
 interface TableColumn {
@@ -70,6 +73,14 @@ interface CustomTableProps {
   actionButtonIcon?: React.ReactNode;
   title?: string;
   actionOptions?: ActionOption[];
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  rowsPerPage?: number;
+  onRowsPerPageChange: (limit: number) => void;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  totalItems: number;
+  getActionOptions?: (row: any) => ActionOption[];
 }
 
 const CustomTable: React.FC<CustomTableProps> = ({
@@ -85,27 +96,34 @@ const CustomTable: React.FC<CustomTableProps> = ({
   actionButtonIcon = <Filter className='h-4 w-4' />,
   title,
   actionOptions = [],
+  currentPage,
+  onPageChange,
+  rowsPerPage = 10,
+  onRowsPerPageChange,
+  searchTerm,
+  onSearchChange,
+  totalItems,
+  getActionOptions,
 }) => {
   // State for filters, sorting, and pagination
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0] || 10);
+
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [modalType, setModalType] = useState<
-    | "confirmation"
-    | "editSchool"
-    | "editSubscription"
-    | "assignPermission"
-    | "addSchool"
-    | "addSubscription"
-    | "addStudent"
-    | "editStudent"
-    | null
-  >(null);
-  const [selectedRow, setSelectedRow] = useState<any>(null);
-  const [actionLabel, setActionLabel] = useState<string>("");
+  // const [modalType, setModalType] = useState<
+  //   | "confirmation"
+  //   | "editSchool"
+  //   | "editSubscription"
+  //   | "assignPermission"
+  //   | "addSchool"
+  //   | "addSubscription"
+  //   | "addStudent"
+  //   | "editStudent"
+  //   | null
+  // >(null);
+  const [modal, setModal] = useState<ENUM_MODULES | null>(null);
+
+  // const [selectedRow, setSelectedRow] = useState<any>(null);
+  // const [actionLabel, setActionLabel] = useState<string>("");
 
   // Extract unique filter values (e.g., status or plan)
   const filterOptions = useMemo(() => {
@@ -118,50 +136,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
     return [...statuses, ...plans];
   }, [data]);
 
-  // Filter and sort data
-  const filteredData = useMemo(() => {
-    let result = [...data];
-
-    // Apply search filter
-    if (filters.showSearch && searchTerm) {
-      result = result.filter(
-        (item) =>
-          item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.school?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply filter (e.g., status or plan)
-    if (filters.showFilter && selectedFilter) {
-      result = result.filter(
-        (item) =>
-          item.status === selectedFilter ||
-          item.plan === selectedFilter ||
-          item.subPlan === selectedFilter
-      );
-    }
-
-    // Apply sorting
-    if (sortColumn) {
-      result.sort((a, b) => {
-        const aValue = a[sortColumn] || "";
-        const bValue = b[sortColumn] || "";
-        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [data, searchTerm, selectedFilter, sortColumn, sortDirection, filters]);
-
-  // Pagination logic
-  const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / rowsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
 
   // Handle sorting
   const handleSort = (columnKey: string) => {
@@ -174,11 +149,15 @@ const CustomTable: React.FC<CustomTableProps> = ({
   };
 
   // Status color mapping
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const getStatusColor = (status: string | boolean) => {
+    switch (typeof status === "string" ? status.toLowerCase() : status) {
       case "active":
         return "bg-green-100 text-green-800";
+      case true:
+        return "bg-green-100 text-green-800";
       case "inactive":
+        return "bg-red-100 text-red-800";
+      case false:
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -186,75 +165,86 @@ const CustomTable: React.FC<CustomTableProps> = ({
   };
 
   // Modal handlers
-  const handleActionClick = (row: any, action: ActionOption) => {
-    setSelectedRow(row);
-    setActionLabel(action.label);
-    if (action.type === "confirmation") {
-      setModalType("confirmation");
-    } else if (action.type === "edit") {
-      setModalType(action.key === "subscription" ? "editSubscription" : action.key === "student" ? "editStudent" : "editSchool");
-    } else if (
-      action.type === "custom" &&
-      action.label === "Assign Permission"
-    ) {
-      setModalType("assignPermission");
-    }
-    action.handler(row); // Call the table-specific handler
-  };
+  // const handleActionClick = (row: any, action: ActionOption) => {
+  //   setSelectedRow(row);
+  //   setActionLabel(action.label);
+  //   if (action.type === "confirmation") {
+  //     setModalType("confirmation");
+  //   } else if (action.type === "edit") {
+  //     setModalType(
+  //       action.key === "subscription"
+  //         ? "editSubscription"
+  //         : action.key === "student"
+  //         ? "editStudent"
+  //         : "editSchool"
+  //     );
+  //   } else if (
+  //     action.type === "custom" &&
+  //     action.label === "Assign Permission"
+  //   ) {
+  //     setModalType("assignPermission");
+  //   }
+  //   action.handler(row); // Call the table-specific handler
+  // };
 
-  const handleConfirmation = async () => {
-    console.log(`Performing ${actionLabel} for`, selectedRow);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-    setModalType(null);
-    setSelectedRow(null);
-    setActionLabel("");
-  };
+  // const handleConfirmation = async () => {
+  //   console.log(`Performing ${actionLabel} for`, selectedRow);
+  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  //   setActionLabel("");
+  // };
 
-  const handleEditSchool = async (updatedData: any) => {
-    console.log(`Updating school ${selectedRow?.name} with`, updatedData);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-    setModalType(null);
-    setSelectedRow(null);
-  };
+  // const handleEditSchool = async (updatedData: any) => {
+  //   console.log(`Updating school ${selectedRow?.name} with`, updatedData);
+  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  // };
 
-  const handleEditSubscription = async (updatedData: any) => {
-    console.log(
-      `Updating subscription ${selectedRow?.package} with`,
-      updatedData
-    );
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-    setModalType(null);
-    setSelectedRow(null);
-  };
+  // const handleEditSubscription = async (updatedData: any) => {
+  //   console.log(
+  //     `Updating subscription ${selectedRow?.package} with`,
+  //     updatedData
+  //   );
+  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  // };
 
-  const handleAssignPermission = async (permissions: string[]) => {
-    console.log(`Assigning permissions to ${selectedRow?.name}:`, permissions);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-    setModalType(null);
-    setSelectedRow(null);
-  };
+  // const handleAssignPermission = async (permissions: string[]) => {
+  //   console.log(`Assigning permissions to ${selectedRow?.name}:`, permissions);
+  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  // };
 
-  const handleModalClose = () => {
-    setModalType(null);
-    setSelectedRow(null);
-    setActionLabel("");
-  };
+  // const handleModalClose = () => {
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  //   setActionLabel("");
+  // };
 
-  const handleAddClick = () => {
-    setModalType(
-      title === "Schools List"
-        ? "addSchool"
-        : title === "Students List"
-        ? "addStudent"
-        : "addSubscription"
-    );
-  };
+  // const handleAddClick = () => {
+  //   setModalType(
+  // title === "Schools List"
+  //   ? "addSchool"
+  //   : title === "Students List"
+  //   ? "addStudent"
+  //   : "addSubscription"
+  //   );
+  // };
 
-  const handleEditStudent = async (updatedData: any) => {
-    console.log(`Updating student ${selectedRow?.package} with`, updatedData);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-    setModalType(null);
-    setSelectedRow(null);
+  // const handleEditStudent = async (updatedData: any) => {
+  //   console.log(`Updating student ${selectedRow?.package} with`, updatedData);
+  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+  //   setModalType(null);
+  //   setSelectedRow(null);
+  // };
+
+  const openModal = (type: Exclude<ENUM_MODULES | null, "">) => setModal(type);
+  const handleModalOpenChange = (isOpen: boolean) => {
+    if (!isOpen) setModal(null);
   };
 
   return (
@@ -266,7 +256,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
             <Input
               placeholder='Search...'
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchChange(e.target.value)}
               className='pl-10 rounded-2xl'
             />
             <Search className='absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
@@ -284,14 +274,9 @@ const CustomTable: React.FC<CustomTableProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className='w-[200px] '>
-                <DropdownMenuItem onClick={() => setSelectedFilter(null)}>
-                  All
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {}}>All</DropdownMenuItem>
                 {filterOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option}
-                    onClick={() => setSelectedFilter(option)}
-                  >
+                  <DropdownMenuItem key={option} onClick={() => {}}>
                     {option}
                   </DropdownMenuItem>
                 ))}
@@ -300,7 +285,17 @@ const CustomTable: React.FC<CustomTableProps> = ({
           )}
           {showActionButton && (
             <Button
-              onClick={handleAddClick}
+              onClick={() =>
+                openModal(
+                  title === "Schools List"
+                    ? ENUM_MODULES.SCHOOL
+                    : title === "Students List"
+                    ? ENUM_MODULES.STUDENT
+                    : title === "Subscription Plans"
+                    ? ENUM_MODULES.SUBSCRIPTION
+                    : null
+                )
+              }
               className='rounded-md flex items-center gap-2 bg-primary text-white'
             >
               {actionButtonIcon}
@@ -340,20 +335,31 @@ const CustomTable: React.FC<CustomTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody className=''>
-          {paginatedData.length > 0 ? (
-            paginatedData.map((row, index) => (
+          {totalItems > 0 ? (
+            data.map((row, index) => (
               <TableRow key={index}>
                 {columns.map((column) => (
                   <TableCell key={column.key}>
-                    {column.key === "status" || column.key === "subStatus" ? (
+                    {column.key === "status" ||
+                    column.key === "subStatus" ||
+                    column.key === "isActive" ? (
                       <span
                         className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
-                          row[column.key]
+                          column.key === "isActive"
+                            ? row[column.key]
+                              ? "active"
+                              : "inactive"
+                            : row[column.key]
                         )}`}
                       >
-                        {row[column.key] || "--"}
+                        {column.key === "isActive"
+                          ? row[column.key]
+                            ? "Active"
+                            : "Inactive"
+                          : row[column.key] || "--"}
                       </span>
-                    ) : column.key === "actions" && actionOptions.length > 0 ? (
+                    ) : column.key === "actions" &&
+                      (getActionOptions || actionOptions.length > 0) ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -365,10 +371,22 @@ const CustomTable: React.FC<CustomTableProps> = ({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align='end'>
-                          {actionOptions.map((action) => (
+                          {/* {actionOptions.map((action) => (
                             <DropdownMenuItem
                               key={action.label}
                               onClick={() => handleActionClick(row, action)}
+                            >
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))} */}
+
+                          {(getActionOptions
+                            ? getActionOptions(row)
+                            : actionOptions
+                          ).map((action) => (
+                            <DropdownMenuItem
+                              key={action.label}
+                              onClick={() => action.handler(row)}
                             >
                               {action.label}
                             </DropdownMenuItem>
@@ -391,8 +409,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className='text-center py-4'>
-                No data found
+              <TableCell colSpan={columns.length} className='text-center py-8'>
+                <NoData text={"No data found"} />
               </TableCell>
             </TableRow>
           )}
@@ -400,7 +418,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
       </Table>
 
       {/* Bottom: Rows Per Page, Pagination, Results Info */}
-      {(showRowsPerPage || pagination || showResultsInfo) && (
+      {totalItems > 0 && (showRowsPerPage || pagination || showResultsInfo) && (
         <div className='flex items-center justify-between'>
           {showRowsPerPage && (
             <div className='flex items-center gap-2'>
@@ -408,8 +426,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Select
                 value={rowsPerPage.toString()}
                 onValueChange={(value) => {
-                  setRowsPerPage(Number(value));
-                  setCurrentPage(1); // Reset to first page
+                  onRowsPerPageChange(Number(value));
+                  onPageChange(1); // Reset to first page
                 }}
               >
                 <SelectTrigger className='w-[100px] rounded-2xl'>
@@ -431,7 +449,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => setCurrentPage(1)}
+                onClick={() => onPageChange(1)}
                 disabled={currentPage === 1}
               >
                 <ChevronsLeft className='h-4 w-4' />
@@ -439,7 +457,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => setCurrentPage((prev) => prev - 1)}
+                onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
               >
                 Previous
@@ -450,7 +468,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     key={page}
                     variant={currentPage === page ? "default" : "outline"}
                     size='sm'
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => onPageChange(page)}
                   >
                     {page}
                   </Button>
@@ -459,7 +477,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => setCurrentPage((prev) => prev + 1)}
+                onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
               >
                 Next
@@ -467,7 +485,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => setCurrentPage(totalPages)}
+                onClick={() => onPageChange(totalPages)}
                 disabled={currentPage === totalPages}
               >
                 <ChevronsRight className='h-4 w-4' />
@@ -485,7 +503,33 @@ const CustomTable: React.FC<CustomTableProps> = ({
         </div>
       )}
 
-      {modalType === "addSchool" ? (
+      {modal === ENUM_MODULES.SCHOOL && (
+        <CustomModal
+          open={modal === ENUM_MODULES.SCHOOL}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.SCHOOL}
+        />
+      )}
+
+      {modal === ENUM_MODULES.STUDENT && (
+        <CustomModal
+          open={modal === ENUM_MODULES.STUDENT}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.STUDENT}
+        />
+      )}
+
+      {modal === ENUM_MODULES.SUBSCRIPTION && (
+        <CustomModal
+          open={modal === ENUM_MODULES.SUBSCRIPTION}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.SUBSCRIPTION}
+        />
+      )}
+      {/* {modalType === "addSchool" ? (
         <AddSchoolModal onCancel={handleModalClose} />
       ) : modalType === "addSubscription" ? (
         <AddSubscriptionModal onCancel={handleModalClose} />
@@ -503,7 +547,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
           onAssignPermission={handleAssignPermission}
           onEditStudent={handleEditStudent}
         />
-      )}
+      )} */}
     </div>
   );
 };

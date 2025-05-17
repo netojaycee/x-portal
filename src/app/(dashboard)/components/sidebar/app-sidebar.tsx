@@ -10,6 +10,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenuButton,
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { adminMenu, superAdminMenu } from "@/lib/menu";
@@ -18,27 +19,6 @@ import { Separator } from "@/components/ui/separator";
 import { ENUM_ROLE } from "@/lib/types/enums";
 import { User } from "@/lib/types";
 
-// This is sample data.
-// const data = {
-//   schools: [
-//     {
-//       name: "Acme Inc",
-//       logo: "/cap.svg",
-//       plan: "Enterprise",
-//     },
-//     {
-//       name: "Acme Corp.",
-//       logo: "/avatar.svg",
-//       plan: "Startup",
-//     },
-//     {
-//       name: "Evil Corp.",
-//       logo: "/computer.svg",
-//       plan: "Free",
-//     },
-//   ],
-// };
-
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   role: ENUM_ROLE;
   user: User | null;
@@ -46,23 +26,28 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ role, user, ...props }: AppSidebarProps) {
   const menuData = role === ENUM_ROLE.ADMIN ? adminMenu : superAdminMenu;
-//  fetch school here
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <div className='py-3'>
+      <div className='w-full  flex items-center justify-center px-2 py-1'>
         {" "}
-        <Logo white />
+        <SidebarMenuButton
+          size='lg'
+          className='data-[state=open]:bg-transparent hover:bg-transparent hover:text-white '
+        >
+          <div className="w-5 flex items-center justify-center">
+            {" "}
+            {/* <Image src={"/logo_white_icon.png"} width={16} height={16} alt="logo_icon" className="w-10 h-10 object-cover"/> */}
+          </div>
+          <div>
+            {" "}
+            <Logo white />
+          </div>
+        </SidebarMenuButton>
       </div>
       <Separator className='my-2' />
       <SidebarHeader>
-        {user && user.role === ENUM_ROLE.SUPERADMIN && (
-          <SchoolSwitcher
-            // viewAs={role}
-            // actualRole={user.role}
-            // schools={data.schools}
-          />
-        )}
+        {user && user.role === ENUM_ROLE.SUPERADMIN && <SchoolSwitcher />}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={menuData} />
