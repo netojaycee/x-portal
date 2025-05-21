@@ -145,7 +145,7 @@ export function SchoolSwitcher() {
                   {activeSchool?.name || "Select a School"}
                 </span>
                 <span className='truncate text-xs'>
-                  {activeSchool?.subscription || ""}
+                  {activeSchool?.subscriptionId || ""}
                 </span>
               </div>
               <ChevronsUpDown className='ml-auto' />
@@ -215,13 +215,13 @@ export function SchoolSwitcher() {
                       <div className='flex-1'>
                         <div className='font-medium'>{school.name}</div>
                         <div className='text-xs text-muted-foreground'>
-                          {school.subscription}
+                          {school.subscriptionId}
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <NoData text={"No Scool Found"} />
+                  <NoData text={"No School Found"} />
                 )}
                 {hasMore && (
                   <Button

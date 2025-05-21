@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
-import { useAddStudentMutation, useUpdateStudentMutation } from "@/redux/api";
+import { useCreateUserMutation, useUpdateUserMutation } from "@/redux/api";
+// import { useAddStudentMutation, useUpdateStudentMutation } from "@/redux/api";
 
 // Mock RTK Query hooks (replace with actual hooks from your API slice)
 const useGetClassesQuery = () => ({
@@ -40,18 +41,22 @@ const useGetArmsQuery = () => ({
 
 // Define the form schema
 const studentSchema = z.object({
-  fullName: z
+  firstname: z
     .string()
-    .min(1, "Full name is required")
-    .max(100, "Full name must be less than 100 characters"),
-  gender: z.enum(["Male", "Female"], {
+    .min(1, "First name is required")
+    .max(100, "First name must be less than 100 characters"),
+  lastname: z
+    .string()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be less than 100 characters"),
+  gender: z.enum(["male", "female"], {
     required_error: "Gender is required",
   }),
-  class: z.string().min(1, "Class is required"),
-  arm: z.string().min(1, "Arm is required"),
-  status: z.enum(["Active", "Inactive"], {
-    required_error: "Status is required",
-  }),
+  classId: z.string().min(1, "Class is required"),
+  classArmId: z.string().min(1, "Arm is required"),
+  // status: z.enum(["Active", "Inactive"], {
+  //   required_error: "Status is required",
+  // }),
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
@@ -68,27 +73,27 @@ export default function StudentForm({
   onSuccess,
 }: StudentFormProps) {
   const [
-    addStudent,
+    addUser,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useAddStudentMutation();
+  ] = useCreateUserMutation();
 
   const [
-    updateStudent,
+    updateUser,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateStudentMutation();
+  ] = useUpdateUserMutation();
 
 
-  // console.log(addStudent, updateStudent)
+  // console.log(addUser, updateUser)
   const { data: classes, isLoading: isLoadingClasses } = useGetClassesQuery();
   const { data: arms, isLoading: isLoadingArms } = useGetArmsQuery();
 
@@ -100,11 +105,12 @@ export default function StudentForm({
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
-      fullName: student?.fullName || "",
+      firstname: student?.firstname || "",
+      lastname: student?.lastname || "",
       gender: student?.gender || undefined,
-      class: student?.class || "",
-      arm: student?.arm || "",
-      status: student?.status || undefined,
+      classId: student?.classId || "",
+      classArmId: student?.classArmId || "",
+      // status: student?.status || undefined,
     },
   });
 
@@ -112,9 +118,9 @@ export default function StudentForm({
     try {
       console.log(values)
       if (isEditMode && student?.id) {
-        await updateStudent({ id: student.id, ...values }).unwrap();
+        await updateUser({ id: student.id, input: values }).unwrap();
       } else {
-        await addStudent(values).unwrap();
+        await addUser(values).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Add"} student error:`, error);
@@ -148,13 +154,31 @@ export default function StudentForm({
           <div className='flex items-center w-full gap-5'>
             <FormField
               control={form.control}
-              name='fullName'
+              name='firstname'
               render={({ field }) => (
                 <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Full Name</FormLabel>
+                  <FormLabel className='text-gray-700'>First Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='e.g., Tolu Adebayo'
+                      placeholder='e.g., Tolu'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='lastname'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>Last Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Adebayo'
                       {...field}
                       className='border-gray-300 focus:border-primary focus:ring-primary/90'
                     />
@@ -165,37 +189,36 @@ export default function StudentForm({
             />
 
             {/* Gender Field */}
-            <FormField
-              control={form.control}
-              name='gender'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Gender</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
-                        <SelectValue placeholder='Select gender' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='male'>Male</SelectItem>
-                      <SelectItem value='female'>Female</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
-
+          <FormField
+            control={form.control}
+            name='gender'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Gender</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl className='w-full'>
+                    <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
+                      <SelectValue placeholder='Select gender' />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value='male'>Male</SelectItem>
+                    <SelectItem value='female'>Female</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           {/* Class Field */}
           <div className='flex items-center w-full gap-5'>
             <FormField
               control={form.control}
-              name='class'
+              name='classId'
               render={({ field }) => (
                 <FormItem className='w-full'>
                   <FormLabel className='text-gray-700'>Class</FormLabel>
@@ -225,10 +248,10 @@ export default function StudentForm({
             {/* Arm Field */}
             <FormField
               control={form.control}
-              name='arm'
+              name='classArmId'
               render={({ field }) => (
                 <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Arm</FormLabel>
+                  <FormLabel className='text-gray-700'>Class Arm</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -254,7 +277,7 @@ export default function StudentForm({
           </div>
 
           {/* Status Field */}
-          <div className='flex items-center w-full gap-5'>
+          {/* <div className='flex items-center w-full gap-5'>
             <FormField
               control={form.control}
               name='status'
@@ -289,7 +312,7 @@ export default function StudentForm({
                 </FormItem>
               )}
             />
-          </div>
+          </div> */}
 
           {/* Submit Button */}
           <Button

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import CustomTable from "@/app/(dashboard)/components/CustomTable";
+import StatsCard from "@/app/(dashboard)/components/StatsCard";
 import { Plus } from "lucide-react";
 import { rowsPerPageOptions } from "@/lib/utils";
 import { ModalState, ModalType, User } from "@/lib/types";
@@ -10,18 +11,14 @@ import { useGetUsersQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 
-export default function AllUsersPage() {
+export default function ParentsTab({ schoolId }: { schoolId: string | null }) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(rowsPerPageOptions[0] || 10);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalState>({ type: null });
   const [debouncedSearchTerm] = useDebounce(search, 500);
   const router = useRouter();
-  const userData = useSelector((state: RootState) => state.user.user);
-  const schoolId = userData?.schoolId || null;
 
   // Pass them into your RTK hook
   const { data, isLoading } = useGetUsersQuery(
@@ -29,17 +26,18 @@ export default function AllUsersPage() {
       page,
       limit,
       q: debouncedSearchTerm,
+      subRoleFlag: "parent",
       schoolId: schoolId || null,
     },
     { skip: !schoolId }
   );
   // const [toggleActive] = useToggleSchoolActiveMutation();
-console.log(data && data);
+
   if (isLoading) {
     return <LoaderComponent />;
   }
   // console.log(data && data);
-  const usersData = data?.users || [];
+  const parentsData = data?.users || [];
 
   const openModal = (type: Exclude<ModalType, "">, row: User) =>
     setModal({ type, data: row });
@@ -49,50 +47,63 @@ console.log(data && data);
     if (!isOpen) setModal({ type: null });
   };
 
-  const getActionOptions = (user: User) => {
+  const getActionOptions = (parent: User) => {
     const otherOptions = [
       {
-        key: "users",
+        key: "student",
         label: "View Profile",
         type: "custom" as const,
-        handler: () => handleViewUser(user),
+        handler: () => handleViewStudent(parent),
       },
       {
-        key: "users",
+        key: "student",
         label: "Edit",
         type: "edit" as const,
-        handler: () => openModal("edit", user),
+        handler: () => openModal("edit", parent),
       },
-      {
-        key: "users",
-        label: "Delete",
-        type: "confirmation" as const,
-        handler: () => openModal("delete", user),
-      },
+      // {
+      //   key: "student",
+      //   label: "Assign Parent/Guardian",
+      //   type: "custom" as const,
+      //   handler: () => openModal("permission", student),
+      // },
     ];
 
     return [...otherOptions];
   };
 
-  const handleViewUser = (row: User) => {
-      router.push(`/users/all-users/profile/${row.id}`);
-    };
+  const handleViewStudent = (row: User) => {
+    router.push(`/students/profile/${row.id}`);
+  };
   return (
-    <div className='p-4'>
+    <div className='space-y-4'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        <StatsCard
+          title='Total Students'
+          number='400'
+          image='/student-group.png'
+          imagePosition='left'
+          male='250'
+          female='150'
+          // url='/details'
+        />
+      </div>
       <CustomTable
-        title='Users List'
+        title='Students List'
         columns={[
           // { key: "sn", label: "SN", sortable: true },
           { key: "name", label: "Name", sortable: true },
-          { key: "email", label: "Email" },
-          { key: "gender", label: "Gender" },
+          { key: "emailAddress", label: "Email Address" },
           { key: "contact", label: "Contact" },
-          { key: "role", label: "Role" },
+          { key: "occupation", label: "Occupation" },
           { key: "createdDate", label: "Created Date" },
-          { key: "status", label: "Status" },
+          {
+            key: "status",
+            label: "Status",
+          },
           { key: "actions", label: "Actions" },
         ]}
-        data={usersData} // Show only 5 rows as per Subscriber List
+        data={parentsData} // Show only 5 rows as per Subscriber List
         totalItems={data?.total || 0}
         currentPage={page}
         onPageChange={setPage}
@@ -108,33 +119,22 @@ console.log(data && data);
         }}
         filters={{ showSearch: true, showFilter: true }}
         showActionButton={true}
-        actionButtonText='Add New User'
+        actionButtonText='Add New Parent/Guardian'
         actionButtonIcon={<Plus className='h-4 w-4' />}
         showRowsPerPage={true}
         pagination={true}
         showResultsInfo={true}
         getActionOptions={getActionOptions}
       />
-
       {modal.type === "edit" && (
-        <CustomModal
-          open={modal.type === "edit"}
-          selectedRow={modal.data}
-          onOpenChange={handleModalOpenChange}
-          isEditMode={true}
-          type={ENUM_MODULES.USER}
-        />
-      )}
-
-      {modal.type === "delete" && (
-        <CustomModal
-          open={modal.type === "delete"}
-          selectedRow={modal.data}
-          onOpenChange={handleModalOpenChange}
-          type={ENUM_MODULES.USER}
-          status={"delete"}
-        />
-      )}
+              <CustomModal
+                open={modal.type === "edit"}
+                selectedRow={modal.data}
+                onOpenChange={handleModalOpenChange}
+                isEditMode={true}
+                type={ENUM_MODULES.PARENT}
+              />
+            )}
     </div>
   );
 }

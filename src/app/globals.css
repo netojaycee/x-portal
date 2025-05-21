@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin 'tailwind-scrollbar';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -124,4 +125,11 @@
 .recharts-responsive-container {
   height: 220px !important;
   width: 100% !important;
+}
+
+@layer utilities {
+  .scrollbar-super-thin::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
 }

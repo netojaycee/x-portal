@@ -1,4 +1,4 @@
-import Main from "./Main";
+import {Main} from "./Main";
 
 export default async function RoleDetails({
   params,
@@ -7,5 +7,5 @@ export default async function RoleDetails({
 }) {
   const { id } = await params;
 
-  return <Main id={id} />;
+  return <Main roleId={id} />;
 }

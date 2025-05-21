@@ -1,28 +1,33 @@
 import { ENUM_GENDER, ENUM_ROLE } from "./enums";
-import { Image } from "./school";
 
-
-export interface User {
+export interface BaseUser {
     id: string;
-    firstname: string;
-    lastname: string;
-    othername?: string | null;
-    email: string;
-    phone?: string | null;
-    gender?: ENUM_GENDER | null;
+    firstname?: string;
+    lastname?: string;
+    othername?: string;
+    username: string;
+    email?: string;
+    phone?: string;
+    gender?: ENUM_GENDER;
     isActive: boolean;
-    emailVerifiedAt?: string | null;
+    emailVerifiedAt?: string;
+    password: string;
+    isDeleted: boolean;
+    plainPassword: string;
     role: ENUM_ROLE;
-    view_as?: ENUM_ROLE | null;
-    schoolId?: string | null;
-    subRoleId?: string | null;
+    rememberToken?: string;
+    avatar?: Image | null;
     createdAt: string;
     updatedAt: string;
-    avatar: Image | null;
+    createdBy?: string;
+    updatedBy?: string;
+    schoolId?: string;
+    subRoleId?: string;
+    view_as?: ENUM_ROLE;
 }
 
 export interface AuthResponse {
-    user: User;
+    user: BaseUser;
     message: string;
 }
 
@@ -31,32 +36,156 @@ export interface LoginCredentials {
     password: string;
 }
 
-export interface Student {
-    sn: number;
-    name: string;
-    gender: ENUM_GENDER;
-    class: string;
-    arms: string;
-    parentGuardian: string;
-    createdDate: string;
-    status: "Active" | "Inactive";
+
+
+export interface Image {
+    url: string;
+    pubId: string;
 }
-
-export interface Parent {
-    sn: number;
-    name: string;
-    emailAddress: string;
-    contact: string;
-    occupation: string;
-    createdDate: string;
-    status: "Linked" | "Un-Linked";
-}
-
-
 
 export type ModalType = "add" | "edit" | "delete" | "permission" | "status" | null;
 
 export interface ModalState {
-  type: ModalType;
-  data?: any;
+    type: ModalType;
+    data?: any;
+}
+
+export interface GetUsersResponse {
+    users: User[];
+    total: number;
+}
+
+export interface GetUsersQuery {
+    q?: string;
+    page?: number;
+    limit?: number;
+    schoolId?: string | null;
+    gender?: 'male' | 'female';
+    subRoleId?: string;
+    subRoleFlag?: 'student' | 'staff' | 'parent';
+}
+
+export interface StudentData {
+    studentId?: string;
+    classId?: string;
+    classArmId?: string;
+    admissionDate?: string;
+    dateOfBirth?: string;
+    parentId?: string;
+}
+
+export interface StaffData {
+    staffId?: string;
+    department?: string;
+    position?: string;
+    hireDate?: string;
+    qualifications?: string;
+}
+
+export interface ParentData {
+    occupation?: string;
+    address?: string;
+    relationship?: string;
+}
+
+export interface User extends BaseUser {
+    student?: StudentData;
+    staff?: StaffData;
+    parent?: ParentData;
+}
+
+
+export interface CreateUserInput {
+    firstname?: string;
+    lastname?: string;
+    othername?: string;
+    username: string;
+    email?: string;
+    phone?: string;
+    gender?: "male" | "female";
+    password: string;
+    schoolId?: string;
+
+    subRoleId: string; // The subRole to assign (e.g., student, staff, parent)
+
+    student?: CreateStudentDetails;
+    staff?: CreateStaffDetails;
+    parent?: CreateParentDetails;
+}
+
+
+export interface CreateStudentDetails {
+    studentId?: string;
+    classId?: string;
+    classArmId?: string;
+    admissionDate?: string;
+    dateOfBirth?: string;
+    parentId?: string;
+}
+
+export interface CreateStaffDetails {
+    staffId?: string;
+    department?: string;
+    position?: string;
+    hireDate?: string;
+    qualifications?: string;
+}
+
+export interface CreateParentDetails {
+    occupation?: string;
+    address?: string;
+    relationship?: string;
+}
+
+
+export interface UpdateUserInput {
+    firstname?: string;
+    lastname?: string;
+    othername?: string;
+    email?: string;
+    phone?: string;
+    gender?: 'male' | 'female';
+    password?: string;
+    subRoleId?: string; // You might allow updating subRole
+
+    student?: UpdateStudentDetails;
+    staff?: UpdateStaffDetails;
+    parent?: UpdateParentDetails;
+}
+
+export interface UpdateStudentDetails {
+    classId?: string;
+    classArmId?: string;
+    admissionDate?: string;
+    dateOfBirth?: string;
+    parentId?: string;
+}
+
+export interface UpdateStaffDetails {
+    department?: string;
+    position?: string;
+    hireDate?: string;
+    qualifications?: string;
+}
+
+export interface UpdateParentDetails {
+    occupation?: string;
+    address?: string;
+    relationship?: string;
+}
+
+
+export interface Subrole {
+    id: string;
+    name: string;
+    description?: string;
+    permissions: string[];
+    schoolId?: string;
+    isDeleted: boolean;
+}
+
+export interface Permission {
+    id: string;
+    name: string;
+    description?: string;
 }

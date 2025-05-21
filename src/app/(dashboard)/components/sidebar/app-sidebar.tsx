@@ -35,7 +35,7 @@ export function AppSidebar({ role, user, ...props }: AppSidebarProps) {
           size='lg'
           className='data-[state=open]:bg-transparent hover:bg-transparent hover:text-white '
         >
-          <div className="w-5 flex items-center justify-center">
+          <div className='w-5 flex items-center justify-center'>
             {" "}
             {/* <Image src={"/logo_white_icon.png"} width={16} height={16} alt="logo_icon" className="w-10 h-10 object-cover"/> */}
           </div>
@@ -49,7 +49,7 @@ export function AppSidebar({ role, user, ...props }: AppSidebarProps) {
       <SidebarHeader>
         {user && user.role === ENUM_ROLE.SUPERADMIN && <SchoolSwitcher />}
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className='scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-primary'>
         <NavMain items={menuData} />
       </SidebarContent>
       <SidebarFooter>

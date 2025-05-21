@@ -228,7 +228,7 @@ export default function UsersLayout({
 
       {/* Main Content */}
       <Suspense fallback={<LoaderComponent />}>
-        <div className=''>
+        <div className='mt-4'>
           {status === "loading" && <LoaderComponent />}
           {status === "completed" && children && <main>{children}</main>}
           {status === "error" && (

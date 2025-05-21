@@ -9,3 +9,7 @@ add subscription statu filtering to school also add sorting asc or descending by
 remove country code form school form
 
 convert all subrole to small letter backend
+
+create arm, create class, create student, create parent, create staff, cretae subrole, assign permissions
+first login school account
+install slim scrollbar and use on all site in layout.tsx from pot

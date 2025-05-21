@@ -18,9 +18,11 @@ import {
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import {
-  useAddSubscriptionMutation,
-  useUpdateSubscriptionMutation,
+  useCreateSubroleMutation,
+  useUpdateSubroleMutation,
 } from "@/redux/api";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 // Define the form schema
 const subroleSchema = z.object({
@@ -44,25 +46,27 @@ export default function SubroleForm({
   isEditMode = false,
   onSuccess,
 }: SubroleFormProps) {
+  const userData = useSelector((state: RootState) => state.user.user);
+
   const [
-    addSubscription,
+    createSubrole,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useAddSubscriptionMutation();
+  ] = useCreateSubroleMutation();
 
   const [
-    updateSubscription,
+    updateSubrole,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateSubscriptionMutation();
+  ] = useUpdateSubroleMutation();
 
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
@@ -79,10 +83,14 @@ export default function SubroleForm({
 
   const onSubmit = async (values: subroleFormData) => {
     try {
+      const credentials = {
+        ...values,
+        schoolId: userData?.schoolId,
+      };
       if (isEditMode && subrole?.id) {
-        await updateSubscription({ id: subrole.id, ...values }).unwrap();
+        await updateSubrole({ id: subrole.id, input: credentials }).unwrap();
       } else {
-        await addSubscription(values).unwrap();
+        await createSubrole(credentials).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Add"} role error:`, error);

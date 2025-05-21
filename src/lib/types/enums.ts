@@ -12,6 +12,28 @@ export enum ENUM_GENDER {
 export enum ENUM_MODULES {
     SCHOOL = "school",
     STUDENT = "student",
+    STAFF = "staff",
+    PARENT = "parent",
+    USER = "user",
     SUBSCRIPTION = "subscription",
     SUBROLE = "subrole",
+    CLASS = "class",
+    CLASS_ARM = "classArm",
+    CLASS_SUBJECT = "classSubject",
+    CLASS_ARM_SUBJECT = "classArmSubject",
+    CLASS_ARM_STUDENT = "classArmStudent",
+    CLASS_ARM_STUDENT_SUBJECT = "classArmStudentSubject",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT = "classArmStudentSubjectResult",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_TERM = "classArmStudentSubjectResultTerm",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_TERM_SESSION = "classArmStudentSubjectResultTermSession",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_SESSION = "classArmStudentSubjectResultSession",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_SESSION_TERM = "classArmStudentSubjectResultSessionTerm",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_SESSION_TERM_SUBJECT = "classArmStudentSubjectResultSessionTermSubject",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_SESSION_TERM_SUBJECT_TERM = "classArmStudentSubjectResultSessionTermSubjectTerm",
+    CLASS_ARM_STUDENT_SUBJECT_RESULT_SESSION_TERM_SUBJECT_SESSION = "classArmStudentSubjectResultSessionTermSubjectSession",
 }
+
+export enum ENUM_PERMISSION_SCOPE {
+    PLATFORM = 'platform',
+    SCHOOL = 'school',
+  }
