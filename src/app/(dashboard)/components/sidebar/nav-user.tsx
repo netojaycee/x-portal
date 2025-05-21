@@ -42,10 +42,10 @@ export function NavUser({ user }: { user: User | null }) {
                       user?.avatar?.url
                         ? user.avatar.url
                         : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(
-                            user.firstname
+                            user?.firstname || "anonymous"
                           )}`
                     }
-                    alt={user.firstname}
+                    alt={user?.firstname || "anonymous"}
                   />
                 )}
                 <AvatarFallback className='rounded-lg'>
@@ -55,10 +55,10 @@ export function NavUser({ user }: { user: User | null }) {
               <div className='grid flex-1 text-left text-sm leading-tight'>
                 {user && (
                   <span className='truncate font-semibold'>
-                    {user.firstname} {user.lastname}
+                    {user?.firstname || "anonymous"} {user?.lastname || "anonymous"}
                   </span>
                 )}
-                <span className='truncate text-xs'>{user && user.email}</span>
+                <span className='truncate text-xs'>{user?.email || "anonymous"}</span>
               </div>
               <ChevronsUpDown className='ml-auto size-4' />
             </SidebarMenuButton>
@@ -78,10 +78,10 @@ export function NavUser({ user }: { user: User | null }) {
                         user?.avatar?.url
                           ? user.avatar.url
                           : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(
-                              user.firstname
+                              user?.firstname || "anonymous"
                             )}`
                       }
-                      alt={user.firstname}
+                      alt={user?.firstname || "anonymous"}
                     />
                   )}
                   <AvatarFallback className='rounded-lg'>
@@ -91,9 +91,9 @@ export function NavUser({ user }: { user: User | null }) {
                 {user && (
                   <div className='grid flex-1 text-left text-sm leading-tight'>
                     <span className='truncate font-semibold'>
-                      {user.firstname}
+                      {user?.firstname || "anonymous"}
                     </span>
-                    <span className='truncate text-xs'>{user.email}</span>
+                    <span className='truncate text-xs'>{user?.email || "anonymous"}</span>
                   </div>
                 )}
               </div>

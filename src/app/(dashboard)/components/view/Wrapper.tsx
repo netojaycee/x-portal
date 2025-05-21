@@ -46,7 +46,7 @@ export default function Wrapper({
             <SidebarTrigger className='-ml-1' />
             <Separator orientation='vertical' className='mr-2 h-4' />
             <p className='text-sm font-semibold text-muted-foreground font-lato'>
-              Welcome, {userData?.firstname}
+              Welcome, {userData?.firstname || userData?.email || "Anonymous"}!
             </p>
           </div>
 
@@ -70,16 +70,16 @@ export default function Wrapper({
                           userData?.avatar?.url
                             ? userData.avatar.url
                             : `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(
-                                userData.firstname
+                                userData?.firstname || "anonymous"
                               )}`
                         }
-                        alt={userData.firstname}
+                        alt={userData?.firstname || "Anonymous"}
                       />
                     )}
                   </Avatar>{" "}
                   {userData ? (
                     <span className='hidden md:inline-flex font-lato font-semibold text-sm'>
-                      {userData.firstname} {userData.lastname}
+                      {userData?.firstname || "Anonymous"} {userData?.lastname || "Anonymous"}
                     </span>
                   ) : (
                     <span className='hidden md:inline-flex font-lato font-semibold text-sm'>

@@ -1,4 +1,3 @@
-import { Parent, Student } from "./types";
 import { ENUM_GENDER } from "./types/enums";
 
 // Hard-coded data for Schools
@@ -331,7 +330,7 @@ export const revenueData = [
 
 
 
-export const studentsData: Student[] = [
+export const studentsData = [
     { sn: 1, name: "Tolu Adebayo", gender: ENUM_GENDER.MALE, class: "JSS1", arms: "Gold", parentGuardian: "Mr Adebayo", createdDate: "23-04-2024", status: "Inactive" },
     { sn: 2, name: "Aisha Mohammed", gender: ENUM_GENDER.FEMALE, class: "JSS2", arms: "Silver", parentGuardian: "Mrs Mohammed", createdDate: "15-05-2024", status: "Active" },
     { sn: 3, name: "Chidi Okeke", gender: ENUM_GENDER.MALE, class: "JSS1", arms: "Blue", parentGuardian: "Mr Okeke", createdDate: "10-03-2024", status: "Active" },
@@ -341,7 +340,7 @@ export const studentsData: Student[] = [
 
 
 
-export const parentsData: Parent[] = [
+export const parentsData = [
     { sn: 1, name: "Tolu Adebayo", emailAddress: "adebayoadeolu@gmail.com", contact: "09077056063", occupation: "Trading", createdDate: "23-04-2024", status: "Un-Linked" },
     { sn: 2, name: "Aisha Mohammed", emailAddress: "aishamohd@yahoo.com", contact: "08123456789", occupation: "Teacher", createdDate: "15-05-2024", status: "Linked" },
     { sn: 3, name: "Chidi Okeke", emailAddress: "chidiokeke@hotmail.com", contact: "07098765432", occupation: "Engineer", createdDate: "10-03-2024", status: "Un-Linked" },
