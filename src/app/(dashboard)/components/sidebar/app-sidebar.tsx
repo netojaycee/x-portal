@@ -25,7 +25,19 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ role, user, ...props }: AppSidebarProps) {
-  const menuData = role === ENUM_ROLE.ADMIN ? adminMenu : superAdminMenu;
+  // const menuData = role === ENUM_ROLE.ADMIN ? adminMenu : superAdminMenu;
+
+  const filteredMenu = React.useMemo(() => {
+    if (user?.role === ENUM_ROLE.SUPERADMIN) {
+      return adminMenu;
+    }
+    const userPermissions = user?.permissions || [];
+    return adminMenu.filter((item) =>
+      userPermissions.includes(item.requiredPermission)
+    );
+  }, [user]);
+
+  const menuData = role === ENUM_ROLE.ADMIN ? filteredMenu : superAdminMenu;
 
   return (
     <Sidebar collapsible='icon' {...props}>

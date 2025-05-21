@@ -24,6 +24,7 @@ export interface BaseUser {
     schoolId?: string;
     subRoleId?: string;
     view_as?: ENUM_ROLE;
+    permissions?: string[];
 }
 
 export interface AuthResponse {

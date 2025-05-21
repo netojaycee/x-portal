@@ -20,90 +20,105 @@ import {
 
 export const adminMenu = [
     {
-        title: "Dashboard",
+        title: 'Dashboard',
         icon: LayoutDashboard,
-        url: "/dashboard",
-        isActive: true
+        url: '/dashboard',
+        isActive: true,
+        requiredPermission: 'dashboard:view',
     },
     {
-        title: "Admission",
+        title: 'Admission',
         icon: UserPlus,
-        url: "/admission",
-        isActive: false
+        url: '/admission',
+        isActive: false,
+        requiredPermission: 'admission:read',
     },
     {
-        title: "Attendance",
+        title: 'Attendance',
         icon: Clock,
-        url: "/attendance",
-        isActive: false
+        url: '/attendance',
+        isActive: false,
+        requiredPermission: 'attendance:read',
     },
     {
-        title: "Fees",
+        title: 'Fees',
         icon: DollarSign,
-        url: "/fees",
-        isActive: false
+        url: '/fees',
+        isActive: false,
+        requiredPermission: 'fee:read',
     },
     {
-        title: "Students",
+        title: 'Students',
         icon: Users,
-        url: "/students",
-        isActive: true
+        url: '/students',
+        isActive: true,
+        requiredPermission: 'student:read',
     },
     {
-        title: "Staff",
+        title: 'Staff',
         icon: Briefcase,
-        url: "/staff",
-        isActive: true
+        url: '/staff',
+        isActive: true,
+        requiredPermission: 'staff:read',
     },
     {
-        title: "Scores",
+        title: 'Scores',
         icon: BarChart,
-        url: "/scores",
-        isActive: false
+        url: '/scores',
+        isActive: false,
+        requiredPermission: 'score:read',
     },
     {
-        title: "Results",
+        title: 'Results',
         icon: FileText,
-        url: "/results",
-        isActive: false
+        url: '/results',
+        isActive: false,
+        requiredPermission: 'result:read',
     },
     {
-        title: "CBT",
+        title: 'CBT',
         icon: MonitorPlay,
-        url: "/cbt",
-        isActive: false
+        url: '/cbt',
+        isActive: false,
+        requiredPermission: 'cbt:read',
     },
     {
-        title: "Communication",
+        title: 'Communication',
         icon: MessageSquare,
-        url: "/communication",
-        isActive: false
+        url: '/communication',
+        isActive: false,
+        requiredPermission: 'communication:read',
     },
     {
-        title: "Users",
+        title: 'Users',
         icon: UserCog,
-        url: "/users/all-users",
-        isActive: true
+        url: '/users/all-users',
+        isActive: true,
+        requiredPermission: 'user:read',
     },
     {
-        title: "Lesson Plan",
+        title: 'Lesson Plan',
         icon: BookOpen,
-        url: "/lesson-plan",
-        isActive: false
+        url: '/lesson-plan',
+        isActive: false,
+        requiredPermission: 'lesson-plan:read',
     },
     {
-        title: "Help",
+        title: 'Help',
         icon: HelpCircle,
-        url: "/help",
-        isActive: false
+        url: '/help',
+        isActive: false,
+        requiredPermission: 'help:access',
     },
     {
-        title: "Configuration",
+        title: 'Configuration',
         icon: Settings,
-        url: "/configuration",
-        isActive: true
+        url: '/configuration',
+        isActive: true,
+        requiredPermission: 'configuration:read',
     },
 ];
+
 
 export const superAdminMenu = [
     {
@@ -130,5 +145,5 @@ export const superAdminMenu = [
         url: "/support",
         isActive: false
     },
-   
+
 ];

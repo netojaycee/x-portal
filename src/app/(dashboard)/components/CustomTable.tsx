@@ -73,13 +73,13 @@ interface CustomTableProps {
   actionButtonIcon?: React.ReactNode;
   title?: string;
   actionOptions?: ActionOption[];
-  currentPage: number;
-  onPageChange: (page: number) => void;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
   rowsPerPage?: number;
-  onRowsPerPageChange: (limit: number) => void;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  totalItems: number;
+  onRowsPerPageChange?: (limit: number) => void;
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
+  totalItems?: number;
   getActionOptions?: (row: any) => ActionOption[];
 }
 
@@ -136,7 +136,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
     return [...statuses, ...plans];
   }, [data]);
 
-  const totalPages = Math.ceil(totalItems / rowsPerPage);
+  const totalPages = Math.ceil((totalItems ?? 1) / rowsPerPage);
 
   // Handle sorting
   const handleSort = (columnKey: string) => {
@@ -256,7 +256,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
             <Input
               placeholder='Search...'
               value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               className='pl-10 rounded-2xl'
             />
             <Search className='absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
@@ -293,6 +293,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ? ENUM_MODULES.STUDENT
                     : title === "Subscription Plans"
                     ? ENUM_MODULES.SUBSCRIPTION
+                    : title === "Users List"
+                    ? ENUM_MODULES.USER
                     : null
                 )
               }
@@ -335,7 +337,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody className=''>
-          {totalItems > 0 ? (
+          {(totalItems ?? 0) > 0 ? (
             data.map((row, index) => (
               <TableRow key={index}>
                 {columns.map((column) => (
@@ -418,7 +420,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
       </Table>
 
       {/* Bottom: Rows Per Page, Pagination, Results Info */}
-      {totalItems > 0 && (showRowsPerPage || pagination || showResultsInfo) && (
+      {(totalItems ?? 0) > 0 && (showRowsPerPage || pagination || showResultsInfo) && (
         <div className='flex items-center justify-between'>
           {showRowsPerPage && (
             <div className='flex items-center gap-2'>
@@ -426,8 +428,10 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Select
                 value={rowsPerPage.toString()}
                 onValueChange={(value) => {
-                  onRowsPerPageChange(Number(value));
-                  onPageChange(1); // Reset to first page
+                  {
+                    if (onRowsPerPageChange) onRowsPerPageChange(Number(value));
+                    if (onPageChange) onPageChange(1); // Reset to first page
+                  }
                 }}
               >
                 <SelectTrigger className='w-[100px] rounded-2xl'>
@@ -444,12 +448,12 @@ const CustomTable: React.FC<CustomTableProps> = ({
             </div>
           )}
 
-          {pagination && totalItems > rowsPerPage && (
+          {pagination && (totalItems ?? 0) > rowsPerPage && (
             <div className='flex space-x-2'>
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => onPageChange(1)}
+                onClick={() => onPageChange && onPageChange(1)}
                 disabled={currentPage === 1}
               >
                 <ChevronsLeft className='h-4 w-4' />
@@ -457,8 +461,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1}
+                onClick={() => onPageChange && onPageChange((currentPage ?? 1) - 1)}
+                disabled={(currentPage ?? 1) === 1}
               >
                 Previous
               </Button>
@@ -468,7 +472,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     key={page}
                     variant={currentPage === page ? "default" : "outline"}
                     size='sm'
-                    onClick={() => onPageChange(page)}
+                    onClick={() => onPageChange && onPageChange(page)}
                   >
                     {page}
                   </Button>
@@ -477,7 +481,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => onPageChange(currentPage + 1)}
+                onClick={() => onPageChange && onPageChange((currentPage ?? 1) + 1)}
                 disabled={currentPage === totalPages}
               >
                 Next
@@ -485,7 +489,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => onPageChange(totalPages)}
+                onClick={() => onPageChange && onPageChange(totalPages)}
                 disabled={currentPage === totalPages}
               >
                 <ChevronsRight className='h-4 w-4' />
@@ -495,8 +499,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
 
           {showResultsInfo && (
             <div className='text-sm text-gray-600'>
-              Showing {(currentPage - 1) * rowsPerPage + 1} -{" "}
-              {Math.min(currentPage * rowsPerPage, totalItems)} of {totalItems}{" "}
+              Showing {((currentPage ?? 1) - 1) * rowsPerPage + 1} -{" "}
+              {Math.min((currentPage ?? 1) * rowsPerPage, totalItems ?? 0)} of {totalItems ?? 0}{" "}
               Results
             </div>
           )}
@@ -527,6 +531,15 @@ const CustomTable: React.FC<CustomTableProps> = ({
           onOpenChange={handleModalOpenChange}
           isEditMode={false}
           type={ENUM_MODULES.SUBSCRIPTION}
+        />
+      )}
+
+      {modal === ENUM_MODULES.USER && (
+        <CustomModal
+          open={modal === ENUM_MODULES.USER}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.USER}
         />
       )}
       {/* {modalType === "addSchool" ? (
