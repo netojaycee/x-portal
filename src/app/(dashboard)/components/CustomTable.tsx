@@ -32,6 +32,7 @@ import {
   Search,
   Filter,
   MoreVertical,
+  Loader2,
 } from "lucide-react";
 // import { ModalComponent } from "./modals/ModalComponent";
 // import { AddSubscriptionModal } from "./modals/AddSubsriptionModal";
@@ -81,6 +82,7 @@ interface CustomTableProps {
   onSearchChange?: (value: string) => void;
   totalItems?: number;
   getActionOptions?: (row: any) => ActionOption[];
+  isSearching?: boolean;
 }
 
 const CustomTable: React.FC<CustomTableProps> = ({
@@ -104,6 +106,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
   onSearchChange,
   totalItems,
   getActionOptions,
+  isSearching,
 }) => {
   // State for filters, sorting, and pagination
 
@@ -259,7 +262,11 @@ const CustomTable: React.FC<CustomTableProps> = ({
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               className='pl-10 rounded-2xl'
             />
-            <Search className='absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
+            {isSearching ? (
+              <Loader2 className='animate-spin absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
+            ) : (
+              <Search className='absolute top-1/2 left-3 w-5 h-5 transform -translate-y-1/2 text-gray-400' />
+            )}
           </div>
         )}
         <div className='flex items-center gap-2'>
@@ -342,9 +349,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <TableRow key={index}>
                 {columns.map((column) => (
                   <TableCell key={column.key}>
-                    {column.key === "status" ||
-                    column.key === "subStatus" ||
-                    column.key === "isActive" ? (
+                    {column.key === "sn" ? (
+                      ((currentPage ?? 1) - 1) * rowsPerPage + index + 1
+                    ) : column.key === "fullname" ? (
+                      `${row.firstname ?? ""} ${row.lastname ?? ""}`.trim() ||
+                      "--"
+                    ) : column.key === "status" ||
+                      column.key === "subStatus" ||
+                      column.key === "isActive" ? (
                       <span
                         className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
                           column.key === "isActive"
@@ -360,6 +372,22 @@ const CustomTable: React.FC<CustomTableProps> = ({
                             : "Inactive"
                           : row[column.key] || "--"}
                       </span>
+                    ) : column.key === "subRole" ? (
+                      row.subRole?.name || "--"
+                    ) : column.key === "date" ? (
+                      row.timestamp
+                      ? new Date(row.timestamp)
+                        .toISOString()
+                        .slice(0, 10) // "YYYY-MM-DD"
+                      : "--"
+                    ) : column.key === "time" ? (
+                      row.timestamp
+                      ? new Date(row.timestamp).toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        }).toLowerCase().replace(" ", "")
+                      : "--"
                     ) : column.key === "actions" &&
                       (getActionOptions || actionOptions.length > 0) ? (
                       <DropdownMenu>
@@ -420,92 +448,98 @@ const CustomTable: React.FC<CustomTableProps> = ({
       </Table>
 
       {/* Bottom: Rows Per Page, Pagination, Results Info */}
-      {(totalItems ?? 0) > 0 && (showRowsPerPage || pagination || showResultsInfo) && (
-        <div className='flex items-center justify-between'>
-          {showRowsPerPage && (
-            <div className='flex items-center gap-2'>
-              <span className='text-sm text-gray-600'>Show Rows</span>
-              <Select
-                value={rowsPerPage.toString()}
-                onValueChange={(value) => {
-                  {
-                    if (onRowsPerPageChange) onRowsPerPageChange(Number(value));
-                    if (onPageChange) onPageChange(1); // Reset to first page
+      {(totalItems ?? 0) > 0 &&
+        (showRowsPerPage || pagination || showResultsInfo) && (
+          <div className='flex items-center justify-between'>
+            {showRowsPerPage && (
+              <div className='flex items-center gap-2'>
+                <span className='text-sm text-gray-600'>Show Rows</span>
+                <Select
+                  value={rowsPerPage.toString()}
+                  onValueChange={(value) => {
+                    {
+                      if (onRowsPerPageChange)
+                        onRowsPerPageChange(Number(value));
+                      if (onPageChange) onPageChange(1); // Reset to first page
+                    }
+                  }}
+                >
+                  <SelectTrigger className='w-[100px] rounded-2xl'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rowsPerPageOptions.map((option) => (
+                      <SelectItem key={option} value={option.toString()}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {pagination && (totalItems ?? 0) > rowsPerPage && (
+              <div className='flex space-x-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => onPageChange && onPageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className='h-4 w-4' />
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() =>
+                    onPageChange && onPageChange((currentPage ?? 1) - 1)
                   }
-                }}
-              >
-                <SelectTrigger className='w-[100px] rounded-2xl'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {rowsPerPageOptions.map((option) => (
-                    <SelectItem key={option} value={option.toString()}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  disabled={(currentPage ?? 1) === 1}
+                >
+                  Previous
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size='sm'
+                      onClick={() => onPageChange && onPageChange(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() =>
+                    onPageChange && onPageChange((currentPage ?? 1) + 1)
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => onPageChange && onPageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className='h-4 w-4' />
+                </Button>
+              </div>
+            )}
 
-          {pagination && (totalItems ?? 0) > rowsPerPage && (
-            <div className='flex space-x-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => onPageChange && onPageChange(1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronsLeft className='h-4 w-4' />
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => onPageChange && onPageChange((currentPage ?? 1) - 1)}
-                disabled={(currentPage ?? 1) === 1}
-              >
-                Previous
-              </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size='sm'
-                    onClick={() => onPageChange && onPageChange(page)}
-                  >
-                    {page}
-                  </Button>
-                )
-              )}
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => onPageChange && onPageChange((currentPage ?? 1) + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => onPageChange && onPageChange(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                <ChevronsRight className='h-4 w-4' />
-              </Button>
-            </div>
-          )}
-
-          {showResultsInfo && (
-            <div className='text-sm text-gray-600'>
-              Showing {((currentPage ?? 1) - 1) * rowsPerPage + 1} -{" "}
-              {Math.min((currentPage ?? 1) * rowsPerPage, totalItems ?? 0)} of {totalItems ?? 0}{" "}
-              Results
-            </div>
-          )}
-        </div>
-      )}
+            {showResultsInfo && (
+              <div className='text-sm text-gray-600'>
+                Showing {((currentPage ?? 1) - 1) * rowsPerPage + 1} -{" "}
+                {Math.min((currentPage ?? 1) * rowsPerPage, totalItems ?? 0)} of{" "}
+                {totalItems ?? 0} Results
+              </div>
+            )}
+          </div>
+        )}
 
       {modal === ENUM_MODULES.SCHOOL && (
         <CustomModal

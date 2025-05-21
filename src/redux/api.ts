@@ -11,7 +11,7 @@ import { CreateSchoolInput, GetSchoolsQuery, GetSchoolsResponse, School, UpdateS
 
 const BASE_URL =
     process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_API_URL || "https://x-portal-server-x2uk.onrender.com"
+        ? process.env.NEXT_PUBLIC_API_URL || "https://api.x-portal.bitekitchen.com.ng"
         : `http://localhost:${process.env.PORT || 3000}`;
 
 // Base query with TypeScript annotations
@@ -30,7 +30,7 @@ const baseQuery: BaseQueryFn<FetchArgs, unknown, FetchBaseQueryError> = fetchBas
 export const api = createApi({
     reducerPath: "api",
     baseQuery,
-    tagTypes: ["User", "Subscriptions", "Schools", "Users", "Subroles", 'PermissionsSchool', 'RolePermissions'],
+    tagTypes: ["User", "Subscriptions", "Schools", "Users", "Subroles", 'PermissionsSchool', 'RolePermissions', "Logs"],
     endpoints: (builder) => ({
         // Register Endpoint
         register: builder.mutation<AuthResponse, RegisterCredentials>({
@@ -162,7 +162,7 @@ export const api = createApi({
                 if (schoolId) params.append('schoolId', schoolId);
                 if (gender) params.append('gender', gender);
                 return {
-                    url: `/users/fetch-users?${params.toString()}`,
+                    url: `/users/get/all-users?${params.toString()}`,
                 };
             },
             providesTags: (result) =>
@@ -276,7 +276,14 @@ export const api = createApi({
             ],
         }),
 
-
+        // getLogs
+        getLogs: builder.query<any, { page?: number; limit?: number }>({
+            query: ({ page = 1, limit = 100 }) => ({
+                url: "/logs",
+                params: { page, limit },
+            }),
+            providesTags: ["Logs"],
+        }),
 
         addSubscription: builder.mutation({
             query: (subscription) => ({
@@ -335,6 +342,7 @@ export const {
     useGetPermissionsSchoolQuery,
     useGetRolePermissionsQuery,
     useUpdateRolePermissionsMutation,
+    useGetLogsQuery,
 
     useAddSubscriptionMutation,
     useUpdateSubscriptionMutation,

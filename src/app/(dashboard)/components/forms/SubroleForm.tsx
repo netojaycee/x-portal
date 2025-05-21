@@ -21,8 +21,6 @@ import {
   useCreateSubroleMutation,
   useUpdateSubroleMutation,
 } from "@/redux/api";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 
 // Define the form schema
 const subroleSchema = z.object({
@@ -46,7 +44,6 @@ export default function SubroleForm({
   isEditMode = false,
   onSuccess,
 }: SubroleFormProps) {
-  const userData = useSelector((state: RootState) => state.user.user);
 
   const [
     createSubrole,
@@ -85,7 +82,7 @@ export default function SubroleForm({
     try {
       const credentials = {
         ...values,
-        schoolId: userData?.schoolId,
+        name: values.name.trim().toLowerCase(),
       };
       if (isEditMode && subrole?.id) {
         await updateSubrole({ id: subrole.id, input: credentials }).unwrap();

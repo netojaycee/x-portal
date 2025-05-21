@@ -14,152 +14,162 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
-import { useCreateSchoolMutation, useUpdateSchoolMutation } from "@/redux/api"; // Adjust path to your RTK Query API slice
-import { School } from "@/lib/types/school";
 import PhoneInput from "react-phone-input-2";
 import { stripCountryCode } from "@/lib/utils";
+import {
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useGetSubrolesQuery,
+} from "@/redux/api";
+import { User } from "@/lib/types";
 
 // Define the form schema
-const schoolSchema = z.object({
-  name: z
+const userSchema = z.object({
+  firstname: z
     .string()
-    .min(1, "School name is required")
-    .max(100, "School name must be less than 100 characters"),
+    .min(1, "First name is required")
+    .max(100, "First name must be less than 100 characters"),
+  lastname: z
+    .string()
+    .min(1, "Last name is required")
+    .max(100, "Last name must be less than 100 characters"),
   email: z.string().email("Invalid email address"),
   contact: z
     .string()
-    .min(14, "Contact must be 11 characters, please start with a 0")
-    .max(14, "Contact must be 11 characters, please start with a 0"),
-  address: z.string().optional(),
-
-  // status: z.enum(["Active", "Inactive"], {
-  //   required_error: "Status is required",
-  // }),
+    .min(14, "Contact must be 11 digits, please start with a 0")
+    .max(14, "Contact must be 11 digits, please start with a 0"),
+  gender: z.enum(["male", "female"], {
+    required_error: "Gender is required",
+  }),
+  subRoleId: z.string().min(1, "Role is required"),
 });
 
-type SchoolFormData = z.infer<typeof schoolSchema>;
+type UserFormData = z.infer<typeof userSchema>;
 
-interface SchoolFormProps {
-  school?: School & { id: string }; // For edit mode
+interface UserFormProps {
+  user?: User & { id: string }; // For edit mode
   isEditMode?: boolean;
   onSuccess: () => void;
 }
 
-export default function SchoolForm({
-  school,
+export default function UserForm({
+  user,
   isEditMode = false,
   onSuccess,
-}: SchoolFormProps) {
+}: UserFormProps) {
   const [
-    addSchool,
+    addUser,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useCreateSchoolMutation();
+  ] = useCreateUserMutation();
 
   const [
-    updateSchool,
+    updateUser,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateSchoolMutation();
+  ] = useUpdateUserMutation();
+
+  const {
+    data,
+    isLoading: isLoadingSubroles,
+    isError: isErrorSubroles,
+    error: errorSubroles,
+  } = useGetSubrolesQuery({});
+  const subrolesData = data?.data || [];
 
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
   const isError = isEditMode ? isErrorUpdate : isErrorAdd;
   const error = isEditMode ? errorUpdate : errorAdd;
 
-  const form = useForm<SchoolFormData>({
-    resolver: zodResolver(schoolSchema),
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
     defaultValues: {
-      name: school?.name || "",
-      email: school?.email || "",
-      contact: school?.contact || "",
-      address: school?.address || "",
-      // status: school?.status || undefined,
+      firstname: user?.firstname || "",
+      lastname: user?.lastname || "",
+      email: user?.email || "",
+      contact: user?.phone || "",
+      gender: user?.gender || undefined,
+      subRoleId: user?.subRoleId || "",
     },
   });
 
-  // console.log(school && school);
-
-  const onSubmit = async (values: SchoolFormData) => {
+  const onSubmit = async (values: UserFormData) => {
     try {
       const credentials = {
         ...values,
-        contact: stripCountryCode(values.contact),
+        phone: stripCountryCode(values.contact),
       };
-      if (isEditMode && school?.id) {
-        await updateSchool({ id: school.id, input: credentials }).unwrap();
+      if (isEditMode && user?.id) {
+        await updateUser({ id: user.id, input: credentials }).unwrap();
       } else {
-        // console.log(values, credentials);
-        await addSchool(credentials).unwrap();
+        await addUser(credentials).unwrap();
       }
     } catch (error) {
-      console.error(`${isEditMode ? "Update" : "Add"} school error:`, error);
+      console.error(`${isEditMode ? "Update" : "Add"} user error:`, error);
     }
   };
 
   useEffect(() => {
     if (isSuccess) {
       toast.success(
-        isEditMode
-          ? "School updated successfully"
-          : "School created successfully"
+        isEditMode ? "User updated successfully" : "User created successfully"
       );
       form.reset();
       if (onSuccess) onSuccess();
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
-          ? (error.data as { message?: string })?.message
+          ? (error.data as { error?: string })?.error
           : "An error occurred";
       toast.error(errorMessage);
     }
   }, [isSuccess, isError, error, form, onSuccess, isEditMode]);
 
+  useEffect(() => {
+    if (isErrorSubroles && errorSubroles) {
+      const errorMessage =
+        "data" in errorSubroles &&
+        typeof errorSubroles.data === "object" &&
+        errorSubroles.data
+          ? (errorSubroles.data as { error?: string })?.error
+          : "Failed to load roles";
+      toast.error(errorMessage);
+    }
+  }, [isErrorSubroles, errorSubroles]);
+
   return (
     <div className='w-full max-w-md'>
-      {/* Header */}
-      {/* <div className='mb-6 text-center'>
-        <h2 className='text-2xl md:text-3xl font-bold text-[#4A4A4A] font-lato'>
-          {isEditMode ? "Edit School" : "Add School"}
-        </h2>
-        <p className='mt-1 text-sm text-gray-600'>
-          {isEditMode
-            ? "Update the school details below"
-            : "Enter the details to create a new school"}
-        </p>
-      </div> */}
-
-      {/* Form */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-          {/* Name Field */}
+          {/* First Name and Last Name */}
           <div className='grid grid-cols-2 items-center gap-3'>
             <FormField
               control={form.control}
-              name='name'
+              name='firstname'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-gray-700'>School Name</FormLabel>
+                  <FormLabel className='text-gray-700'>First Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='e.g., Springfield High'
+                      placeholder='e.g., Tolu'
                       {...field}
                       className='border-gray-300 focus:border-primary focus:ring-primary'
                     />
@@ -168,18 +178,15 @@ export default function SchoolForm({
                 </FormItem>
               )}
             />
-
-            {/* Email Field */}
             <FormField
               control={form.control}
-              name='email'
+              name='lastname'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-gray-700'>Email</FormLabel>
+                  <FormLabel className='text-gray-700'>Last Name</FormLabel>
                   <FormControl>
                     <Input
-                      type='email'
-                      placeholder='e.g., contact@school.com'
+                      placeholder='e.g., Adebayo'
                       {...field}
                       className='border-gray-300 focus:border-primary focus:ring-primary'
                     />
@@ -189,15 +196,34 @@ export default function SchoolForm({
               )}
             />
           </div>
-          {/* Contact Field */}
-          <div className='items-center grid grid-cols-2 gap-3'>
+
+          {/* Email and Contact */}
+          <div className='grid grid-cols-2 items-center gap-3'>
+            <FormField
+              control={form.control}
+              name='email'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className='text-gray-700'>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='email'
+                      placeholder='e.g., user@example.com'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name='contact'
               render={({ field }) => (
-                <FormItem className=''>
+                <FormItem>
                   <FormLabel className='text-gray-700'>Contact</FormLabel>
-                  <FormControl className=''>
+                  <FormControl>
                     <PhoneInput
                       inputProps={{
                         name: "contact",
@@ -217,7 +243,7 @@ export default function SchoolForm({
                         boxShadow: "none",
                         height: "2.5rem", // h-10
                         borderRadius: "0.375rem", // rounded-md
-                        paddingLeft: "2.5rem", // pl-10 (to match input icon spacing)
+                        paddingLeft: "2.5rem", // pl-10
                         paddingRight: "0.75rem", // pr-3
                         fontSize: "1rem", // text-base
                         transition: "border-color 0.2s, box-shadow 0.2s",
@@ -228,63 +254,75 @@ export default function SchoolForm({
                 </FormItem>
               )}
             />
+          </div>
 
-            {/* Status Field */}
-            {/* <FormField
+          {/* Gender and SubRole */}
+          <div className='grid grid-cols-2 items-center gap-3'>
+            <FormField
               control={form.control}
-              name='status'
+              name='gender'
               render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Status</FormLabel>
+                <FormItem>
+                  <FormLabel className='text-gray-700'>Gender</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl className='w-full'>
                       <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary'>
-                        <SelectValue placeholder='Select status' />
+                        <SelectValue placeholder='Select gender' />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem
-                        value='Active'
-                        className='bg-green-100 text-green-800 '
-                      >
-                        Active
-                      </SelectItem>
-                      <SelectItem
-                        value='Inactive'
-                        className='bg-red-100 text-red-800'
-                      >
-                        Inactive
-                      </SelectItem>
+                      <SelectItem value='male'>Male</SelectItem>
+                      <SelectItem value='female'>Female</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
-            /> */}
-
+            />
             <FormField
               control={form.control}
-              name='address'
+              name='subRoleId'
               render={({ field }) => (
-                <FormItem className=''>
-                  <FormLabel className='text-gray-700'>
-                    School Address
-                  </FormLabel>
-                  <FormControl className=''>
-                    <Input
-                      placeholder='e.g., 456 Oak Ave'
-                      {...field}
-                      className='border-gray-300 focus:border-primary focus:ring-primary'
-                    />
-                  </FormControl>
+                <FormItem>
+                  <FormLabel className='text-gray-700'>Role</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    // disabled={isLoadingSubroles}
+                  >
+                    <FormControl className='w-full'>
+                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary'>
+                        <SelectValue placeholder='Select role' />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {isLoadingSubroles ? (
+                            <div className="p-3 flex items-center justify-center">
+                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                <span className="ml-2 text-primary">Loading roles...</span>
+                            </div>
+                        ) : isErrorSubroles ? (
+                            <div className="p-3 text-sm text-red-600 border border-red-500 rounded">
+                                Failed to load roles
+                            </div>
+                        ) : (
+                            subrolesData.map((subrole: any) => (
+                                <SelectItem key={subrole.id} value={subrole.id}>
+                                    {subrole.name}
+                                </SelectItem>
+                            ))
+                        )}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
+
           {/* Submit Button */}
           <Button
             type='submit'

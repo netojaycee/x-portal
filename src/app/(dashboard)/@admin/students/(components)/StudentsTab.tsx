@@ -93,7 +93,7 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
         title='Students List'
         columns={[
           // { key: "sn", label: "SN", sortable: true },
-          { key: "name", label: "Name", sortable: true },
+          { key: "fullname", label: "Name" },
           { key: "gender", label: "Gender" },
           { key: "class", label: "Class" },
           { key: "arm", label: "Arm" },

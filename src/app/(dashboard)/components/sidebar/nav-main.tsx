@@ -29,7 +29,7 @@ export function NavMain({
             <SidebarMenuButton
               tooltip={item.title}
               asChild
-              isActive={pathname === item.url && !item.isActive}
+              isActive={pathname === item.url && item.isActive || pathname.includes(item.url)}
               className={
                 !item.isActive
                   ? "text-gray-400 pointer-events-none opacity-70"

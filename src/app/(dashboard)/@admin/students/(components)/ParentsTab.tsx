@@ -92,7 +92,7 @@ export default function ParentsTab({ schoolId }: { schoolId: string | null }) {
         title='Students List'
         columns={[
           // { key: "sn", label: "SN", sortable: true },
-          { key: "name", label: "Name", sortable: true },
+          { key: "fullname", label: "Name" },
           { key: "emailAddress", label: "Email Address" },
           { key: "contact", label: "Contact" },
           { key: "occupation", label: "Occupation" },
@@ -127,14 +127,14 @@ export default function ParentsTab({ schoolId }: { schoolId: string | null }) {
         getActionOptions={getActionOptions}
       />
       {modal.type === "edit" && (
-              <CustomModal
-                open={modal.type === "edit"}
-                selectedRow={modal.data}
-                onOpenChange={handleModalOpenChange}
-                isEditMode={true}
-                type={ENUM_MODULES.PARENT}
-              />
-            )}
+        <CustomModal
+          open={modal.type === "edit"}
+          selectedRow={modal.data}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={true}
+          type={ENUM_MODULES.PARENT}
+        />
+      )}
     </div>
   );
 }

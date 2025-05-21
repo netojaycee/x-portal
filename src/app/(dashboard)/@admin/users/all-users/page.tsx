@@ -18,13 +18,16 @@ export default function AllUsersPage() {
   const [limit, setLimit] = useState(rowsPerPageOptions[0] || 10);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalState>({ type: null });
-  const [debouncedSearchTerm] = useDebounce(search, 500);
+  const [debouncedSearchTerm] = useDebounce(
+    search,
+    500
+  );
   const router = useRouter();
   const userData = useSelector((state: RootState) => state.user.user);
   const schoolId = userData?.schoolId || null;
 
   // Pass them into your RTK hook
-  const { data, isLoading } = useGetUsersQuery(
+  const { data, isLoading, isFetching: isSearching } = useGetUsersQuery(
     {
       page,
       limit,
@@ -83,11 +86,12 @@ console.log(data && data);
         title='Users List'
         columns={[
           // { key: "sn", label: "SN", sortable: true },
-          { key: "name", label: "Name", sortable: true },
+          { key: "fullname", label: "Name" },
           { key: "email", label: "Email" },
           { key: "gender", label: "Gender" },
-          { key: "contact", label: "Contact" },
-          { key: "role", label: "Role" },
+          { key: "phone", label: "Contact" },
+          { key: "subRole", label: "Role" },
+          { key: "plainPassword", label: "Password" },
           { key: "createdDate", label: "Created Date" },
           { key: "status", label: "Status" },
           { key: "actions", label: "Actions" },
@@ -97,6 +101,7 @@ console.log(data && data);
         currentPage={page}
         onPageChange={setPage}
         rowsPerPage={limit}
+        isSearching={isSearching}
         onRowsPerPageChange={(newLimit) => {
           setLimit(newLimit);
           setPage(1);

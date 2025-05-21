@@ -12,6 +12,7 @@ import SubscriptionForm from "../forms/SubscriptionForm";
 import StudentForm from "../forms/StudentForm";
 import ConfirmationForm from "../forms/ConfirmationForm";
 import SubroleForm from "../forms/SubroleForm";
+import UserForm from "../forms/UserForm";
 
 interface CustomModalProps {
   type: ENUM_MODULES;
@@ -41,6 +42,7 @@ export function CustomModal({
                 (type === ENUM_MODULES.SCHOOL ||
                   type === ENUM_MODULES.STUDENT ||
                   type === ENUM_MODULES.SUBSCRIPTION ||
+                  type === ENUM_MODULES.USER ||
                   type === ENUM_MODULES.SUBROLE) &&
                 status === "delete"
               ) {
@@ -50,6 +52,7 @@ export function CustomModal({
                 (type === ENUM_MODULES.SCHOOL ||
                   type === ENUM_MODULES.STUDENT ||
                   type === ENUM_MODULES.SUBSCRIPTION ||
+                  type === ENUM_MODULES.USER ||
                   type === ENUM_MODULES.SUBROLE) &&
                 status === "confirmation"
               ) {
@@ -79,6 +82,12 @@ export function CustomModal({
               if (type === ENUM_MODULES.SUBROLE && !isEditMode) {
                 return "Add Role";
               }
+              if (type === ENUM_MODULES.USER && isEditMode) {
+                return "Edit User";
+              }
+              if (type === ENUM_MODULES.USER && !isEditMode) {
+                return "Add User";
+              }
               return null;
             })()}
           </DialogTitle>
@@ -88,6 +97,7 @@ export function CustomModal({
                 (type === ENUM_MODULES.SCHOOL ||
                   type === ENUM_MODULES.STUDENT ||
                   type === ENUM_MODULES.SUBSCRIPTION ||
+                  type === ENUM_MODULES.USER ||
                   type === ENUM_MODULES.SUBROLE) &&
                 status === "delete"
               ) {
@@ -99,6 +109,7 @@ export function CustomModal({
                 (type === ENUM_MODULES.SCHOOL ||
                   type === ENUM_MODULES.STUDENT ||
                   type === ENUM_MODULES.SUBSCRIPTION ||
+                  type === ENUM_MODULES.USER ||
                   type === ENUM_MODULES.SUBROLE) &&
                 status === "confirmation"
               ) {
@@ -131,6 +142,12 @@ export function CustomModal({
               }
               if (type === ENUM_MODULES.SUBROLE && !isEditMode) {
                 return "Enter details to create a new subscription plan.";
+              }
+              if (type === ENUM_MODULES.USER && isEditMode) {
+                return `Update details for ${selectedRow?.fullname || "--"}.`;
+              }
+              if (type === ENUM_MODULES.USER && !isEditMode) {
+                return "Enter details to create a new user.";
               }
               return null;
             })()}
@@ -172,10 +189,18 @@ export function CustomModal({
             onSuccess={handleClose}
           />
         )}
+        {type === ENUM_MODULES.USER && !status && (
+          <UserForm
+            user={selectedRow}
+            isEditMode={isEditMode}
+            onSuccess={handleClose}
+          />
+        )}
 
         {(type === ENUM_MODULES.SCHOOL ||
           type === ENUM_MODULES.STUDENT ||
           type === ENUM_MODULES.SUBSCRIPTION ||
+          type === ENUM_MODULES.USER ||
           type === ENUM_MODULES.SUBROLE) &&
           (status === "confirmation" || status === "delete") && (
             <ConfirmationForm
