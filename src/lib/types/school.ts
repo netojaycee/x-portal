@@ -9,6 +9,7 @@ export interface GetSchoolsQuery {
     search?: string;
     page?: number;
     limit?: number;
+    subscriptionId?: string | null; // For filtering schools with no subscription
     schoolId?: string | null; // For user.schoolId filtering
 }
 
@@ -21,6 +22,16 @@ export interface School {
     contact: string;
     address?: string;
     subscriptionId?: string;
+    subscription?: {
+        id: string;
+        name: string;
+        duration: number;
+        studentLimit: number;
+        isActive: boolean;
+        isDeleted: boolean;
+        createdAt: string;
+        updatedAt: string;
+    } | null;
     logo?: Image | null;
     isActive: boolean;
     isDeleted: boolean;

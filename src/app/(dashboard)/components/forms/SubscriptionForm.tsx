@@ -24,9 +24,9 @@ import {
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import {
-  useAddSubscriptionMutation,
+  useCreateSubscriptionMutation,
   useUpdateSubscriptionMutation,
-} from "@/redux/api"; 
+} from "@/redux/api";
 
 // Define the form schema
 const subscriptionSchema = z.object({
@@ -42,15 +42,21 @@ const subscriptionSchema = z.object({
   studentLimit: z.enum(["50", "100", "200", "Unlimited"], {
     required_error: "Student limit is required",
   }),
-  status: z.enum(["Active", "Inactive"], {
-    required_error: "Status is required",
-  }),
+  // status: z.enum(["Active", "Inactive"], {
+  //   required_error: "Status is required",
+  // }),
 });
+
+interface Subscription {
+  name: string;
+  duration: number;
+  studentLimit: number;
+}
 
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
 
 interface SubscriptionFormProps {
-  subscription?: SubscriptionFormData & { id: string }; // For edit mode
+  subscription?: Subscription & { id: string }; // For edit mode
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -61,14 +67,14 @@ export default function SubscriptionForm({
   onSuccess,
 }: SubscriptionFormProps) {
   const [
-    addSubscription,
+    createSubscription,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useAddSubscriptionMutation();
+  ] = useCreateSubscriptionMutation();
 
   const [
     updateSubscription,
@@ -88,19 +94,39 @@ export default function SubscriptionForm({
   const form = useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      package: subscription?.package || "",
+      package: subscription?.name || "",
       duration: subscription?.duration || 0,
-      studentLimit: subscription?.studentLimit || undefined,
-      status: subscription?.status || undefined,
+      studentLimit:
+        Number(subscription?.studentLimit) === 100000
+          ? "Unlimited"
+          : subscription?.studentLimit === 50
+          ? "50"
+          : subscription?.studentLimit === 100
+          ? "100"
+          : subscription?.studentLimit === 200
+          ? "200"
+          : undefined,
+      // status: subscription?.status || undefined,
     },
   });
 
   const onSubmit = async (values: SubscriptionFormData) => {
     try {
+      const { package: packageName, studentLimit, ...rest } = values;
+      const credentials = {
+        ...rest,
+        studentLimit:
+          studentLimit === "Unlimited" ? 100000 : Number(studentLimit),
+        name: packageName.trim().toLowerCase(),
+      };
+      console.log(credentials);
       if (isEditMode && subscription?.id) {
-        await updateSubscription({ id: subscription.id, ...values }).unwrap();
+        await updateSubscription({
+          id: subscription.id,
+          ...credentials,
+        }).unwrap();
       } else {
-        await addSubscription(values).unwrap();
+        await createSubscription(credentials).unwrap();
       }
     } catch (error) {
       console.error(
@@ -218,7 +244,7 @@ export default function SubscriptionForm({
             />
 
             {/* Status Field */}
-            <FormField
+            {/* <FormField
               control={form.control}
               name='status'
               render={({ field }) => (
@@ -251,7 +277,7 @@ export default function SubscriptionForm({
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
           </div>
           {/* Submit Button */}
           <Button

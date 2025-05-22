@@ -99,11 +99,12 @@ export const api = createApi({
         }),
 
         getSchools: builder.query<GetSchoolsResponse, GetSchoolsQuery>({
-            query: ({ search, page = 1, limit = 5 }) => {
+            query: ({ search, page = 1, limit = 5, subscriptionId }) => {
                 const params = new URLSearchParams();
                 if (search) params.append('search', search.toLowerCase());
                 params.append('page', page.toString());
                 params.append('limit', limit.toString());
+                if (subscriptionId) params.append('subscriptionId', subscriptionId);
                 return {
                     url: `/schools/list?${params.toString()}`,
                 };
@@ -278,16 +279,24 @@ export const api = createApi({
 
         // getLogs
         getLogs: builder.query<any, { page?: number; limit?: number }>({
-            query: ({ page = 1, limit = 100 }) => ({
+            query: ({ page = 1, limit = 20 }) => ({
                 url: "/logs",
                 params: { page, limit },
             }),
             providesTags: ["Logs"],
         }),
+        assignSubscription: builder.mutation<void, { schoolId: string; subscriptionId: string }>({
+            query: ({ schoolId, subscriptionId }) => ({
+                url: '/subscription/assign-subscription-to-school',
+                method: 'POST',
+                body: { schoolId, subscriptionId },
+            }),
+            invalidatesTags: ['Schools'], // Refresh school list after assignment
+        }),
 
-        addSubscription: builder.mutation({
+        createSubscription: builder.mutation({
             query: (subscription) => ({
-                url: "/subscriptions",
+                url: "/subscription/create",
                 method: "POST",
                 body: subscription,
             }),
@@ -303,8 +312,8 @@ export const api = createApi({
         }),
 
         getSubscriptions: builder.query({
-            query: ({ page = 1, limit = 100 }) => ({
-                url: "/subscriptions",
+            query: ({ page = 1, limit = 10 }) => ({
+                url: "/subscription/fetch",
                 params: { page, limit },
             }),
             providesTags: ["Subscriptions"],
@@ -343,8 +352,9 @@ export const {
     useGetRolePermissionsQuery,
     useUpdateRolePermissionsMutation,
     useGetLogsQuery,
-
-    useAddSubscriptionMutation,
+    useAssignSubscriptionMutation,
+    useGetSubscriptionsQuery,
+    useCreateSubscriptionMutation,
     useUpdateSubscriptionMutation,
 
 

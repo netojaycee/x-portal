@@ -35,6 +35,7 @@ export default function Schools() {
   }
   // console.log(data && data);
   const schoolsData = data?.schools || [];
+  console.log("schoolsData", schoolsData);
 
   const openModal = (type: Exclude<ModalType, "">, row: School) =>
     setModal({ type, data: row });
@@ -82,7 +83,7 @@ export default function Schools() {
       <CustomTable
         title='Schools List'
         columns={[
-          // { key: "sn", label: "SN", sortable: true },
+          { key: "sn", label: "SN", sortable: true },
           { key: "name", label: "School Name", sortable: true },
           { key: "email", label: "Email Address" },
           { key: "contact", label: "Contact" },

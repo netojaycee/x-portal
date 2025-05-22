@@ -12,7 +12,7 @@
 
 # testing
 /coverage
-
+./src/app/(dashboard)/@admin/configuration
 # next.js
 /.next/
 /out/

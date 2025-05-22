@@ -13,6 +13,7 @@ import StudentForm from "../forms/StudentForm";
 import ConfirmationForm from "../forms/ConfirmationForm";
 import SubroleForm from "../forms/SubroleForm";
 import UserForm from "../forms/UserForm";
+import SubscriptionAssignmentForm from "../forms/SubscriptionAssignmentForm";
 
 interface CustomModalProps {
   type: ENUM_MODULES;
@@ -20,7 +21,7 @@ interface CustomModalProps {
   selectedRow?: any;
   open: boolean | undefined;
   onOpenChange: (value: boolean) => void;
-  status?: "confirmation" | "delete";
+  status?: "confirmation" | "delete" | "custom";
 }
 
 export function CustomModal({
@@ -209,6 +210,13 @@ export function CustomModal({
               status={status}
             />
           )}
+
+        {type === ENUM_MODULES.SUBSCRIPTION && status === "custom" && (
+          <SubscriptionAssignmentForm
+            subscriptionId={selectedRow?.id}
+            onSuccess={handleClose}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

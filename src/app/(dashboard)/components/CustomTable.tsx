@@ -348,7 +348,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
             data.map((row, index) => (
               <TableRow key={index}>
                 {columns.map((column) => (
-                  <TableCell key={column.key}>
+                    <TableCell key={column.key}>
                     {column.key === "sn" ? (
                       ((currentPage ?? 1) - 1) * rowsPerPage + index + 1
                     ) : column.key === "fullname" ? (
@@ -358,22 +358,24 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       column.key === "subStatus" ||
                       column.key === "isActive" ? (
                       <span
-                        className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
-                          column.key === "isActive"
-                            ? row[column.key]
-                              ? "active"
-                              : "inactive"
-                            : row[column.key]
-                        )}`}
+                      className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
+                        column.key === "isActive"
+                        ? row[column.key]
+                          ? "active"
+                          : "inactive"
+                        : row[column.key]
+                      )}`}
                       >
-                        {column.key === "isActive"
-                          ? row[column.key]
-                            ? "Active"
-                            : "Inactive"
-                          : row[column.key] || "--"}
+                      {column.key === "isActive"
+                        ? row[column.key]
+                        ? "Active"
+                        : "Inactive"
+                        : row[column.key] || "--"}
                       </span>
                     ) : column.key === "subRole" ? (
                       row.subRole?.name || "--"
+                    ) : column.key === "subPlan" ? (
+                      row.subscription?.name || "--"
                     ) : column.key === "date" ? (
                       row.timestamp
                       ? new Date(row.timestamp)
@@ -391,40 +393,38 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ) : column.key === "actions" &&
                       (getActionOptions || actionOptions.length > 0) ? (
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-8 w-8 p-0'
-                          >
-                            <MoreVertical className='h-4 w-4' />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end'>
-                          {/* {actionOptions.map((action) => (
-                            <DropdownMenuItem
-                              key={action.label}
-                              onClick={() => handleActionClick(row, action)}
-                            >
-                              {action.label}
-                            </DropdownMenuItem>
-                          ))} */}
-
-                          {(getActionOptions
-                            ? getActionOptions(row)
-                            : actionOptions
-                          ).map((action) => (
-                            <DropdownMenuItem
-                              key={action.label}
-                              onClick={() => action.handler(row)}
-                            >
-                              {action.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                        variant='ghost'
+                        size='sm'
+                        className='h-8 w-8 p-0'
+                        >
+                        <MoreVertical className='h-4 w-4' />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align='end'>
+                        {(getActionOptions
+                        ? getActionOptions(row)
+                        : actionOptions
+                        ).map((action) => (
+                        <DropdownMenuItem
+                          key={action.label}
+                          onClick={() => action.handler(row)}
+                        >
+                          {action.label}
+                        </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
                       </DropdownMenu>
-                    ) : column.key === "dueDate" ||
-                      column.key === "startedDate" ||
+                    ) : column.key === "dueDate" ? (
+                      row.SchoolSubscription &&
+                      Array.isArray(row.SchoolSubscription) &&
+                      row.SchoolSubscription[0]?.endDate
+                      ? new Date(row.SchoolSubscription[0].endDate)
+                        .toISOString()
+                        .slice(0, 10)
+                      : "--"
+                    ) : column.key === "startedDate" ||
                       column.key === "createDate" ? (
                       row[column.key] || "--"
                     ) : column.key === "studentLimit" &&
@@ -433,7 +433,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ) : (
                       row[column.key] || "--"
                     )}
-                  </TableCell>
+                    </TableCell>
                 ))}
               </TableRow>
             ))
