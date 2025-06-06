@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import {
   Form,
@@ -18,52 +17,96 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useCreateClassMutation } from "@/redux/api"; // Assume this is defined in your RTK setup
-import { useRouter } from "next/navigation";
+import { useCreateClassMutation, useUpdateClassMutation } from "@/redux/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define the form schema
 const classSchema = z.object({
-  category: z.string().min(1, "Class category is required"),
+  category: z.enum(["junior", "senior"], {
+    required_error: "Class category is required",
+  }),
   name: z.string().min(1, "Class name is required"),
-  arms: z.array(z.string()).optional(),
-  status: z.boolean(),
+  isActive: z.boolean().optional(),
 });
 
 type ClassFormData = z.infer<typeof classSchema>;
 
-const CreateClassForm: React.FC = () => {
-  const router = useRouter();
-  const [createClass, { isLoading, isSuccess, isError, error }] =
-    useCreateClassMutation();
+interface ClassFormProps {
+  classData?: ClassFormData & { id: string }; // For edit mode
+  isEditMode?: boolean;
+  onSuccess: () => void;
+}
+
+const CreateClassForm: React.FC<ClassFormProps> = ({
+  classData,
+  isEditMode = false,
+  onSuccess,
+}) => {
+  const [
+    createClass,
+    {
+      isLoading: isLoadingAdd,
+      isSuccess: isSuccessAdd,
+      isError: isErrorAdd,
+      error: errorAdd,
+    },
+  ] = useCreateClassMutation();
+  const [
+    updateClass,
+    {
+      isLoading: isLoadingUpdate,
+      isSuccess: isSuccessUpdate,
+      isError: isErrorUpdate,
+      error: errorUpdate,
+    },
+  ] = useUpdateClassMutation();
+
+  const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
+  const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
+  const isError = isEditMode ? isErrorUpdate : isErrorAdd;
+  const error = isEditMode ? errorUpdate : errorAdd;
 
   const form = useForm<ClassFormData>({
     resolver: zodResolver(classSchema),
     defaultValues: {
-      category: "",
-      name: "",
-      arms: [],
-      status: false,
+      category: classData?.category || "junior",
+      name: classData?.name || "",
+      isActive: classData?.isActive || true, // Default to true for add mode
     },
   });
 
+  // console.log("Class Data:", classData);
+
   const onSubmit = async (values: ClassFormData) => {
     try {
-      await createClass({
-        category: values.category,
-        name: values.name,
-        arms: values.arms,
-        status: values.status ? "active" : "deactivated",
-      }).unwrap();
+      const credentials = {
+        ...values
+      };
+      console.log(credentials);
+      if (isEditMode && classData?.id) {
+        await updateClass({ id: classData.id, ...credentials }).unwrap();
+      } else {
+        await createClass(credentials).unwrap();
+      }
     } catch (error) {
-      console.error("Create class error:", error);
+      console.error(`${isEditMode ? "Update" : "Create"} class error:`, error);
     }
   };
 
   useEffect(() => {
     if (isSuccess) {
-      toast.success("Class created successfully");
+      toast.success(
+        isEditMode ? "Class updated successfully" : "Class created successfully"
+      );
       form.reset();
-      router.back(); // Navigate back after success
+      onSuccess();
+      // else router.back(); // Navigate back if no onSuccess callback
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
@@ -71,18 +114,12 @@ const CreateClassForm: React.FC = () => {
           : "An error occurred";
       toast.error(errorMessage);
     }
-  }, [isSuccess, isError, error, form, router]);
+  }, [isSuccess, isError, error, form, onSuccess, isEditMode]);
 
   return (
-    <div className='w-full max-w-md p-6'>
-      <div className='space-y-3 mb-6'>
-        <h2 className='text-lg font-semibold'>Create a new class level</h2>
-        <p className='text-sm text-gray-500'>
-          Enter details for the class level below
-        </p>
-      </div>
+    <div className='w-full max-w-md'>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
           {/* Class Category */}
           <FormField
             control={form.control}
@@ -91,11 +128,22 @@ const CreateClassForm: React.FC = () => {
               <FormItem>
                 <FormLabel>Class Category</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder='Enter category (Example: Junior secondary school)'
-                    {...field}
-                    className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                  />
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value} // Use field value for preselection
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue placeholder='Select a class category' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='junior'>
+                        Junior Secondary School
+                      </SelectItem>
+                      <SelectItem value='senior'>
+                        Senior Secondary School
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -121,63 +169,34 @@ const CreateClassForm: React.FC = () => {
             )}
           />
 
-          {/* Select Arms */}
-          <FormField
-            control={form.control}
-            name='arms'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Select Arms</FormLabel>
-                <div className='flex flex-wrap gap-4'>
-                  {["No Arms", "Gold", "Diamond", "Silver"].map((arm) => (
-                    <div key={arm} className='flex items-center space-x-2'>
-                      <Checkbox
-                        id={arm}
-                        checked={field.value?.includes(arm)}
-                        onCheckedChange={(checked) => {
-                          const newArms = checked
-                            ? [...(field.value || []), arm]
-                            : (field.value || []).filter((a) => a !== arm);
-                          field.onChange(newArms);
-                        }}
-                      />
-                      <label htmlFor={arm} className='text-sm'>
-                        {arm}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Status */}
-          <FormField
-            control={form.control}
-            name='status'
-            render={({ field }) => (
-              <FormItem className='flex items-center justify-between'>
-                <FormLabel>Status</FormLabel>
-                <div className='flex items-center space-x-2'>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                  <span className='text-sm text-gray-500'>
-                    {field.value ? "Activated" : "Deactivated"}
-                  </span>
-                </div>
-              </FormItem>
-            )}
-          />
+          {/* Status (only in edit mode) */}
+          {isEditMode && (
+            <FormField
+              control={form.control}
+              name='isActive'
+              render={({ field }) => (
+                <FormItem className='flex items-center justify-between'>
+                  <FormLabel>Status</FormLabel>
+                  <div className='flex items-center space-x-2'>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                    <span className='text-sm text-gray-500'>
+                      {field.value ? "Activated" : "Deactivated"}
+                    </span>
+                  </div>
+                </FormItem>
+              )}
+            />
+          )}
 
           {/* Buttons */}
           <div className='flex justify-center gap-4'>
             <Button
               type='button'
               variant='outline'
-              onClick={() => router.back()}
+              onClick={onSuccess}
               className='border-gray-300 text-gray-700 hover:bg-gray-50'
             >
               Cancel
@@ -190,8 +209,10 @@ const CreateClassForm: React.FC = () => {
               {isLoading ? (
                 <>
                   <Loader2 className='h-5 w-5 animate-spin mr-2' />
-                  Create Class
+                  {isEditMode ? "Updating Class" : "Creating Class"}
                 </>
+              ) : isEditMode ? (
+                "Update Class"
               ) : (
                 "Create Class"
               )}

@@ -1,17 +1,17 @@
-create modal ad fomr for parents is next ensure ations on parent table withing students
 remeber me form backend and frontned how?
 
-create fetch me route and fire on succesful login or better still collect response and dispatch after login but den fire fetch me on evey refresh
-invalid role screen with login login tht auto logs out and redirects to login
-logout endpoint to clear all cookies
-attach loader on pagnation switch rows ans current page
 add subscription statu filtering to school also add sorting asc or descending by alphabet
 remove country code form school form
 
-convert all subrole to small letter backend
 
-create arm, create class, create student, create parent, create staff, cretae subrole, assign permissions
-first login school account
-install slim scrollbar and use on all site in layout.tsx from pot
 handle unlimited for subscription for now set to 100,000 from frontend--- check to make sure on add student student.count <= school.subId.studentLimit comverted to int
 check for school with sub and reject new sub if active sub
+
+change admission to admissionStatus (pending, approved, rejected)
+
+for asign subject fetch all class and all class arms display each under each class
+when sent save to subject classarm model that takes track of sbjectid class id and claasarm id so when a user enters a classa rm dy automaticall get the subjects for that class arm
+modify classcategory fomr to use rtk for classcatregory and class form to fetch class category and display instead of hard codded
+implement admission and attendance integration
+in enrollmen form the class and class arm should be fetch form the sessionclassclassarm model
+add sessionclasssubjectstaff model and combine classroom and subject modal togethrr collect it manage assignment

@@ -33,6 +33,8 @@ import {
   Filter,
   MoreVertical,
   Loader2,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 // import { ModalComponent } from "./modals/ModalComponent";
 // import { AddSubscriptionModal } from "./modals/AddSubsriptionModal";
@@ -41,6 +43,7 @@ import {
 import { ENUM_MODULES } from "@/lib/types/enums";
 import { CustomModal } from "./modals/CustomModal";
 import NoData from "./NoData";
+import Image from "next/image";
 
 // Define types for the table data and configuration
 interface TableColumn {
@@ -112,23 +115,9 @@ const CustomTable: React.FC<CustomTableProps> = ({
 
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  // const [modalType, setModalType] = useState<
-  //   | "confirmation"
-  //   | "editSchool"
-  //   | "editSubscription"
-  //   | "assignPermission"
-  //   | "addSchool"
-  //   | "addSubscription"
-  //   | "addStudent"
-  //   | "editStudent"
-  //   | null
-  // >(null);
+
   const [modal, setModal] = useState<ENUM_MODULES | null>(null);
 
-  // const [selectedRow, setSelectedRow] = useState<any>(null);
-  // const [actionLabel, setActionLabel] = useState<string>("");
-
-  // Extract unique filter values (e.g., status or plan)
   const filterOptions = useMemo(() => {
     const statuses = Array.from(
       new Set(data.map((item) => item.status))
@@ -166,84 +155,6 @@ const CustomTable: React.FC<CustomTableProps> = ({
         return "bg-gray-100 text-gray-800";
     }
   };
-
-  // Modal handlers
-  // const handleActionClick = (row: any, action: ActionOption) => {
-  //   setSelectedRow(row);
-  //   setActionLabel(action.label);
-  //   if (action.type === "confirmation") {
-  //     setModalType("confirmation");
-  //   } else if (action.type === "edit") {
-  //     setModalType(
-  //       action.key === "subscription"
-  //         ? "editSubscription"
-  //         : action.key === "student"
-  //         ? "editStudent"
-  //         : "editSchool"
-  //     );
-  //   } else if (
-  //     action.type === "custom" &&
-  //     action.label === "Assign Permission"
-  //   ) {
-  //     setModalType("assignPermission");
-  //   }
-  //   action.handler(row); // Call the table-specific handler
-  // };
-
-  // const handleConfirmation = async () => {
-  //   console.log(`Performing ${actionLabel} for`, selectedRow);
-  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  //   setActionLabel("");
-  // };
-
-  // const handleEditSchool = async (updatedData: any) => {
-  //   console.log(`Updating school ${selectedRow?.name} with`, updatedData);
-  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  // };
-
-  // const handleEditSubscription = async (updatedData: any) => {
-  //   console.log(
-  //     `Updating subscription ${selectedRow?.package} with`,
-  //     updatedData
-  //   );
-  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  // };
-
-  // const handleAssignPermission = async (permissions: string[]) => {
-  //   console.log(`Assigning permissions to ${selectedRow?.name}:`, permissions);
-  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  // };
-
-  // const handleModalClose = () => {
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  //   setActionLabel("");
-  // };
-
-  // const handleAddClick = () => {
-  //   setModalType(
-  // title === "Schools List"
-  //   ? "addSchool"
-  //   : title === "Students List"
-  //   ? "addStudent"
-  //   : "addSubscription"
-  //   );
-  // };
-
-  // const handleEditStudent = async (updatedData: any) => {
-  //   console.log(`Updating student ${selectedRow?.package} with`, updatedData);
-  //   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-  //   setModalType(null);
-  //   setSelectedRow(null);
-  // };
 
   const openModal = (type: Exclude<ENUM_MODULES | null, "">) => setModal(type);
   const handleModalOpenChange = (isOpen: boolean) => {
@@ -302,6 +213,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ? ENUM_MODULES.SUBSCRIPTION
                     : title === "Users List"
                     ? ENUM_MODULES.USER
+                    : title === "Class List"
+                    ? ENUM_MODULES.CLASS
+                    : title === "Class Category List"
+                    ? ENUM_MODULES.CLASS_CATEGORY
+                    : title === "ClassArm List"
+                    ? ENUM_MODULES.CLASS_ARM
+                    : title === "Subject List"
+                    ? ENUM_MODULES.SUBJECT
                     : null
                 )
               }
@@ -315,11 +234,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
       </div>
 
       {/* Title */}
-      {title && (
-        <h2 className='text-base md:text-xl font-semibold font-lato'>
-          {title}
-        </h2>
-      )}
+      {title &&
+        title !== "Class List" &&
+        title !== "Subject List" &&
+        title !== "Class Category List" && (
+          <h2 className='text-base md:text-xl font-semibold font-lato'>
+            {title}
+          </h2>
+        )}
 
       {/* Table */}
       <Table className='bg-white rounded-2xl'>
@@ -348,7 +270,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
             data.map((row, index) => (
               <TableRow key={index}>
                 {columns.map((column) => (
-                    <TableCell key={column.key}>
+                  <TableCell key={column.key}>
                     {column.key === "sn" ? (
                       ((currentPage ?? 1) - 1) * rowsPerPage + index + 1
                     ) : column.key === "fullname" ? (
@@ -358,72 +280,108 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       column.key === "subStatus" ||
                       column.key === "isActive" ? (
                       <span
-                      className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
-                        column.key === "isActive"
-                        ? row[column.key]
-                          ? "active"
-                          : "inactive"
-                        : row[column.key]
-                      )}`}
+                        className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
+                          column.key === "isActive"
+                            ? row[column.key]
+                              ? "active"
+                              : "inactive"
+                            : row[column.key]
+                        )}`}
                       >
-                      {column.key === "isActive"
-                        ? row[column.key]
-                        ? "Active"
-                        : "Inactive"
-                        : row[column.key] || "--"}
+                        {column.key === "isActive"
+                          ? row[column.key]
+                            ? "Active"
+                            : "Inactive"
+                          : row[column.key] || "--"}
                       </span>
                     ) : column.key === "subRole" ? (
                       row.subRole?.name || "--"
+                    ) : column.key === "adClass" ? (
+                      <div className='flex flex-col gap-1'>
+                        <span className='flex items-center gap-1'>
+                          <ArrowLeft className='w-4 h-4 text-red-500' />
+                          <p className=''>{row.currentClass}</p>
+                        </span>
+                        <span className='flex items-center gap-1'>
+                          <ArrowRight className='w-4 h-4 text-green-500' />
+                          <p className=''>{row.appliedClass}</p>
+                        </span>
+                      </div>
+                    ) : column.key === "photo" ? (
+                      <Image
+                        width={40}
+                        height={40}
+                        src={row.photo}
+                        alt={row.name}
+                        className='h-10 w-10 bg-gray-400 rounded-md'
+                      />
                     ) : column.key === "subPlan" ? (
                       row.subscription?.name || "--"
                     ) : column.key === "date" ? (
-                      row.timestamp
-                      ? new Date(row.timestamp)
-                        .toISOString()
-                        .slice(0, 10) // "YYYY-MM-DD"
-                      : "--"
+                      row.timestamp || row.createdAt ? (
+                        new Date(row.timestamp || row.createdAt)
+                          .toISOString()
+                          .slice(0, 10) // "YYYY-MM-DD"
+                      ) : (
+                        "--"
+                      )
                     ) : column.key === "time" ? (
-                      row.timestamp
-                      ? new Date(row.timestamp).toLocaleTimeString([], {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                        }).toLowerCase().replace(" ", "")
-                      : "--"
+                      row.timestamp ? (
+                        new Date(row.timestamp)
+                          .toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                          .toLowerCase()
+                          .replace(" ", "")
+                      ) : (
+                        "--"
+                      )
                     ) : column.key === "actions" &&
                       (getActionOptions || actionOptions.length > 0) ? (
                       <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                        variant='ghost'
-                        size='sm'
-                        className='h-8 w-8 p-0'
-                        >
-                        <MoreVertical className='h-4 w-4' />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align='end'>
-                        {(getActionOptions
-                        ? getActionOptions(row)
-                        : actionOptions
-                        ).map((action) => (
-                        <DropdownMenuItem
-                          key={action.label}
-                          onClick={() => action.handler(row)}
-                        >
-                          {action.label}
-                        </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-8 w-8 p-0'
+                          >
+                            <MoreVertical className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end'>
+                          {(getActionOptions
+                            ? getActionOptions(row)
+                            : actionOptions
+                          ).map((action) => (
+                            <DropdownMenuItem
+                              key={action.label}
+                              onClick={() => action.handler(row)}
+                            >
+                              {action.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
                       </DropdownMenu>
                     ) : column.key === "dueDate" ? (
                       row.SchoolSubscription &&
                       Array.isArray(row.SchoolSubscription) &&
-                      row.SchoolSubscription[0]?.endDate
-                      ? new Date(row.SchoolSubscription[0].endDate)
-                        .toISOString()
-                        .slice(0, 10)
-                      : "--"
+                      row.SchoolSubscription[0]?.endDate ? (
+                        new Date(row.SchoolSubscription[0].endDate)
+                          .toISOString()
+                          .slice(0, 10)
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "category" ? (
+                      row.category === "junior" ? (
+                        "Junior Secondary School"
+                      ) : row.category === "senior" ? (
+                        "Senior Secondary School"
+                      ) : (
+                        row.category || "--"
+                      )
                     ) : column.key === "startedDate" ||
                       column.key === "createDate" ? (
                       row[column.key] || "--"
@@ -433,7 +391,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ) : (
                       row[column.key] || "--"
                     )}
-                    </TableCell>
+                  </TableCell>
                 ))}
               </TableRow>
             ))
@@ -576,25 +534,40 @@ const CustomTable: React.FC<CustomTableProps> = ({
           type={ENUM_MODULES.USER}
         />
       )}
-      {/* {modalType === "addSchool" ? (
-        <AddSchoolModal onCancel={handleModalClose} />
-      ) : modalType === "addSubscription" ? (
-        <AddSubscriptionModal onCancel={handleModalClose} />
-      ) : modalType === "addStudent" ? (
-        <AddStudentModal onCancel={handleModalClose} />
-      ) : (
-        <ModalComponent
-          modalType={modalType}
-          selectedRow={selectedRow}
-          actionLabel={actionLabel}
-          onClose={handleModalClose}
-          onConfirm={handleConfirmation}
-          onEditSchool={handleEditSchool}
-          onEditSubscription={handleEditSubscription}
-          onAssignPermission={handleAssignPermission}
-          onEditStudent={handleEditStudent}
+      {modal === ENUM_MODULES.CLASS && (
+        <CustomModal
+          open={modal === ENUM_MODULES.CLASS}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.CLASS}
         />
-      )} */}
+      )}
+
+      {modal === ENUM_MODULES.CLASS_CATEGORY && (
+        <CustomModal
+          open={modal === ENUM_MODULES.CLASS_CATEGORY}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.CLASS_CATEGORY}
+        />
+      )}
+      {modal === ENUM_MODULES.CLASS_ARM && (
+        <CustomModal
+          open={modal === ENUM_MODULES.CLASS_ARM}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.CLASS_ARM}
+        />
+      )}
+
+      {modal === ENUM_MODULES.SUBJECT && (
+        <CustomModal
+          open={modal === ENUM_MODULES.SUBJECT}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={ENUM_MODULES.SUBJECT}
+        />
+      )}
     </div>
   );
 };

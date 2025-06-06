@@ -30,7 +30,7 @@ const baseQuery: BaseQueryFn<FetchArgs, unknown, FetchBaseQueryError> = fetchBas
 export const api = createApi({
     reducerPath: "api",
     baseQuery,
-    tagTypes: ["User", "Subscriptions", "Schools", "Users", "Subroles", 'PermissionsSchool', 'RolePermissions', "Logs"],
+    tagTypes: ["User", "Subscriptions", "Schools", "Users", "Subroles", 'PermissionsSchool', 'RolePermissions', "Logs", "Sessions", "Classes", "ClassArms", "Subjects", "Admissions", "Students"],
     endpoints: (builder) => ({
         // Register Endpoint
         register: builder.mutation<AuthResponse, RegisterCredentials>({
@@ -119,7 +119,7 @@ export const api = createApi({
         }),
 
         getSchoolById: builder.query<School, string>({
-            query: (id) => { return { url: `/school/${id}` } },
+            query: (id) => { return { url: `/schools/${id}` } },
             providesTags: (result) => (result ? [{ type: 'Schools', id: result.id }] : []),
         }),
         createSchool: builder.mutation<School, CreateSchoolInput>({
@@ -305,7 +305,7 @@ export const api = createApi({
         updateSubscription: builder.mutation({
             query: ({ sn, ...updates }) => ({
                 url: `/subscriptions/${sn}`,
-                method: "PUT",
+                method: "PATCH",
                 body: updates,
             }),
             invalidatesTags: ["Subscriptions"],
@@ -319,7 +319,191 @@ export const api = createApi({
             providesTags: ["Subscriptions"],
         }),
 
+        updateSchoolInfo: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/school/${id}`,
+                method: "PATCH",
+                body: updates,
+            }),
+            // invalidatesTags: ["Subscriptions"],
+        }),
+        updateSchoolStaff: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/school/${id}/staff`,
+                method: "PATCH",
+                body: updates,
+            }),
+            // invalidatesTags: ["Subscriptions"],
+        }),
+        updateSystemSettings: builder.mutation({
+            query: (updates) => ({
+                url: `/system-settings`,
+                method: "PATCH",
+                body: updates,
+            }),
+            // invalidatesTags: ["Subscriptions"],
+        }),
+        getSessions: builder.query({
+            query: () => ({
+                url: "/sessions",
+                // params: { page, limit },
+            }),
+            providesTags: ["Sessions"],
+        }),
+        createSession: builder.mutation({
+            query: (session) => ({
+                url: "/sessions",
+                method: "POST",
+                body: session,
+            }),
+            invalidatesTags: ["Sessions"],
+        }),
+        updateSession: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/sessions/${id}`,
+                method: "PATCH",
+                body: updates,
+            }),
+            invalidatesTags: ["Sessions"],
+        }),
+        deleteSession: builder.mutation({
+            query: (id) => ({
+                url: `/sessions/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Sessions"],
+        }),
+        getClasses: builder.query({
+            query: ({ page = 1, limit = 10 }) => ({
+                url: "/classes",
+                params: { page, limit },
+            }),
+            providesTags: ["Classes"],
+        }),
+        createClass: builder.mutation({
+            query: (input) => ({
+                url: "/classes",
+                method: "POST",
+                body: input,
+            }),
+            invalidatesTags: ["Classes"],
+        }),
 
+        updateClass: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/classes/${id}`,
+                method: "PATCH",
+                body: updates,
+            }),
+            invalidatesTags: ["Classes"],
+        }),
+        deleteClass: builder.mutation({
+            query: (id) => ({
+                url: `/classes/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Classes"],
+        }),
+        getClassArms: builder.query({
+            query: () => ({
+                url: `/arm`,
+            }),
+            providesTags: ["ClassArms"],
+        }),
+        createClassArms: builder.mutation({
+            query: (input) => ({
+                url: "/arm",
+                method: "POST",
+                body: input,
+            }),
+            invalidatesTags: ["ClassArms"],
+        }),
+
+        updateClassArms: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/arm/${id}`,
+                method: "PATCH",
+                body: updates,
+            }),
+            invalidatesTags: ["ClassArms"],
+        }),
+        deleteClassArms: builder.mutation({
+            query: (id) => ({
+                url: `/arm/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["ClassArms"],
+        }),
+        assignArms: builder.mutation({
+            query: (credentials) => ({
+                url: `/classes/assign/arms`,
+                method: "POST",
+                body: credentials,
+            }),
+            invalidatesTags: ["Classes", "Sessions"],
+        }),
+        getSubject: builder.query({
+            query: () => ({
+                url: `/subject`,
+            }),
+            providesTags: ["Subjects"],
+        }),
+        createSubject: builder.mutation({
+            query: (input) => ({
+                url: "/subject",
+                method: "POST",
+                body: input,
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
+
+        updateSubject: builder.mutation({
+            query: ({ id, ...updates }) => ({
+                url: `/subject/${id}`,
+                method: "PATCH",
+                body: updates,
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
+        deleteSubject: builder.mutation({
+            query: (id) => ({
+                url: `/subject/subject/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
+        assignSubject: builder.mutation({
+            query: (credentials) => ({
+                url: `/subject/assign/subject`,
+                method: "POST",
+                body: credentials,
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
+        assignSubjectToArms: builder.mutation({
+            query: (credentials) => ({
+                url: `/subject/assign/subject`,
+                method: "POST",
+                body: credentials,
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
+        manageAdmission: builder.mutation({
+            query: (credentials) => ({
+                url: `/admissions/${credentials.id}/status`,
+                method: "PATCH",
+                body: credentials,
+            }),
+            invalidatesTags: ["Admissions", "Students"],
+        }),
+        createStudent: builder.mutation({
+            query: (credentials) => ({
+                url: `/subject/assign/subject`,
+                method: "POST",
+                body: credentials,
+            }),
+            invalidatesTags: ["Subjects"],
+        }),
 
 
     }),
@@ -356,6 +540,32 @@ export const {
     useGetSubscriptionsQuery,
     useCreateSubscriptionMutation,
     useUpdateSubscriptionMutation,
+    useUpdateSchoolInfoMutation,
+    useUpdateSchoolStaffMutation,
+    useUpdateSystemSettingsMutation,
+    useGetSessionsQuery,
+    useCreateSessionMutation,
+    useUpdateSessionMutation,
+    useDeleteSessionMutation,
+    useGetClassesQuery,
+    useAssignArmsMutation,
+    useGetClassArmsQuery,
+    useCreateClassArmsMutation,
+    useUpdateClassArmsMutation,
+    useDeleteClassArmsMutation,
+    useCreateClassMutation,
+    useUpdateClassMutation,
+    useDeleteClassMutation,
+    useGetSubjectQuery,
+    useCreateSubjectMutation,
+    useUpdateSubjectMutation,
+    useAssignSubjectMutation,
+    useDeleteSubjectMutation,
+
+
+    useAssignSubjectToArmsMutation,
+    useManageAdmissionMutation,
+    useCreateStudentMutation,
 
 
 

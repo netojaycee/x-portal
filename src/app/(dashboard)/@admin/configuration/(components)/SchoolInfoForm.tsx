@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useUpdateSchoolInfoMutation } from "@/redux/api"; // Assume this is defined in your RTK setup
+import Image from "next/image";
 
 // Define the form schema
 const schoolSchema = z.object({
@@ -62,6 +63,12 @@ const SchoolInfoForm: React.FC = () => {
       if (values.logo && values.logo[0])
         formData.append("logo", values.logo[0]);
 
+      // Log the plain values for debugging
+      console.log("Form values:", values);
+      // Log the FormData entries for debugging
+      for (const [key, value] of formData.entries()) {
+        console.log(`FormData: ${key}:`, value);
+      }
       await updateSchoolInfo(formData).unwrap();
     } catch (error) {
       console.error("Update school info error:", error);
@@ -123,46 +130,74 @@ const SchoolInfoForm: React.FC = () => {
           {/* Left Section: Logo Upload and Color Picker */}
           <div className='space-y-6 w-1/3'>
             {/* Logo Upload */}
-            <div className='border border-gray-200 rounded-lg p-4 flex flex-col items-center'>
-              <div className='w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden'>
-                {preview ? (
-                  <img
-                    src={preview}
-                    alt='School logo preview'
-                    className='w-full h-full object-cover'
-                  />
-                ) : (
-                  <span className='text-gray-500 text-sm text-center'>
-                    School logo here
-                  </span>
-                )}
+            <div className='border border-primary rounded-lg p-4 flex flex-col'>
+              {!preview && (
+                <span className=''>
+                  <p className='font-lato font-bold text-sm'>School logo</p>
+                  <p className=' text-sm text-gray-500'>
+                    Upload school logo here
+                  </p>
+                </span>
+              )}
+              <div className='flex flex-col items-center'>
+                <div className='w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden'>
+                  {preview ? (
+                    <Image
+                      height={32}
+                      width={32}
+                      src={preview}
+                      alt='School logo preview'
+                      className='w-full h-full object-cover'
+                    />
+                  ) : (
+                    <span className='text-primary text-sm text-center bg-[#E7E7E7] rounded-full p-2'>
+                      <Image
+                        height={32}
+                        width={32}
+                        src={"/user-circle-02.svg"}
+                        alt='School logo preview'
+                        className='w-full h-full object-cover'
+                      />
+                    </span>
+                  )}
+                </div>
+                <Label htmlFor='logo-upload' className='mt-4'>
+                  <div className='border-primary text-primary hover:border-primary/70 border-2 rounded-md flex items-center p-2 space-x-2'>
+                    <Image
+                      height={16}
+                      width={16}
+                      src={"/image-upload.svg"}
+                      alt='School logo preview'
+                      className=''
+                    />{" "}
+                    <span className=''>Upload Logo</span>
+                  </div>
+                </Label>
+                <Input
+                  id='logo-upload'
+                  type='file'
+                  accept='image/*'
+                  className='hidden'
+                  onChange={handleFileChange}
+                />
               </div>
-              <Label htmlFor='logo-upload' className='mt-4'>
-                <Button
-                  asChild
-                  variant='outline'
-                  className='border-blue-500 text-blue-500 hover:bg-blue-50'
-                >
-                  <span>Upload Logo</span>
-                </Button>
-              </Label>
-              <Input
-                id='logo-upload'
-                type='file'
-                accept='image/*'
-                className='hidden'
-                onChange={handleFileChange}
-              />
             </div>
-
             {/* Color Picker */}
-            <div className='border border-gray-200 rounded-lg p-4'>
+            <div className='border border-primary rounded-lg p-4'>
               <FormField
                 control={form.control}
                 name='color'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>School Color</FormLabel>
+                    {/* <FormLabel>School Color</FormLabel> */}
+                    <span className=''>
+                      <p className='font-lato font-bold text-sm'>
+                        School Color
+                      </p>
+                      <p className=' text-sm text-gray-500'>
+                        Pick a color for your school here{" "}
+                      </p>
+                    </span>
                     <div className='flex items-center gap-2 mb-4'>
                       <Input
                         type='text'
@@ -181,7 +216,7 @@ const SchoolInfoForm: React.FC = () => {
                         <button
                           key={color}
                           type='button'
-                          className='w-8 h-8 rounded border border-gray-200'
+                          className='w-8 h-8 rounded'
                           style={{ backgroundColor: color }}
                           onClick={() => field.onChange(color)}
                         />

@@ -2,23 +2,47 @@
 
 import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {  Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useGetClassesQuery, useAssignArmsMutation } from "@/redux/api"; // Assume these are defined in your RTK setup
+import {
+  useGetClassesQuery,
+  useAssignArmsMutation,
+  useGetClassArmsQuery,
+} from "@/redux/api";
+import LoaderComponent from "@/components/local/LoaderComponent";
 
 interface AssignArmsFormData {
   classes: { classId: string; arms: string[] }[];
 }
 
-const AssignArms: React.FC = () => {
-  const router = useRouter();
-  const { data: classes = [], isLoading } = useGetClassesQuery(); // Simulated RTK Query
+interface Class {
+  id: string;
+  name: string;
+}
+
+interface Session {
+  id: string;
+  name: string;
+  classes: { id: string; name: string; assignedArms: string[] }[];
+  schoolId: string;
+}
+
+interface AssignArmsProps {
+  session: Session;
+  onSuccess: () => void;
+}
+
+const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
+  const { data: classes = [], isLoading: isLoadingClasses } =
+    useGetClassesQuery({});
+  const { data: availableArms = [], isLoading: isLoadingArms } =
+    useGetClassArmsQuery({});
   const [assignArms, { isLoading: isSaving, isError, error, isSuccess }] =
     useAssignArmsMutation();
+
+  // console.log(classes, "classes", availableArms, "availableArms");
 
   const form = useForm<AssignArmsFormData>({
     defaultValues: {
@@ -26,29 +50,39 @@ const AssignArms: React.FC = () => {
     },
   });
 
-  const { control, handleSubmit } = form;
+  const { control, handleSubmit, setValue, watch } = form;
   const { fields } = useFieldArray({
     control,
     name: "classes",
   });
 
-  // Simulate initial data from endpoint (replace with real API data)
+  // Watch the arms field for each class to force re-render
+  const armsValues = watch("classes");
+
+  // Set initial form data with classes and pre-selected arms from session
   React.useEffect(() => {
-    if (classes.length > 0) {
-      const initialData = classes.map((cls) => ({
-        classId: cls.id,
-        arms: [],
-      }));
-      form.reset({ classes: initialData });
+    if (classes.length > 0 && session.classes) {
+      const initialData = classes.map((cls: Class) => {
+        const sessionClass = session.classes.find((sc) => sc.id === cls.id);
+        return {
+          classId: cls.id,
+          arms: sessionClass?.assignedArms || [],
+        };
+      });
+      setValue("classes", initialData);
     }
-  }, [classes, form]);
+  }, [classes, session, setValue]);
 
   const onSubmit = async (data: AssignArmsFormData) => {
     try {
-      const payload = data.classes.map((cls) => ({
-        classId: cls.classId,
-        arms: cls.arms,
-      }));
+      const payload = {
+        assignments: data.classes.map((cls) => ({
+          classId: cls.classId,
+          sessionId: session.id,
+          arms: cls.arms,
+        })),
+      };
+      console.log("Payload to assign arms:", payload);
       await assignArms(payload).unwrap();
     } catch (error) {
       console.error("Assign arms error:", error);
@@ -58,7 +92,7 @@ const AssignArms: React.FC = () => {
   React.useEffect(() => {
     if (isSuccess) {
       toast.success("Arms assigned successfully");
-      form.reset();
+      onSuccess();
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
@@ -66,91 +100,107 @@ const AssignArms: React.FC = () => {
           : "An error occurred";
       toast.error(errorMessage);
     }
-  }, [isSuccess, isError, error, form]);
+  }, [isSuccess, isError, error, onSuccess]);
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  if (isLoadingClasses || isLoadingArms) {
+    return <LoaderComponent />;
   }
 
   return (
-    <div className='space-y-4 p-6'>
-      <div className='flex items-center justify-between mb-4'>
-        <Button variant='ghost' onClick={() => router.back()}>
-          <ChevronLeft className='mr-2 h-4 w-4' /> Back
-        </Button>
-      </div>
-      <div className='space-y-3'>
-        <h2 className='text-lg font-semibold'>Assign Arms</h2>
-        <p className='text-sm text-gray-500'>
-          Select Arms for class available for this session
-        </p>
-      </div>
-      <Card className='p-4'>
-        <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
-          {fields.map((field, index) => (
-            <div key={field.id} className='border-b border-gray-200 pb-2'>
-              <h3 className='text-md font-medium mb-2'>
-                {classes[index]?.name}
-              </h3>
-              <div className='flex flex-wrap gap-4'>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    {...form.register(`classes.${index}.arms`)}
-                    value='No Arms'
-                  />
-                  <span className='text-sm'>No Arms</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    {...form.register(`classes.${index}.arms`)}
-                    value='Gold'
-                  />
-                  <span className='text-sm'>Gold</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    {...form.register(`classes.${index}.arms`)}
-                    value='Diamond'
-                  />
-                  <span className='text-sm'>Diamond</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    {...form.register(`classes.${index}.arms`)}
-                    value='Silver'
-                  />
-                  <span className='text-sm'>Silver</span>
+    <div className='space-y-4'>
+      <div className=''>
+        <form onSubmit={handleSubmit(onSubmit)} className='space-y-2'>
+          {fields.map((field, index) => {
+            const classData = classes.find((cls: Class) => cls.id === field.classId);
+            const currentArms = armsValues[index]?.arms || [];
+
+            return (
+              <div key={field.id} className='pb-2'>
+                <h3 className='text-sm font-medium bg-[#E1E8F8]'>
+                  {classData?.name}
+                </h3>
+                <div className='flex flex-wrap gap-4 bg-[#f5f5f5] p-1'>
+                  {/* "No Arms" option */}
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      className={`${
+                        currentArms.length === 0
+                          ? "data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
+                          : ""
+                      } h-4 w-4 border border-black`}
+                      id={`classes.${index}.arms.noArms`}
+                      checked={currentArms.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setValue(`classes.${index}.arms`, []);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`classes.${index}.arms.noArms`}
+                      className='text-xs'
+                    >
+                      No Arms
+                    </label>
+                  </div>
+                  {/* Other arms */}
+                  {availableArms.map((arm: { id: string; name: string }) => (
+                    <div key={arm.id} className='flex items-center space-x-2'>
+                      <Checkbox
+                        className={`${
+                          currentArms.includes(arm.name)
+                            ? " data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
+                            : ""
+                        } h-4 w-4 border border-black`}
+                        id={`classes.${index}.arms.${arm.id}`}
+                        checked={currentArms.includes(arm.name)}
+                        onCheckedChange={(checked) => {
+                          const updatedArms = checked
+                            ? [...currentArms, arm.name]
+                            : currentArms.filter((a) => a !== arm.name);
+                          setValue(`classes.${index}.arms`, updatedArms);
+                        }}
+                      />
+                      <label
+                        htmlFor={`classes.${index}.arms.${arm.id}`}
+                        className='text-xs'
+                      >
+                        {arm.name}
+                      </label>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className='flex justify-center gap-4 mt-6'>
             <Button
               type='submit'
               disabled={isSaving}
-              className='bg-blue-500 text-white hover:bg-blue-600'
+              className='bg-primary text-white hover:bg-blue-600'
             >
               {isSaving ? (
                 <>
                   <Loader2 className='h-5 w-5 animate-spin mr-2' />
-                  Create Session
+                  Assign Arms
                 </>
               ) : (
-                "Create Session"
+                "Assign Arms"
               )}
             </Button>
             <Button
               variant='outline'
-              onClick={() => router.back()}
-              className='border-blue-500 text-blue-500 hover:bg-blue-50'
+              onClick={() => onSuccess()}
+              disabled={isSaving}
+              className='border-primary text-primary hover:bg-blue-50'
             >
               Back
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 };
 
-export default AssignArms;
+export default AssignArmsForm;

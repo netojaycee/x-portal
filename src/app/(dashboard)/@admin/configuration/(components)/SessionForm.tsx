@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -14,27 +13,28 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 import {
   useCreateSessionMutation,
   useUpdateSessionMutation,
 } from "@/redux/api";
+import { Input } from "@/components/ui/input";
 
-// Define the form schema
-const sessionSchema = z
+// Define the schema for a single term
+const termSchema = z
   .object({
     name: z
       .string()
-      .min(1, "Session name is required")
-      .max(50, "Session name must be less than 50 characters"),
+      .min(1, "Term name is required")
+      .max(50, "Term name must be less than 50 characters"),
     startDate: z
       .string()
       .min(1, "Start date is required")
@@ -43,26 +43,53 @@ const sessionSchema = z
       .string()
       .min(1, "End date is required")
       .regex(/^\d{4}-\d{2}-\d{2}$/, "End date must be in YYYY-MM-DD format"),
-    status: z.enum(["Active", "Inactive"], {
-      required_error: "Status is required",
-    }),
   })
   .refine((data) => new Date(data.startDate) < new Date(data.endDate), {
     message: "End date must be after start date",
     path: ["endDate"],
   });
 
-interface Session {
+// Define the schema for the session with startYear and endYear
+const sessionSchema = z
+  .object({
+    startYear: z
+      .number()
+      .int()
+      .min(2000, "Start year must be at least 2000")
+      .max(2100, "Start year must not exceed 2100"),
+    endYear: z
+      .number()
+      .int()
+      .min(2001, "End year must be at least 2001")
+      .max(2101, "End year must not exceed 2101"),
+    terms: z.array(termSchema).length(3, "Exactly three terms are required"),
+  })
+  .refine((data) => data.endYear - data.startYear === 1, {
+    message: "End year must be exactly one year after start year",
+    path: ["endYear"],
+  })
+  .refine((data) => data.endYear !== data.startYear, {
+    message: "Start year and end year cannot be the same",
+    path: ["endYear"],
+  });
+
+interface Term {
+  id?: string;
   name: string;
   startDate: string;
   endDate: string;
-  status: "Active" | "Inactive";
+}
+
+interface Session {
+  id?: string;
+  name: string; // Backend format: "startYear/endYear"
+  terms: Term[];
 }
 
 type SessionFormData = z.infer<typeof sessionSchema>;
 
 interface SessionFormProps {
-  session?: Session & { id: string }; // For edit mode
+  session?: Session; // For edit mode, expects "2024/2025" format
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -97,21 +124,53 @@ const SessionForm: React.FC<SessionFormProps> = ({
   const isError = isEditMode ? isErrorUpdate : isErrorAdd;
   const error = isEditMode ? errorUpdate : errorAdd;
 
+  // Parse session name (e.g., "2024/2025") into startYear and endYear for edit mode
+  const parseSessionName = (name: string) => {
+    const [start, end] = name.split("/").map(Number);
+    return { startYear: start, endYear: end };
+  };
+
+  // Format ISO date to YYYY-MM-DD for date picker
+  const formatDateForInput = (dateStr: string | undefined) =>
+    dateStr ? format(new Date(dateStr), "yyyy-MM-dd") : "";
+
+  // Initialize default terms if not provided
+  const defaultTerms: Term[] = [
+    { name: "First Term", startDate: "", endDate: "" },
+    { name: "Second Term", startDate: "", endDate: "" },
+    { name: "Third Term", startDate: "", endDate: "" },
+  ];
+
   const form = useForm<SessionFormData>({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
-      name: session?.name || "",
-      startDate: session?.startDate || "",
-      endDate: session?.endDate || "",
-      status: session?.status || undefined,
+      startYear: session?.name
+        ? parseSessionName(session.name).startYear
+        : undefined,
+      endYear: session?.name
+        ? parseSessionName(session.name).endYear
+        : undefined,
+      terms:
+        session?.terms?.length === 3
+          ? session.terms.map((term) => ({
+              ...term,
+              startDate: formatDateForInput(term.startDate),
+              endDate: formatDateForInput(term.endDate),
+            }))
+          : defaultTerms,
     },
   });
 
   const onSubmit = async (values: SessionFormData) => {
     try {
       const credentials = {
-        ...values,
-        name: values.name.trim(),
+        session: `${values.startYear}/${values.endYear}`,
+        firstTermStartDate: values.terms[0].startDate,
+        firstTermEndDate: values.terms[0].endDate,
+        secondTermStartDate: values.terms[1].startDate,
+        secondTermEndDate: values.terms[1].endDate,
+        thirdTermStartDate: values.terms[2].startDate,
+        thirdTermEndDate: values.terms[2].endDate,
       };
       if (isEditMode && session?.id) {
         await updateSession({
@@ -148,108 +207,200 @@ const SessionForm: React.FC<SessionFormProps> = ({
   }, [isSuccess, isError, error, form, onSuccess, isEditMode]);
 
   return (
-    <div className='w-full max-w-md p-6'>
-      <div className='mb-6'>
+    <div className='w-full max-w-3xl'>
+      {/* <div className='mb-6'>
         <h2 className='text-lg font-semibold'>
           {isEditMode ? "Edit Session" : "Create Session"}
         </h2>
         <p className='text-sm text-gray-500'>
           {isEditMode
-            ? "Update the session details below"
-            : "Enter the details to create a new session"}
+            ? "Update the session and term details below"
+            : "Enter the details to create a new session with terms"}
         </p>
-      </div>
+      </div> */}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-          {/* Session Name */}
-          <FormField
-            control={form.control}
-            name='name'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className='text-gray-700'>
-                  Session Name <span className='text-red-500'>*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder='e.g., 2025/2026'
-                    {...field}
-                    className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Start Date and End Date */}
-          <div className='flex items-center w-full gap-5'>
-            <FormField
-              control={form.control}
-              name='startDate'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>
-                    Start Date <span className='text-red-500'>*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type='date'
-                      {...field}
-                      className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='endDate'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>
-                    End Date <span className='text-red-500'>*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type='date'
-                      {...field}
-                      className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          {/* Session Details */}
+          <div className='space-y-4'>
+            <h3 className='text-md font-medium text-gray-700'>
+              Session Details
+            </h3>
+            <div className='flex items-center gap-5'>
+              <FormField
+                control={form.control}
+                name='startYear'
+                render={({ field }) => (
+                  <FormItem className='w-full'>
+                    <FormLabel className='text-gray-700'>
+                      Start Year <span className='text-red-500'>*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        placeholder='e.g., 2024'
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='endYear'
+                render={({ field }) => (
+                  <FormItem className='w-full'>
+                    <FormLabel className='text-gray-700'>
+                      End Year <span className='text-red-500'>*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        placeholder='e.g., 2025'
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
 
-          {/* Status */}
-          <FormField
-            control={form.control}
-            name='status'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className='text-gray-700'>
-                  Status <span className='text-red-500'>*</span>
-                </FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'>
-                      <SelectValue placeholder='Select status' />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value='Active'>Active</SelectItem>
-                    <SelectItem value='Inactive'>Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Terms */}
+          {["terms.0", "terms.1", "terms.2"].map((termPrefix, index) => (
+            <div key={termPrefix} className='space-y-4 border-t pt-4'>
+              <h3 className='text-md font-medium text-gray-700'>
+                {index === 0
+                  ? "First Term"
+                  : index === 1
+                  ? "Second Term"
+                  : "Third Term"}
+              </h3>
+              <FormField
+                control={form.control}
+                name={`${termPrefix}.name` as any}
+                render={({ field }) => (
+                  <FormItem className='hidden'>
+                    <FormLabel className='text-gray-700'>
+                      Term Name <span className='text-red-500'>*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={`e.g., ${
+                          index === 0
+                            ? "First Term"
+                            : index === 1
+                            ? "Second Term"
+                            : "Third Term"
+                        }`}
+                        {...field}
+                        className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                        readOnly
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className='flex items-center w-full gap-5'>
+                <FormField
+                  control={form.control}
+                  name={`${termPrefix}.startDate` as any}
+                  render={({ field }) => (
+                    <FormItem className='w-full'>
+                      <FormLabel className='text-gray-700'>
+                        Start Date <span className='text-red-500'>*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Input
+                              type='text'
+                              placeholder='Select a date'
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 w-full'
+                              readOnly
+                            />
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0'>
+                          <Calendar
+                            mode='single'
+                            selected={
+                              field.value ? new Date(field.value) : undefined
+                            }
+                            onSelect={(date) =>
+                              field.onChange(
+                                date ? format(date, "yyyy-MM-dd") : ""
+                              )
+                            }
+                            disabled={(date) =>
+                              date > new Date("2100-01-01") ||
+                              date < new Date("2000-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`${termPrefix}.endDate` as any}
+                  render={({ field }) => (
+                    <FormItem className='w-full'>
+                      <FormLabel className='text-gray-700'>
+                        End Date <span className='text-red-500'>*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Input
+                              type='text'
+                              placeholder='Select a date'
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 w-full'
+                              readOnly
+                            />
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0'>
+                          <Calendar
+                            mode='single'
+                            selected={
+                              field.value ? new Date(field.value) : undefined
+                            }
+                            onSelect={(date) =>
+                              field.onChange(
+                                date ? format(date, "yyyy-MM-dd") : ""
+                              )
+                            }
+                            disabled={(date) =>
+                              date > new Date("2100-01-01") ||
+                              date < new Date("2000-01-01")
+                            }
+                            initialFocus
+                            
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          ))}
 
           {/* Submit Button */}
           <Button

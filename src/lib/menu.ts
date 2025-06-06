@@ -29,15 +29,15 @@ export const adminMenu = [
     {
         title: 'Admission',
         icon: UserPlus,
-        url: '/admission',
-        isActive: false,
+        url: '/admissions',
+        isActive: true,
         requiredPermission: 'admission:read',
     },
     {
         title: 'Attendance',
         icon: Clock,
         url: '/attendance',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'attendance:read',
     },
     {

@@ -32,6 +32,7 @@ export interface School {
         createdAt: string;
         updatedAt: string;
     } | null;
+    SchoolSubscription: any;
     logo?: Image | null;
     isActive: boolean;
     isDeleted: boolean;

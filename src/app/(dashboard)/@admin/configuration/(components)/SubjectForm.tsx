@@ -14,13 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import {
@@ -37,18 +31,18 @@ const subjectSchema = z.object({
   code: z
     .string()
     .min(1, "Subject code is required")
-    .max(10, "Subject code must be less than 10 characters"),
-  classCategory: z.string().min(1, "Class category is required"),
-  status: z.enum(["Active", "Inactive"], {
-    required_error: "Status is required",
-  }),
+    .max(3, "Subject code must be less than 3 characters"),
+  // classCategory: z.string().min(1, "Class category is required"),
+  // status: z.enum(["Active", "Inactive"], {
+  //   required_error: "Status is required",
+  // }),
 });
 
 interface Subject {
   name: string;
   code: string;
-  classCategory: string;
-  status: "Active" | "Inactive";
+  // classCategory: string;
+  // status: "Active" | "Inactive";
 }
 
 type SubjectFormData = z.infer<typeof subjectSchema>;
@@ -94,8 +88,8 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
     defaultValues: {
       name: subject?.name || "",
       code: subject?.code || "",
-      classCategory: subject?.classCategory || "",
-      status: subject?.status || undefined,
+      // classCategory: subject?.classCategory || "",
+      // status: subject?.status || undefined,
     },
   });
 
@@ -141,8 +135,8 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
   }, [isSuccess, isError, error, form, onSuccess, isEditMode]);
 
   return (
-    <div className='w-full max-w-md p-6'>
-      <div className='mb-6'>
+    <div className='w-full max-w-md'>
+      {/* <div className='mb-6'>
         <h2 className='text-lg font-semibold'>
           {isEditMode ? "Edit Subject" : "Create Subject"}
         </h2>
@@ -151,7 +145,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             ? "Update the subject details below"
             : "Enter the details to create a new subject"}
         </p>
-      </div>
+      </div> */}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
@@ -187,7 +181,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='e.g., MATH101'
+                      placeholder='e.g., MTH'
                       {...field}
                       className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                     />
@@ -198,61 +192,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             />
           </div>
 
-          {/* Class Category and Status */}
-          <div className='flex items-center w-full gap-5'>
-            <FormField
-              control={form.control}
-              name='classCategory'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>
-                    Class Category <span className='text-red-500'>*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'>
-                        <SelectValue placeholder='Select class category' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='Junior Secondary'>
-                        Junior Secondary
-                      </SelectItem>
-                      <SelectItem value='Senior Secondary'>
-                        Senior Secondary
-                      </SelectItem>
-                      <SelectItem value='Primary'>Primary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='status'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>
-                    Status <span className='text-red-500'>*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'>
-                        <SelectValue placeholder='Select status' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='Active'>Active</SelectItem>
-                      <SelectItem value='Inactive'>Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+         
 
           {/* Submit Button */}
           <Button

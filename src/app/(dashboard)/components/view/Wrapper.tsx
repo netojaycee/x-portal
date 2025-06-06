@@ -6,7 +6,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "../sidebar/app-sidebar";
-import { Bell, Calendar, ChevronDown, Pencil } from "lucide-react";
+import { Bell, Calendar, ChevronDown, Loader2, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,23 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import Logout from "@/components/local/Logout";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { useGetSessionsQuery } from "@/redux/api";
+
+function getActiveTermSessionText(sessions: any[]): string {
+  const currentDate = new Date("2025-05-24T03:17:00Z"); // 04:17 AM WAT converted to UTC
+
+  for (const session of sessions) {
+    const activeTerm = session.terms.find(
+      (term: any) =>
+        new Date(term.startDate) <= currentDate &&
+        new Date(term.endDate) >= currentDate
+    );
+    if (activeTerm) {
+      return `${activeTerm.name} ${session.name}`;
+    }
+  }
+  return "No active term";
+}
 
 export default function Wrapper({
   children,
@@ -34,7 +51,9 @@ export default function Wrapper({
   role?: ENUM_ROLE;
 }) {
   const userData = useSelector((state: RootState) => state.user.user);
-
+    const { data, isLoading } = useGetSessionsQuery({});
+  console.log("Sessions data", data && data);
+  const sessions = data?.data || [];
   console.log(wrapperStyle, pageTitle);
 
   return (
@@ -54,7 +73,11 @@ export default function Wrapper({
             {role === ENUM_ROLE.ADMIN && (
               <span className='flex items-center gap-3 text-[#4A4A4A]'>
                 <Calendar className='size-4' />
-                <p className='text-sm'>First Term 2024/2025</p>
+                {isLoading ? (
+                  <Loader2 className='animate-spin w-4 h-4' />
+                ) : (
+                  <p className='text-sm'>{getActiveTermSessionText(sessions)}</p>
+                )}
               </span>
             )}
             <div className='border h-5 border-yellow-300' />
@@ -79,7 +102,8 @@ export default function Wrapper({
                   </Avatar>{" "}
                   {userData ? (
                     <span className='hidden md:inline-flex font-lato font-semibold text-sm'>
-                      {userData?.firstname || "Anonymous"} {userData?.lastname || "Anonymous"}
+                      {userData?.firstname || "Anonymous"}{" "}
+                      {userData?.lastname || "Anonymous"}
                     </span>
                   ) : (
                     <span className='hidden md:inline-flex font-lato font-semibold text-sm'>

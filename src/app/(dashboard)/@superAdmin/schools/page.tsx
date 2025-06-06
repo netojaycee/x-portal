@@ -1,16 +1,16 @@
 "use client";
 import React, { useState } from "react";
-import CustomTable from "../../components/CustomTable";
 // import { schoolsData } from "@/lib/data";
 import { Plus } from "lucide-react";
 import { useGetSchoolsQuery } from "@/redux/api";
 import { rowsPerPageOptions } from "@/lib/utils";
 import { useDebounce } from "use-debounce";
 import { School } from "@/lib/types/school";
-import { CustomModal } from "../../components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { ModalState, ModalType } from "@/lib/types";
+import CustomTable from "../../components/CustomTable";
+import { CustomModal } from "../../components/modals/CustomModal";
 
 // above your component
 

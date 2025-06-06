@@ -36,7 +36,7 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
   if (isLoading) {
     return <LoaderComponent />;
   }
-  // console.log(data && data);
+  console.log(data && data);
   const studentsData = data?.users || [];
 
   const openModal = (type: Exclude<ModalType, "">, row: User) =>

@@ -170,6 +170,41 @@ export const subscribersData = [
     },
 ];
 
+// Attendance mock data for a month (e.g. May 2025)
+export const mockAttendanceMay2025 = {
+    "2025-05-01": { present: 5, absent: 1, late: 0 },
+    "2025-05-02": { present: 6, absent: 0, late: 1 },
+    "2025-05-03": { present: 4, absent: 2, late: 1 },
+    "2025-05-04": { present: 7, absent: 0, late: 0 },
+    "2025-05-05": { present: 7, absent: 0, late: 0 },
+    "2025-05-06": { present: 5, absent: 2, late: 0 },
+    "2025-05-07": { present: 6, absent: 1, late: 0 },
+    "2025-05-08": { present: 6, absent: 1, late: 0 },
+    "2025-05-09": { present: 5, absent: 2, late: 1 },
+    "2025-05-10": { present: 7, absent: 0, late: 0 },
+    "2025-05-11": { present: 6, absent: 1, late: 0 },
+    "2025-05-12": { present: 7, absent: 0, late: 0 },
+    "2025-05-13": { present: 6, absent: 1, late: 0 },
+    "2025-05-14": { present: 7, absent: 0, late: 0 },
+    "2025-05-15": { present: 5, absent: 2, late: 0 },
+    "2025-05-16": { present: 6, absent: 1, late: 1 },
+    "2025-05-17": { present: 7, absent: 0, late: 0 },
+    "2025-05-18": { present: 6, absent: 1, late: 0 },
+    "2025-05-19": { present: 7, absent: 0, late: 0 },
+    "2025-05-20": { present: 6, absent: 1, late: 0 },
+    "2025-05-21": { present: 7, absent: 0, late: 0 },
+    "2025-05-22": { present: 7, absent: 0, late: 0 },
+    "2025-05-23": { present: 6, absent: 1, late: 1 },
+    "2025-05-24": { present: 5, absent: 2, late: 0 },
+    "2025-05-25": { present: 7, absent: 0, late: 0 },
+    "2025-05-26": { present: 6, absent: 1, late: 0 },
+    "2025-05-27": { present: 7, absent: 0, late: 0 },
+    "2025-05-28": { present: 5, absent: 2, late: 0 },
+    "2025-05-29": { present: 6, absent: 1, late: 1 },
+    "2025-05-30": { present: 7, absent: 0, late: 0 },
+    "2025-05-31": { present: 6, absent: 1, late: 0 },
+  };
+
 // Hard-coded data for Subscriptions
 export const subscriptionsData = [
     {

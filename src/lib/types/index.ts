@@ -44,8 +44,20 @@ export interface Image {
     pubId: string;
 }
 
-export type ModalType = "add" | "edit" | "delete" | "permission" | "status" | null;
-
+// export type ModalType = "add" | "edit" | "delete" | "permission" | "status" | "approve" | "reject" | "custom" | "confirmation" | null;
+export type ModalType =
+    | "status"
+    | "add"
+    | "edit"
+    | "delete"
+    | "permission"
+    | "approve"
+    | "custom"
+    | "confirmation"
+    | "reject"
+    | null
+    | undefined;
+    
 export interface ModalState {
     type: ModalType;
     data?: any;

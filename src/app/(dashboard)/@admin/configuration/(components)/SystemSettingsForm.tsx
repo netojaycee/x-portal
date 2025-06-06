@@ -24,6 +24,8 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useUpdateSystemSettingsMutation } from "@/redux/api"; // Assume this is defined in your RTK setup
+import Image from "next/image";
+import NoData from "@/app/(dashboard)/components/NoData";
 
 // Define the form schema
 const systemSettingsSchema = z.object({
@@ -129,60 +131,65 @@ const SystemSettingsForm: React.FC = () => {
     <div className='p-6 flex gap-6'>
       {/* Left Section: Form */}
       <div className='w-1/2 space-y-6'>
-        {/* Registration Number for Student */}
-        <FormField
-          control={form.control}
-          name='registrationNumStudent'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className='text-gray-700'>
-                Registration Num. for student{" "}
-                <span className='text-red-500'>*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder='Sch. short name/Year/student no. (DLHS/Y/00001)'
-                  {...field}
-                  className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Registration Number for Staff */}
-        <FormField
-          control={form.control}
-          name='registrationNumStaff'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className='text-gray-700'>
-                Registration Num. for Staff{" "}
-                <span className='text-red-500'>*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder='Eg. (DLHS/Y/00001)'
-                  {...field}
-                  className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+            {/* Registration Number for Staff */}
+            <FormField
+              control={form.control}
+              name='registrationNumStaff'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className='text-gray-700'>
+                    Registration Num. for Staff{" "}
+                    <span className='text-red-500'>*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='Eg. (DLHS/Y/00001)'
+                      {...field}
+                      className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                    />
+                  </FormControl>
+                  <span className='w-full flex justify-end'>
+                    <p className='text-sm text-primary'>preview</p>
+                  </span>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Registration Number for Student */}
+            <FormField
+              control={form.control}
+              name='registrationNumStudent'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className='text-gray-700'>
+                    Registration Num. for student{" "}
+                    <span className='text-red-500'>*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='Sch. short name/Year/student no. (DLHS/Y/00001)'
+                      {...field}
+                      className='border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                    />
+                  </FormControl>
+                  <span className='w-full flex justify-end'>
+                    <p className='text-sm text-primary'>preview</p>
+                  </span>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className='border border-gray-200 rounded-lg p-4 space-y-4'>
               <p className='text-sm text-gray-500'>
                 Set school mat with the font size using the range box setting to
                 assign size with a Squid School Name*
               </p>
-              <p className='text-sm text-gray-500'>
+              {/* <p className='text-sm text-gray-500'>
                 School Name* <span className='text-red-500'>*</span>
-              </p>
+              </p> */}
               <FormField
                 control={form.control}
                 name='schoolName'
@@ -199,27 +206,37 @@ const SystemSettingsForm: React.FC = () => {
                           className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 flex-1'
                         />
                       </FormControl>
-                      <FormField
-                        control={form.control}
-                        name='schoolNameFontSize'
-                        render={({ field }) => (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger className='w-32'>
-                              <SelectValue placeholder='Choose font size' />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[12, 14, 16, 18, 20, 24, 28, 32].map((size) => (
-                                <SelectItem key={size} value={size.toString()}>
-                                  {size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
+                      <div className='space-y-1'>
+                        <FormField
+                          control={form.control}
+                          name='schoolNameFontSize'
+                          render={({ field }) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className='w-32'>
+                                <SelectValue placeholder='Choose font size' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[12, 14, 16, 18, 20, 24, 28, 32].map(
+                                  (size) => (
+                                    <SelectItem
+                                      key={size}
+                                      value={size.toString()}
+                                    >
+                                      {size}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />{" "}
+                        <p className='text-xs text-gray-500'>
+                          choose font size
+                        </p>
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -243,27 +260,37 @@ const SystemSettingsForm: React.FC = () => {
                           className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 flex-1'
                         />
                       </FormControl>
-                      <FormField
-                        control={form.control}
-                        name='addressFontSize'
-                        render={({ field }) => (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger className='w-32'>
-                              <SelectValue placeholder='Choose font size' />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[12, 14, 16, 18, 20, 24, 28, 32].map((size) => (
-                                <SelectItem key={size} value={size.toString()}>
-                                  {size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
+                      <div className='space-y-1'>
+                        <FormField
+                          control={form.control}
+                          name='addressFontSize'
+                          render={({ field }) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className='w-32'>
+                                <SelectValue placeholder='Choose font size' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[12, 14, 16, 18, 20, 24, 28, 32].map(
+                                  (size) => (
+                                    <SelectItem
+                                      key={size}
+                                      value={size.toString()}
+                                    >
+                                      {size}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        <p className='text-xs text-gray-500'>
+                          choose font size
+                        </p>
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -287,27 +314,37 @@ const SystemSettingsForm: React.FC = () => {
                           className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 flex-1'
                         />
                       </FormControl>
-                      <FormField
-                        control={form.control}
-                        name='emailFontSize'
-                        render={({ field }) => (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger className='w-32'>
-                              <SelectValue placeholder='Choose font size' />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[12, 14, 16, 18, 20, 24, 28, 32].map((size) => (
-                                <SelectItem key={size} value={size.toString()}>
-                                  {size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
+                      <div className='space-y-1'>
+                        <FormField
+                          control={form.control}
+                          name='emailFontSize'
+                          render={({ field }) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className='w-32'>
+                                <SelectValue placeholder='Choose font size' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[12, 14, 16, 18, 20, 24, 28, 32].map(
+                                  (size) => (
+                                    <SelectItem
+                                      key={size}
+                                      value={size.toString()}
+                                    >
+                                      {size}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        <p className='text-xs text-gray-500'>
+                          choose font size
+                        </p>
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -331,27 +368,37 @@ const SystemSettingsForm: React.FC = () => {
                           className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 flex-1'
                         />
                       </FormControl>
-                      <FormField
-                        control={form.control}
-                        name='contactFontSize'
-                        render={({ field }) => (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger className='w-32'>
-                              <SelectValue placeholder='Choose font size' />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[12, 14, 16, 18, 20, 24, 28, 32].map((size) => (
-                                <SelectItem key={size} value={size.toString()}>
-                                  {size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
+                      <div className='space-y-1'>
+                        <FormField
+                          control={form.control}
+                          name='contactFontSize'
+                          render={({ field }) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger className='w-32'>
+                                <SelectValue placeholder='Choose font size' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[12, 14, 16, 18, 20, 24, 28, 32].map(
+                                  (size) => (
+                                    <SelectItem
+                                      key={size}
+                                      value={size.toString()}
+                                    >
+                                      {size}
+                                    </SelectItem>
+                                  )
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />{" "}
+                        <p className='text-xs text-gray-500'>
+                          choose font size
+                        </p>
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -359,6 +406,17 @@ const SystemSettingsForm: React.FC = () => {
               />
             </div>
 
+            {/* Preview Button */}
+            <div className='flex justify-center'>
+              <Button
+                type='button'
+                variant={"outline"}
+                onClick={handlePreview}
+                className='border-primary text-primary hover:bg-blue-50'
+              >
+                Preview
+              </Button>
+            </div>
             {/* Login Background Upload */}
             <FormField
               control={form.control}
@@ -382,17 +440,6 @@ const SystemSettingsForm: React.FC = () => {
               )}
             />
 
-            {/* Preview Button */}
-            <div className='flex justify-center'>
-              <Button
-                type='button'
-                onClick={handlePreview}
-                className='border-blue-500 text-blue-500 hover:bg-blue-50'
-              >
-                Preview
-              </Button>
-            </div>
-
             {/* Submit Button */}
             <div className='flex justify-center'>
               <Button
@@ -415,7 +462,7 @@ const SystemSettingsForm: React.FC = () => {
       </div>
 
       {/* Right Section: Preview */}
-      <div className='w-1/2 border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center'>
+      <div className='w-1/2 bg-white border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center'>
         {previewData ? (
           <div className='space-y-4 text-center'>
             <p style={{ fontSize: `${previewData.schoolNameFontSize}px` }}>
@@ -432,7 +479,9 @@ const SystemSettingsForm: React.FC = () => {
             </p>
             {backgroundPreview && (
               <div className='mt-4'>
-                <img
+                <Image
+                  width={200}
+                  height={200}
                   src={backgroundPreview}
                   alt='Login background preview'
                   className='w-full h-40 object-cover rounded'
@@ -443,22 +492,8 @@ const SystemSettingsForm: React.FC = () => {
         ) : (
           <div className='text-center text-gray-500'>
             <div className='w-32 h-32 mx-auto mb-4'>
-              <svg
-                className='w-full h-full'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-                xmlns='http://www.w3.org/2000/svg'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth='2'
-                  d='M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'
-                />
-              </svg>
+              <NoData text='click preview on any section you need to view' />
             </div>
-            <p>Click preview on ANY section you need to view</p>
           </div>
         )}
       </div>
