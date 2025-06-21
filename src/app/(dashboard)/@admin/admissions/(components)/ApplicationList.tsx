@@ -5,70 +5,12 @@ import { rowsPerPageOptions } from "@/lib/utils";
 import { ModalState, ModalType, User } from "@/lib/types";
 import { useDebounce } from "use-debounce";
 import { useRouter } from "next/navigation";
-import { useGetUsersQuery } from "@/redux/api";
+import { useGetAdmissionsQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 
-// Sample data aligned with your provided table
-const admissionsData = [
-  {
-    id: "1",
-    photo: "/avatar.png",
-    firstname: "Tolu",
-    lastname: "Adebayo",
-    dateOfBirth: "12/9/2011",
-    gender: "M",
-    session: "2023/2024",
-    currentClass: "Basic 7",
-    appliedClass: "Basic 8",
-  },
-  {
-    id: "2",
-    photo: "/avatar.png",
-    firstname: "Tolu",
-    lastname: "Adebayo",
-    dateOfBirth: "12/9/2011",
-    gender: "M",
-    session: "2023/2024",
-    currentClass: "Basic 7",
-    appliedClass: "Basic 8",
-  },
-  {
-    id: "3",
-    photo: "/avatar.png",
-    firstname: "Tolu",
-    lastname: "Adebayo",
-    dateOfBirth: "12/9/2011",
-    gender: "M",
-    session: "2023/2024",
-    currentClass: "Basic 7",
-    appliedClass: "Basic 8",
-  },
-  {
-    id: "4",
-    photo: "/avatar.png",
-    firstname: "Tolu",
-    lastname: "Adebayo",
 
-    dateOfBirth: "12/9/2011",
-    gender: "M",
-    session: "2023/2024",
-    currentClass: "Basic 7",
-    appliedClass: "Basic 8",
-  },
-  {
-    id: "5",
-    photo: "/avatar.png",
-    firstname: "Tolu",
-    lastname: "Adebayo",
-    dateOfBirth: "12/9/2011",
-    gender: "M",
-    session: "2023/2024",
-    currentClass: "Basic 7",
-    appliedClass: "Basic 8",
-  },
-];
 
 export default function ApplicationList() {
   const [page, setPage] = useState(1);
@@ -78,20 +20,21 @@ export default function ApplicationList() {
   const [debouncedSearchTerm] = useDebounce(search, 500);
   const router = useRouter();
 
-  const { data, isLoading } = useGetUsersQuery({
+  const { data, isLoading } = useGetAdmissionsQuery({
     page,
     limit,
     q: debouncedSearchTerm,
+    status: "pending",
   });
 
   if (isLoading) {
     return <LoaderComponent />;
   }
 
-  //   const admissionsDataFromApi = data?.users || [];
-  //   const totalItems = data?.total || admissionsDataFromApi.length;
+    const admissionsDataFromApi = data?.data || [];
+    const totalItems = data?.total || admissionsDataFromApi.length;
 
-  console.log("admissions data:", data);
+  
 
   const openModal = (type: Exclude<ModalType, "">, row: User) => {
     setModal({ type, data: row });
@@ -148,16 +91,16 @@ export default function ApplicationList() {
         title='Application List'
         columns={[
           { key: "sn", label: "SN", sortable: false },
-          { key: "photo", label: "Photo", sortable: false }, // Assuming photo is an image URL
+          { key: "imageUrl", label: "Photo", sortable: false }, // Assuming photo is an image URL
           { key: "fullname", label: "Name" },
-          { key: "dateOfBirth", label: "Date of Birth" },
+          { key: "date", label: "Date of Birth" },
           { key: "gender", label: "Gender" },
           { key: "session", label: "Session" },
           { key: "adClass", label: "Class" },
           { key: "actions", label: "Actions" },
         ]}
-        data={admissionsData} // Fallback to sample data
-        totalItems={admissionsData.length || 0}
+        data={admissionsDataFromApi} // Fallback to sample data
+        totalItems={totalItems || 0}
         currentPage={page}
         onPageChange={setPage}
         rowsPerPage={limit}

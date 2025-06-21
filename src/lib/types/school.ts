@@ -19,6 +19,7 @@ export interface School {
     id: string;
     name: string;
     email: string;
+    slug: string;
     contact: string;
     address?: string;
     subscriptionId?: string;

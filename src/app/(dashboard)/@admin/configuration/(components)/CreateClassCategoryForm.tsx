@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useCreateClassMutation, useUpdateClassMutation } from "@/redux/api";
+import { useCreateClassCategoryMutation, useUpdateClassCategoryMutation } from "@/redux/api";
 
 
 // Define the form schema
@@ -40,23 +40,23 @@ const CreateClassCategoryForm: React.FC<ClassCategoryFormProps> = ({
   onSuccess,
 }) => {
   const [
-    createClass,
+    createClassCategory,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useCreateClassMutation();
+  ] = useCreateClassCategoryMutation();
   const [
-    updateClass,
+    updateClassCategory,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateClassMutation();
+  ] = useUpdateClassCategoryMutation();
 
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
@@ -80,9 +80,9 @@ const CreateClassCategoryForm: React.FC<ClassCategoryFormProps> = ({
       };
       console.log(credentials);
       if (isEditMode && classCategoryData?.id) {
-        await updateClass({ id: classCategoryData.id, ...credentials }).unwrap();
+        await updateClassCategory({ id: classCategoryData.id, ...credentials }).unwrap();
       } else {
-        await createClass(credentials).unwrap();
+        await createClassCategory(credentials).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Create"} class category error:`, error);

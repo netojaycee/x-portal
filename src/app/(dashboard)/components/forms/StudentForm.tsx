@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,21 +23,14 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
-import { useCreateUserMutation, useUpdateUserMutation } from "@/redux/api";
-// import { useAddStudentMutation, useUpdateStudentMutation } from "@/redux/api";
-
-// Mock RTK Query hooks (replace with actual hooks from your API slice)
-const useGetClassesQuery = () => ({
-  data: ["JSS1", "JSS2", "JSS3", "SSS1", "SSS2", "SSS3"],
-  isLoading: false,
-  error: null,
-});
-
-const useGetArmsQuery = () => ({
-  data: ["Gold", "Silver", "Blue", "Red"],
-  isLoading: false,
-  error: null,
-});
+import {
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useGetClassClassArmsBySessionIdQuery,
+  useGetSessionsQuery,
+} from "@/redux/api";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 // Define the form schema
 const studentSchema = z.object({
@@ -54,6 +47,7 @@ const studentSchema = z.object({
   }),
   classId: z.string().min(1, "Class is required"),
   classArmId: z.string().min(1, "Arm is required"),
+  sessionId: z.string().optional(),
   // status: z.enum(["Active", "Inactive"], {
   //   required_error: "Status is required",
   // }),
@@ -62,7 +56,10 @@ const studentSchema = z.object({
 type StudentFormData = z.infer<typeof studentSchema>;
 
 interface StudentFormProps {
-  student?: StudentFormData & { id: string }; // For edit mode
+  student?: StudentFormData & {
+    id: string;
+    currentSessionId?: string;
+  }; // For edit mode
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -72,6 +69,33 @@ export default function StudentForm({
   isEditMode = false,
   onSuccess,
 }: StudentFormProps) {
+  const [availableArms, setAvailableArms] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const userData = useSelector((state: RootState) => state.user.user);
+  console.log(userData)
+
+  // Get current session ID - either from student or from active session
+  const { data: sessions } = useGetSessionsQuery(
+    {},
+    { skip: !userData?.schoolId }
+  );
+
+  console.log("Sessions data:", sessions);
+  const currentSession = sessions?.data?.find(
+    (session: any) => session.status === "Active"
+  );
+  const sessionId =
+    userData?.currentSessionId ||
+    student?.currentSessionId ||
+    (currentSession && currentSession.id);
+
+  // Fetch classes and arms for the current session
+  const { data: classData, isLoading: classDataLoading } =
+    useGetClassClassArmsBySessionIdQuery(sessionId, {
+      skip: !sessionId,
+    });
+
   const [
     addUser,
     {
@@ -92,15 +116,24 @@ export default function StudentForm({
     },
   ] = useUpdateUserMutation();
 
-
-  // console.log(addUser, updateUser)
-  const { data: classes, isLoading: isLoadingClasses } = useGetClassesQuery();
-  const { data: arms, isLoading: isLoadingArms } = useGetArmsQuery();
-
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
   const isError = isEditMode ? isErrorUpdate : isErrorAdd;
   const error = isEditMode ? errorUpdate : errorAdd;
+
+  // Handle class change to update available arms
+  const handleClassChange = (classId: string) => {
+    // Find the selected class and update available arms
+    const selectedClass = classData?.data?.classes?.find(
+      (cls: any) => cls.id === classId
+    );
+
+    if (selectedClass) {
+      setAvailableArms(selectedClass.classArms || []);
+    } else {
+      setAvailableArms([]);
+    }
+  };
 
   const form = useForm<StudentFormData>({
     resolver: zodResolver(studentSchema),
@@ -110,17 +143,41 @@ export default function StudentForm({
       gender: student?.gender || undefined,
       classId: student?.classId || "",
       classArmId: student?.classArmId || "",
+      sessionId:
+        student?.currentSessionId ||
+        (currentSession && currentSession.id) ||
+        undefined,
       // status: student?.status || undefined,
     },
   });
 
+  // Update available arms when class selection changes
+  useEffect(() => {
+    // When editing, load the arms for the student's class
+    if (student?.classId && classData?.data?.classes) {
+      const studentClass = classData.data.classes.find(
+        (cls: any) => cls.id === student.classId
+      );
+      if (studentClass) {
+        setAvailableArms(studentClass.classArms || []);
+      }
+    }
+  }, [student?.classId, classData]);
+
   const onSubmit = async (values: StudentFormData) => {
     try {
-      console.log(values)
+      // Add session ID to the form data
+      const formData = {
+        ...values,
+        sessionId: sessionId,
+        subRoleFlag: "student",
+      };
+
+      console.log(formData);
       if (isEditMode && student?.id) {
-        await updateUser({ id: student.id, input: values }).unwrap();
+        await updateUser({ id: student.id, input: formData }).unwrap();
       } else {
-        await addUser(values).unwrap();
+        await addUser(formData).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Add"} student error:`, error);
@@ -139,11 +196,35 @@ export default function StudentForm({
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
-          ? (error.data as { error?: string })?.error
+          ? (error.data as { message?: string })?.message
           : "An error occurred";
       toast.error(errorMessage);
     }
   }, [isSuccess, isError, error, form, onSuccess, isEditMode]);
+
+  // Show loading state while fetching sessions
+  const isLoadingSessions = !sessions && !userData?.schoolId;
+
+  if (isLoadingSessions || classDataLoading) {
+    return (
+      <div className='w-full max-w-md p-4 flex flex-col items-center justify-center'>
+        <Loader2 className='h-8 w-8 animate-spin text-primary mb-4' />
+        <p className='text-gray-700'>Loading data...</p>
+      </div>
+    );
+  }
+
+  // Show error if no session is available
+  if (!sessionId && sessions?.data?.length > 0) {
+    return (
+      <div className='w-full max-w-md p-4 text-center'>
+        <p className='text-red-500 mb-2'>No active session found.</p>
+        <p className='text-gray-700'>
+          Please set an active session in the Session & Term settings.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className='w-full max-w-md'>
@@ -223,9 +304,12 @@ export default function StudentForm({
                 <FormItem className='w-full'>
                   <FormLabel className='text-gray-700'>Class</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      handleClassChange(value);
+                    }}
                     defaultValue={field.value}
-                    disabled={isLoadingClasses}
+                    disabled={classDataLoading}
                   >
                     <FormControl className='w-full'>
                       <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
@@ -233,11 +317,21 @@ export default function StudentForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {classes?.map((className) => (
-                        <SelectItem key={className} value={className}>
-                          {className}
+                      {classDataLoading ? (
+                        <SelectItem value='loading' disabled>
+                          Loading classes...
                         </SelectItem>
-                      ))}
+                      ) : classData?.data?.classes?.length ? (
+                        classData.data.classes.map((cls: any) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value='empty' disabled>
+                          No classes available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -255,7 +349,7 @@ export default function StudentForm({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={isLoadingArms}
+                    disabled={!form.getValues("classId") || classDataLoading}
                   >
                     <FormControl className='w-full'>
                       <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
@@ -263,11 +357,21 @@ export default function StudentForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {arms?.map((armName) => (
-                        <SelectItem key={armName} value={armName}>
-                          {armName}
+                      {!form.getValues("classId") ? (
+                        <SelectItem value='select-class-first' disabled>
+                          Select a class first
                         </SelectItem>
-                      ))}
+                      ) : availableArms.length > 0 ? (
+                        availableArms.map((arm) => (
+                          <SelectItem key={arm.id} value={arm.id}>
+                            {arm.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value='no-arms' disabled>
+                          No class arms available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -25,13 +25,15 @@ interface Term {
   name: string;
   startDate: string;
   endDate: string;
-  status: "Active" | "Inactive";
+  // status: "Active" | "Inactive";
+  status: boolean;
+
 }
 
 interface Session {
   id: string;
   name: string;
-  status: "Active" | "Inactive";
+  status: boolean;
   terms: Term[];
 }
 
@@ -85,16 +87,21 @@ const SessionTables: React.FC<SessionTablesProps> = ({
     return [...otherOptions];
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "inactive":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // const getStatusColor = (status: string) => {
+  //   switch (status.toLowerCase()) {
+  //     case "active":
+  //       return "bg-green-100 text-green-800";
+  //     case "inactive":
+  //       return "bg-red-100 text-red-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
+  const getStatusColor = (status: boolean) => {
+    return status
+    ? "bg-green-100 text-green-800"
+    : "bg-red-100 text-red-800";
+  }
 
   if (isLoading) {
     return <LoaderComponent />;
@@ -128,17 +135,17 @@ const SessionTables: React.FC<SessionTablesProps> = ({
                 </h3>
                 <span
                   className={` ${
-                    session.status === "Active" ? "bg-[#E1E8F8]" : "bg-white"
+                    session.status ? "bg-[#E1E8F8]" : "bg-white"
                   } rounded-full flex items-center gap-1 px-[3px] py-[2px]`}
                 >
                   {" "}
                   <Switch
-                    checked={session.status === "Active"}
+                    checked={session.status}
                     className='data-[state=checked]:bg-primary data-[state=unchecked]:bg-gray-400'
                     disabled
                   />{" "}
                   <p className='text-xs font-semibold text-gray-500'>
-                    {session.status === "Active" ? "Activated" : "Deactivated"}
+                    {session.status ? "Activated" : "Deactivated"}
                   </p>
                 </span>
               </div>
@@ -213,15 +220,15 @@ const SessionTables: React.FC<SessionTablesProps> = ({
                         <TableCell>
                           <span
                             className={`flex items-center gap-2 w-32 px-2 py-1 rounded-2xl text-xs font-medium ${getStatusColor(
-                              term.status
+                              term?.status
                             )} bg-opacity-70`}
                             style={{
                               backgroundColor:
-                                term.status === "Active"
+                                term.status
                                   ? "rgba(34,197,94,0.07)" // green-500/70
                                   : "rgba(239,68,68,0.07)", // red-500/70
                               color:
-                                term.status === "Active"
+                                term.status
                                   ? "#22c55e" // green-500
                                   : "#ef4444", // red-500
                             }}
@@ -230,12 +237,12 @@ const SessionTables: React.FC<SessionTablesProps> = ({
                               className='inline-block w-2 h-2 rounded-full'
                               style={{
                                 backgroundColor:
-                                  term.status === "Active"
+                                  term.status
                                     ? "#22c55e"
                                     : "#ef4444",
                               }}
                             />
-                            {term.status === "Active"
+                            {term.status
                               ? "Current term"
                               : "Inactive"}
                           </span>

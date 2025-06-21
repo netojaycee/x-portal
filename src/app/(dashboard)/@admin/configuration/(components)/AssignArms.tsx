@@ -4,12 +4,13 @@ import React from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import {  Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetClassesQuery,
   useAssignArmsMutation,
   useGetClassArmsQuery,
+  // useGetSessionClassStudentsQuery,
 } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 
@@ -25,7 +26,11 @@ interface Class {
 interface Session {
   id: string;
   name: string;
-  classes: { id: string; name: string; assignedArms: string[] }[];
+  classes: {
+    id: string;
+    name: string;
+    assignedArms: { id: string; name: string }[];
+  }[];
   schoolId: string;
 }
 
@@ -41,8 +46,6 @@ const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
     useGetClassArmsQuery({});
   const [assignArms, { isLoading: isSaving, isError, error, isSuccess }] =
     useAssignArmsMutation();
-
-  // console.log(classes, "classes", availableArms, "availableArms");
 
   const form = useForm<AssignArmsFormData>({
     defaultValues: {
@@ -64,10 +67,14 @@ const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
     if (classes.length > 0 && session.classes) {
       const initialData = classes.map((cls: Class) => {
         const sessionClass = session.classes.find((sc) => sc.id === cls.id);
+        console.log(session.classes, classes, sessionClass, "FF");
+
         return {
           classId: cls.id,
-          arms: sessionClass?.assignedArms || [],
+          // Map assignedArms objects to their IDs
+          arms: sessionClass?.assignedArms.map((arm) => arm.id) || [],
         };
+
       });
       setValue("classes", initialData);
     }
@@ -76,13 +83,15 @@ const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
   const onSubmit = async (data: AssignArmsFormData) => {
     try {
       const payload = {
-        assignments: data.classes.map((cls) => ({
-          classId: cls.classId,
-          sessionId: session.id,
-          arms: cls.arms,
-        })),
+        sessionId: session.id,
+        assignments: data.classes
+          .filter((cls) => cls.arms.length > 0)
+          .map((cls) => ({
+            classId: cls.classId,
+            classArmIds: cls.arms,
+          })),
       };
-      console.log("Payload to assign arms:", payload);
+      // console.log("Payload to assign arms:", payload);
       await assignArms(payload).unwrap();
     } catch (error) {
       console.error("Assign arms error:", error);
@@ -111,7 +120,9 @@ const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
       <div className=''>
         <form onSubmit={handleSubmit(onSubmit)} className='space-y-2'>
           {fields.map((field, index) => {
-            const classData = classes.find((cls: Class) => cls.id === field.classId);
+            const classData = classes.find(
+              (cls: Class) => cls.id === field.classId
+            );
             const currentArms = armsValues[index]?.arms || [];
 
             return (
@@ -148,16 +159,16 @@ const AssignArmsForm: React.FC<AssignArmsProps> = ({ session, onSuccess }) => {
                     <div key={arm.id} className='flex items-center space-x-2'>
                       <Checkbox
                         className={`${
-                          currentArms.includes(arm.name)
-                            ? " data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
+                          currentArms.includes(arm.id)
+                            ? "data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
                             : ""
                         } h-4 w-4 border border-black`}
                         id={`classes.${index}.arms.${arm.id}`}
-                        checked={currentArms.includes(arm.name)}
+                        checked={currentArms.includes(arm.id)}
                         onCheckedChange={(checked) => {
                           const updatedArms = checked
-                            ? [...currentArms, arm.name]
-                            : currentArms.filter((a) => a !== arm.name);
+                            ? [...currentArms, arm.id]
+                            : currentArms.filter((a) => a !== arm.id);
                           setValue(`classes.${index}.arms`, updatedArms);
                         }}
                       />

@@ -27,9 +27,11 @@ import {
   useGetSessionsQuery, // New query for sessions
   // useCreateStudentMutation,
   // useUpdateAdmissionMutation,
+  useCreateAdmissionMutation,
 } from "@/redux/api";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar"; // shadcn calendar
+import { useImageConverter } from "@/lib/imageUtils";
 import {
   Popover,
   PopoverContent,
@@ -40,54 +42,76 @@ import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Define the form schema using Zod
-const AdmissionFormSchema = z.object({
-  // Student Info
-  firstname: z.string().min(1, "First name is required"),
-  lastname: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").min(1, "Email is required"),
-  gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
-  dateOfBirth: z.date({ required_error: "Date of birth is required" }),
-  sessionId: z.string().min(1, "Session is required"),
-  presentClassId: z.string().min(1, "Present class is required"),
-  classApplyingForId: z.string().min(1, "Class applying for is required"),
-  homeAddress: z.string().min(1, "Home address is required"),
-  contact: z.string().min(1, "Contact number is required"),
-  religion: z.string().min(1, "Religion is required"),
-  nationality: z.string().min(1, "Nationality is required"),
-  stateOfOrigin: z.string().min(1, "State of origin is required"),
-  lga: z.string().min(1, "LGA is required"),
-  imageUrl: z.string().min(1, "Student image is required"),
+const AdmissionFormSchema = z
+  .object({
+    // Student Info
+    firstname: z.string().min(1, "First name is required"),
+    lastname: z.string().min(1, "Last name is required"),
+    email: z
+      .string()
+      .email("Invalid email address")
+      .min(1, "Email is required"),
+    gender: z.enum(["male", "female"], {
+      required_error: "Gender is required",
+    }),
+    dateOfBirth: z.date({ required_error: "Date of birth is required" }),
+    sessionId: z.string().min(1, "Session is required"),
+    presentClassId: z.string().min(1, "Present class is required"),
+    classApplyingTo: z.string().min(1, "Class applying for is required"),
+    homeAddress: z.string().min(1, "Home address is required"),
+    contact: z.string().min(1, "Contact number is required"),
+    religion: z.string().min(1, "Religion is required"),
+    nationality: z.string().min(1, "Nationality is required"),
+    stateOfOrigin: z.string().min(1, "State of origin is required"),
+    lga: z.string().min(1, "LGA is required"),
+    imageUrl: z.string().min(1, "Student image is required"),
 
-  // Guardian Info
-  guardianLastname: z.string().min(1, "Guardian last name is required"),
-  guardianFirstname: z.string().min(1, "Guardian first name is required"),
-  guardianOthername: z.string().optional(),
-  guardianAddress: z.string().min(1, "Guardian address is required"),
-  guardianTel: z.string().min(1, "Guardian contact number is required"),
-  guardianEmail: z
-    .string()
-    .email("Invalid email address")
-    .min(1, "Guardian email is required"),
-  parentRelationship: z.enum(
-    ["father", "mother", "brother", "sister", "guardian", "other"],
+    // Guardian Info
+    guardianLastname: z.string().min(1, "Guardian last name is required"),
+    guardianFirstname: z.string().min(1, "Guardian first name is required"),
+    guardianOthername: z.string().optional(),
+    guardianAddress: z.string().min(1, "Guardian address is required"),
+    guardianTel: z.string().min(1, "Guardian contact number is required"),
+    guardianEmail: z
+      .string()
+      .email("Invalid email address")
+      .min(1, "Guardian email is required"),
+    parentRelationship: z.enum(
+      ["father", "mother", "brother", "sister", "guardian", "other"],
+      {
+        required_error: "Relationship is required",
+      }
+    ),
+    otherRelationship: z.string().optional(),
+    // Former School Info
+    formerSchoolName: z.string().min(1, "School name is required"),
+    formerSchoolAddress: z.string().min(1, "School address is required"),
+    formerSchoolContact: z.string().min(1, "School contact is required"),
+
+    // Other Info
+    specialHealthProblems: z.string().optional(),
+    howDidYouHearAboutUs: z.string().min(1, "This field is required"),
+  })
+  .refine(
+    (data) => {
+      // If relationship is "other", otherRelationship must be provided
+      if (data.parentRelationship === "other") {
+        return (
+          !!data.otherRelationship && data.otherRelationship.trim().length > 0
+        );
+      }
+      // Otherwise, it's optional
+      return true;
+    },
     {
-      required_error: "Relationship is required",
+      message: "Please specify the relationship",
+      path: ["otherRelationship"], // This shows the error on the otherRelationship field
     }
-  ),
-  otherRelationship: z.string().min(1, "Please specify the relationship"),
-
-  // Former School Info
-  formerSchoolName: z.string().min(1, "School name is required"),
-  formerSchoolAddress: z.string().min(1, "School address is required"),
-  formerSchoolContact: z.string().min(1, "School contact is required"),
-
-  // Other Info
-  specialHealthProblems: z.string().optional(),
-  howDidYouHearAboutUs: z.string().min(1, "This field is required"),
-});
-
+  );
 type AdmissionFormValues = z.infer<typeof AdmissionFormSchema>;
 
 interface AdmissionFormProps {
@@ -101,7 +125,8 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
   isEditMode = false,
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
-
+  const router = useRouter();
+  const { convertImage } = useImageConverter();
   // Fetch sessions, classes, class arms, and parents
 
   const { data: sessionsData, isLoading: sessionsLoading } =
@@ -112,7 +137,8 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
   // const { data: classArmsData, isLoading: classArmsLoading } =
   //   useGetClassArmsQuery({});
 
-  // const [createAdmission, { isLoading: isCreating }] = useCreateAdmissionMutation();
+  const [createAdmission, { isLoading: isCreating }] =
+    useCreateAdmissionMutation();
   // const [updateAdmission, { isLoading: isUpdating }] = useUpdateAdmissionMutation();
 
   // Initialize the form with React Hook Form
@@ -127,7 +153,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
       dateOfBirth: undefined,
       sessionId: "",
       presentClassId: "",
-      classApplyingForId: "",
+      classApplyingTo: "",
       contact: "",
       religion: "",
       nationality: "",
@@ -157,74 +183,120 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
     },
   });
 
-  const isLoading = false;
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       const base64String = reader.result as string;
+  //       setPreview(base64String);
+  //       form.setValue("imageUrl", base64String);
+  //     };
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
+      try {
+        const base64String = await convertImage(file, {
+          maxWidth: 800,
+          maxHeight: 600,
+          quality: 0.8,
+          outputFormat: "jpeg",
+        });
+
         setPreview(base64String);
         form.setValue("imageUrl", base64String);
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Image conversion failed:", error);
+        toast.error("Failed to process image. Please try again.");
+      }
     }
   };
 
   const onSubmit = async (values: AdmissionFormValues) => {
     try {
+      // Restructured payload following the exact format provided
       const submissionData = {
-        ...values,
-        dateOfBirth: values.dateOfBirth
-          ? values.dateOfBirth.toISOString()
-          : null,
-        parentRelationship:
-          values.parentRelationship === "other"
-            ? values.otherRelationship
-            : values.parentRelationship,
-        guardian: {
-          lastName: values.guardianLastname,
-          firstName: values.guardianFirstname,
-          otherName: values.guardianOthername,
-          address: values.guardianAddress,
-          tel: values.guardianTel,
+        sessionId: values.sessionId,
+        // schoolId: "e4aa619d-fbdf-4682-b7d6-6bf45a26533d", // You might need to get this from context or props
+        presentClassId: values.presentClassId,
+        classApplyingTo: values.classApplyingTo,
+        imageBase64: values.imageUrl, // Image as base64 in the main object
+
+        // Student data as a nested object
+        student: {
+          firstname: values.firstname,
+          lastname: values.lastname,
+          email: values.email,
+          contact: values.contact,
+          gender: values.gender,
+          religion: values.religion,
+          nationality: values.nationality,
+          stateOfOrigin: values.stateOfOrigin,
+          lga: values.lga,
+          dateOfBirth: values.dateOfBirth
+            ? values.dateOfBirth.toISOString()
+            : null,
+          homeAddress: values.homeAddress,
+        },
+
+        // Parent data as a nested object
+        parent: {
+          firstname: values.guardianFirstname,
+          lastname: values.guardianLastname,
+          othername: values.guardianOthername || "",
           email: values.guardianEmail,
+          contact: values.guardianTel,
+          address: values.guardianAddress,
           relationship:
             values.parentRelationship === "other"
               ? values.otherRelationship
               : values.parentRelationship,
         },
+
+        // Former school data as a nested object
         formerSchool: {
           name: values.formerSchoolName,
           address: values.formerSchoolAddress,
           contact: values.formerSchoolContact,
         },
+
+        // Other info as a nested object
         otherInfo: {
-          specialHealthProblems: values.specialHealthProblems,
+          healthProblems: values.specialHealthProblems || "None",
           howHeardAboutUs: values.howDidYouHearAboutUs,
         },
       };
-      console.log(submissionData);
+      // Add this line to see the data in the console
+      // console.log("Form submitted with data:", submissionData);
       if (isEditMode && admissionId) {
         // await updateAdmission({ id: admissionId, ...submissionData }).unwrap();
         toast.success("Admission updated", {
           description: "The admission has been updated successfully.",
         });
       } else {
-        // await createStudent(submissionData).unwrap();
+        await createAdmission(submissionData).unwrap();
         toast.success("Admission created", {
           description: "The admission has been created successfully.",
         });
       }
+      router.push("/admissions");
     } catch (error) {
-      toast.error(`Failed to save the admission. Please try again. ${error}`);
+      console.log(error, "Error creating/updating admission");
+      toast.error(`Failed to save the admission. Please try again.`);
     }
   };
 
   return (
-    <div className='bg-white p-4 rounded-lg shadow-md'>
+    <div className='bg-white p-4 rounded-lg shadow-md '>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className='space-y-4 mx-10'
+        >
           {/* Header and Subheader */}
           <div className='text-center mb-6'>
             <h1 className='text-primary font-bold text-2xl'>Admission Form</h1>
@@ -358,7 +430,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
               />
               <FormField
                 control={form.control}
-                name='classApplyingForId'
+                name='classApplyingTo'
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Class Applying For</FormLabel>
@@ -823,8 +895,15 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
           >
             Cancel
           </Button> */}
-            <Button type='submit' disabled={isLoading}>
-              {isEditMode ? "Update" : "Create"} Student
+            <Button type='submit' disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  Processing...
+                </>
+              ) : (
+                <>{isEditMode ? "Update" : "Create"} Student</>
+              )}
             </Button>
           </div>
         </form>

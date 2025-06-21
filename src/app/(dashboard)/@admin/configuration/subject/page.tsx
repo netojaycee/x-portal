@@ -145,6 +145,7 @@ export default function Subject() {
           onOpenChange={handleModalOpenChange}
           isEditMode={modal.type === "edit"}
           type={ENUM_MODULES.SUBJECT}
+          
           status={
             modal.type === "status"
               ? "custom"

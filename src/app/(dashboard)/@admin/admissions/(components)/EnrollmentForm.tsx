@@ -1,9 +1,19 @@
-"use client";
-
-import React, { useState } from "react";
+"use client"
+import {
+  JSXElementConstructor,
+  Key,
+  ReactElement,
+  ReactNode,
+  ReactPortal,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import {
+  useGetClassClassArmsBySessionIdQuery,
+  useManageAdmissionMutation,
+} from "@/redux/api";
 import {
   Form,
   FormControl,
@@ -12,9 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,46 +29,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  useGetClassesQuery,
-  useGetClassArmsQuery,
-  useManageAdmissionMutation,
-} from "@/redux/api";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
-// Define the form schema using Zod
 const EnrollmentFormSchema = z.object({
-  classId: z.string().min(1, "Class is required"),
-  classArmId: z.string().min(1, "Class Arm is required"),
+  classId: z.string().min(1, "Please select a class"),
+  classArmId: z.string().min(1, "Please select a class arm"),
 });
 
 type EnrollmentFormValues = z.infer<typeof EnrollmentFormSchema>;
 
 interface EnrollmentFormProps {
-  admissionId: string;
+  admission: any;
   onSuccess: () => void;
 }
 
-export default function EnrollmentForm({
-  admissionId,
-  onSuccess,
-}: EnrollmentFormProps) {
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
+export function EnrollmentForm({ admission, onSuccess }: EnrollmentFormProps) {
+  const [availableArms, setAvailableArms] = useState<
+    { id: string; name: string }[]
+  >([]);
 
-  // Fetch classes and class arms
-  const { data: classesData, isLoading: classesLoading } = useGetClassesQuery(
-    {}
-  );
-  const { data: classArmsData, isLoading: classArmsLoading } =
-    useGetClassArmsQuery({});
-
-  // Filter class arms based on selected class
-  const filteredClassArms = selectedClassId
-    ? classArmsData?.filter((arm: any) => arm.classId === selectedClassId)
-    : [];
-
+  // Fetch classes and arms data using the session ID from the admission
+  const { data: classData, isLoading: classDataLoading } =
+    useGetClassClassArmsBySessionIdQuery(admission?.sessionId, {
+      skip: !admission?.sessionId,
+    });
   const [approveAdmission, { isLoading }] = useManageAdmissionMutation();
 
-  // Initialize the form with React Hook Form
   const form = useForm<EnrollmentFormValues>({
     resolver: zodResolver(EnrollmentFormSchema),
     defaultValues: {
@@ -70,12 +65,28 @@ export default function EnrollmentForm({
     },
   });
 
-  // Handle form submission
+  // When class selection changes, update available arms
+  const handleClassChange = (classId: string) => {
+    form.setValue("classId", classId);
+    form.setValue("classArmId", ""); // Reset arm selection
+
+    // Find the selected class and update available arms
+    const selectedClass = classData?.data?.classes?.find(
+      (cls: any) => cls.id === classId
+    );
+
+    if (selectedClass) {
+      setAvailableArms(selectedClass.classArms || []);
+    } else {
+      setAvailableArms([]);
+    }
+  };
+
   const onSubmit = async (values: EnrollmentFormValues) => {
     try {
       await approveAdmission({
-        id: admissionId,
-        status: "approved",
+        id: admission.id,
+        status: "accepted",
         classId: values.classId,
         classArmId: values.classArmId,
       }).unwrap();
@@ -90,34 +101,78 @@ export default function EnrollmentForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+      {classDataLoading && (
+        <Loader2 className='animate-spin w-5 h-5 text-primary' />
+      )}
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
         <FormField
           control={form.control}
           name='classId'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Class</FormLabel>
-              <FormControl>
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    setSelectedClassId(value);
-                  }}
-                  defaultValue={field.value}
-                  disabled={classesLoading}
-                >
+              <FormLabel>Select Class</FormLabel>
+              <Select
+                onValueChange={(value) => handleClassChange(value)}
+                value={field.value}
+                disabled={classDataLoading || isLoading}
+              >
+                <FormControl>
                   <SelectTrigger className='w-full'>
                     <SelectValue placeholder='Select class' />
                   </SelectTrigger>
-                  <SelectContent>
-                    {classesData?.map((item: any) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
+                </FormControl>
+                <SelectContent>
+                  {classDataLoading ? (
+                    <SelectItem value='loading' disabled>
+                      Loading classes...
+                    </SelectItem>
+                  ) : classData?.data?.classes?.length ? (
+                    classData.data.classes.map(
+                      (cls: {
+                        id: Key | null | undefined;
+                        name:
+                          | string
+                          | number
+                          | bigint
+                          | boolean
+                          | ReactElement<
+                              unknown,
+                              string | JSXElementConstructor<any>
+                            >
+                          | Iterable<ReactNode>
+                          | ReactPortal
+                          | Promise<
+                              | string
+                              | number
+                              | bigint
+                              | boolean
+                              | ReactPortal
+                              | ReactElement<
+                                  unknown,
+                                  string | JSXElementConstructor<any>
+                                >
+                              | Iterable<ReactNode>
+                              | null
+                              | undefined
+                            >
+                          | null
+                          | undefined;
+                      }) => (
+                        <SelectItem
+                          key={cls.id?.toString()}
+                          value={String(cls.id)}
+                        >
+                          {cls.name}
+                        </SelectItem>
+                      )
+                    )
+                  ) : (
+                    <SelectItem value='empty' disabled>
+                      No classes available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -128,40 +183,43 @@ export default function EnrollmentForm({
           name='classArmId'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Class Arm</FormLabel>
-              <FormControl>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={classArmsLoading || !selectedClassId}
-                >
+              <FormLabel>Select Class Arm</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={!form.getValues("classId") || isLoading}
+              >
+                <FormControl>
                   <SelectTrigger className='w-full'>
                     <SelectValue placeholder='Select class arm' />
                   </SelectTrigger>
-                  <SelectContent>
-                    {filteredClassArms?.map((item: any) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name}
+                </FormControl>
+                <SelectContent>
+                  {!form.getValues("classId") ? (
+                    <SelectItem value='select-class-first' disabled>
+                      Select a class first
+                    </SelectItem>
+                  ) : availableArms.length > 0 ? (
+                    availableArms.map((arm) => (
+                      <SelectItem key={arm.id} value={arm.id}>
+                        {arm.name}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
+                    ))
+                  ) : (
+                    <SelectItem value='no-arms' disabled>
+                      No class arms available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className='flex justify-end'>
-          <Button type='submit' disabled={isLoading} className='w-full'>
-            {isLoading ? (
-              <>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                Processing...
-              </>
-            ) : (
-              "Confirm Enrollment"
-            )}
+        <div className='flex justify-end pt-4'>
+          <Button type='submit' disabled={isLoading}>
+            {isLoading ? "Processing..." : "Enroll Student"}
           </Button>
         </div>
       </form>

@@ -6,7 +6,14 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "../sidebar/app-sidebar";
-import { Bell, Calendar, ChevronDown, Loader2, Pencil } from "lucide-react";
+import {
+  Bell,
+  Calendar,
+  ChevronDown,
+  CreditCard,
+  Loader2,
+  Pencil,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,19 +31,23 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { useGetSessionsQuery } from "@/redux/api";
 
 function getActiveTermSessionText(sessions: any[]): string {
-  const currentDate = new Date("2025-05-24T03:17:00Z"); // 04:17 AM WAT converted to UTC
+  // Find the current session (where status is true)
+  const currentSession = sessions.find((session) => session.status === true);
 
-  for (const session of sessions) {
-    const activeTerm = session.terms.find(
-      (term: any) =>
-        new Date(term.startDate) <= currentDate &&
-        new Date(term.endDate) >= currentDate
-    );
-    if (activeTerm) {
-      return `${activeTerm.name} ${session.name}`;
-    }
+  if (!currentSession) {
+    return "No active term";
   }
-  return "No active term";
+
+  // Find the current term within the current session (where status is true)
+  const currentTerm = currentSession.terms.find(
+    (term: any) => term.status === true
+  );
+
+  if (!currentTerm) {
+    return "No active term";
+  }
+
+  return `${currentTerm.name} ${currentSession.name}`;
 }
 
 export default function Wrapper({
@@ -51,8 +62,11 @@ export default function Wrapper({
   role?: ENUM_ROLE;
 }) {
   const userData = useSelector((state: RootState) => state.user.user);
-    const { data, isLoading } = useGetSessionsQuery({});
-  console.log("Sessions data", data && data);
+  const { data, isLoading } = useGetSessionsQuery(
+    {},
+    { skip: !userData.schoolId }
+  );
+  // console.log("Sessions data", data && data);
   const sessions = data?.data || [];
   console.log(wrapperStyle, pageTitle);
 
@@ -76,7 +90,9 @@ export default function Wrapper({
                 {isLoading ? (
                   <Loader2 className='animate-spin w-4 h-4' />
                 ) : (
-                  <p className='text-sm'>{getActiveTermSessionText(sessions)}</p>
+                  <p className='text-sm'>
+                    {getActiveTermSessionText(sessions)}
+                  </p>
                 )}
               </span>
             )}
@@ -117,6 +133,12 @@ export default function Wrapper({
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => (window.location.href = "/payment")}
+                  >
+                    <CreditCard />
+                    Subscription
+                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Pencil />
                     Profile

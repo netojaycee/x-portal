@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 // import { classCategoryData } from "@/lib/data";
 import { Plus } from "lucide-react";
-import { useGetClassesQuery } from "@/redux/api";
+import { useGetClassCategoriesQuery } from "@/redux/api";
 import { rowsPerPageOptions } from "@/lib/utils";
 import { ENUM_MODULES } from "@/lib/types/enums";
 import LoaderComponent from "@/components/local/LoaderComponent";
@@ -19,18 +19,19 @@ export default function ClassCategoryTab() {
   const [modal, setModal] = useState<ModalState>({ type: null });
 
   // Pass them into your RTK hook
-  const { data, isLoading } = useGetClassesQuery({
-    page,
-    limit,
-  });
-  // const [toggleActive] = useToggleSchoolActiveMutation();
 
-  if (isLoading) {
+
+
+    const { data: categoriesData, isLoading: categoriesLoading } =
+      useGetClassCategoriesQuery({});
+      const classCategoryData = categoriesData?.classCategories || [];
+
+  if ( categoriesLoading) {
     return <LoaderComponent />;
   }
   //   console.log(data && data);
     //  const classCategoryData = data?.data || [];
-  const classCategoryData = data || [];
+  // const classCategoryData = data || [];
 
   console.log("classCategoryData", classCategoryData);
 
@@ -73,7 +74,7 @@ export default function ClassCategoryTab() {
           { key: "actions", label: "Actions" },
         ]}
         data={classCategoryData}
-        totalItems={data.length || 0}
+        totalItems={classCategoryData?.length || 0}
         currentPage={page}
         onPageChange={setPage}
         rowsPerPage={limit}

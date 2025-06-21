@@ -16,7 +16,7 @@ const AuthWrapper = ({ children }: AuthWrapperProps) => {
   const pathname = usePathname();
 
   // Define public routes that don't require authentication
-  const publicRoutes = ["/"];
+  const publicRoutes = ["/", "/admissions/school/"];
 
   // Apply withAuth only for non-public routes
   if (publicRoutes.includes(pathname)) {

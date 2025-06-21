@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/select";
 import {
   ChevronDown,
-  ChevronsLeft,
-  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
   ChevronsUpDown,
   Search,
   Filter,
@@ -58,9 +58,9 @@ interface FilterConfig {
 }
 
 interface ActionOption {
-  label: string;
+  label: string | React.ReactNode;
   type: "confirmation" | "edit" | "custom";
-  handler: (row: any) => void;
+  handler: (row: any) => void | undefined;
   key: string;
 }
 
@@ -237,7 +237,8 @@ const CustomTable: React.FC<CustomTableProps> = ({
       {title &&
         title !== "Class List" &&
         title !== "Subject List" &&
-        title !== "Class Category List" && (
+        title !== "Class Category List" &&
+        title !== "Results" && (
           <h2 className='text-base md:text-xl font-semibold font-lato'>
             {title}
           </h2>
@@ -278,10 +279,15 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       "--"
                     ) : column.key === "status" ||
                       column.key === "subStatus" ||
-                      column.key === "isActive" ? (
+                      column.key === "isActive" ||
+                      column.key === "isApproved" ? (
                       <span
                         className={`px-2 py-1 rounded-sm text-xs font-medium ${getStatusColor(
                           column.key === "isActive"
+                            ? row[column.key]
+                              ? "active"
+                              : "inactive"
+                            : column.key === "isApproved"
                             ? row[column.key]
                               ? "active"
                               : "inactive"
@@ -292,39 +298,69 @@ const CustomTable: React.FC<CustomTableProps> = ({
                           ? row[column.key]
                             ? "Active"
                             : "Inactive"
+                          : column.key === "isApproved"
+                          ? row[column.key]
+                            ? "Approved"
+                            : "Submitted"
                           : row[column.key] || "--"}
                       </span>
                     ) : column.key === "subRole" ? (
                       row.subRole?.name || "--"
+                    ) : column.key === "classArmName" ? (
+                      row.classArm.name || "--"
+                    ) : column.key === "className" ? (
+                      row.class.name || "--"
+                    ) : column.key === "submittedBy" ? (
+                      row.createdBy?.name || "--"
+                    ) : column.key === "session" ? (
+                      row.session?.name || "--"
+                    ) : column.key === "term" ? (
+                      row.termDefinition?.name || "--"
+                    ) : column.key === "resultScope" ? (
+                      row.resultScope === "EXAM" ? (
+                        "Terminal"
+                      ) : (
+                        row.resultScope || "--"
+                      )
                     ) : column.key === "adClass" ? (
                       <div className='flex flex-col gap-1'>
                         <span className='flex items-center gap-1'>
                           <ArrowLeft className='w-4 h-4 text-red-500' />
-                          <p className=''>{row.currentClass}</p>
+                          <p className=''>{row.presentClass}</p>
                         </span>
                         <span className='flex items-center gap-1'>
                           <ArrowRight className='w-4 h-4 text-green-500' />
-                          <p className=''>{row.appliedClass}</p>
+                          <p className=''>{row.classToApply}</p>
                         </span>
                       </div>
-                    ) : column.key === "photo" ? (
+                    ) : column.key === "imageUrl" ? (
                       <Image
                         width={40}
                         height={40}
-                        src={row.photo}
+                        src={row.imageUrl}
                         alt={row.name}
                         className='h-10 w-10 bg-gray-400 rounded-md'
                       />
                     ) : column.key === "subPlan" ? (
                       row.subscription?.name || "--"
                     ) : column.key === "date" ? (
-                      row.timestamp || row.createdAt ? (
-                        new Date(row.timestamp || row.createdAt)
+                      row.timestamp || row.createdAt || row.admissionDate ? (
+                        new Date(
+                          row.timestamp || row.createdAt || row.admissionDate
+                        )
                           .toISOString()
                           .slice(0, 10) // "YYYY-MM-DD"
                       ) : (
                         "--"
                       )
+                    ) : column.key === "dateOfBirth" ? (
+                      row.dateOfBirth ? (
+                        new Date(row.dateOfBirth).toISOString().slice(0, 10) // "YYYY-MM-DD"
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "classCategory" ? (
+                      row?.classCategory?.name || "--"
                     ) : column.key === "time" ? (
                       row.timestamp ? (
                         new Date(row.timestamp)
@@ -354,9 +390,9 @@ const CustomTable: React.FC<CustomTableProps> = ({
                           {(getActionOptions
                             ? getActionOptions(row)
                             : actionOptions
-                          ).map((action) => (
+                          ).map((action, index) => (
                             <DropdownMenuItem
-                              key={action.label}
+                              key={index}
                               onClick={() => action.handler(row)}
                             >
                               {action.label}
@@ -438,14 +474,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
 
             {pagination && (totalItems ?? 0) > rowsPerPage && (
               <div className='flex space-x-2'>
-                <Button
+                {/* <Button
                   variant='outline'
                   size='sm'
                   onClick={() => onPageChange && onPageChange(1)}
                   disabled={currentPage === 1}
                 >
-                  <ChevronsLeft className='h-4 w-4' />
-                </Button>
+                  <ChevronLeft className='h-4 w-4' />
+                </Button> */}
                 <Button
                   variant='outline'
                   size='sm'
@@ -454,20 +490,86 @@ const CustomTable: React.FC<CustomTableProps> = ({
                   }
                   disabled={(currentPage ?? 1) === 1}
                 >
-                  Previous
+                  {/* Previous */}
+                  <ChevronLeft className='h-4 w-4' />
                 </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size='sm'
-                      onClick={() => onPageChange && onPageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  )
-                )}
+                {(() => {
+                  const maxVisiblePages = 3;
+                  const halfVisible = Math.floor(maxVisiblePages / 2);
+                  let startPage = Math.max(1, (currentPage ?? 1) - halfVisible);
+                  const endPage = Math.min(
+                    totalPages,
+                    startPage + maxVisiblePages - 1
+                  );
+
+                  // Adjust startPage if we're near the end
+                  if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                  }
+
+                  const pages = [];
+
+                  // Add first page if not visible
+                  if (startPage > 1) {
+                    pages.push(
+                      <Button
+                        key={1}
+                        variant='outline'
+                        size='sm'
+                        onClick={() => onPageChange && onPageChange(1)}
+                      >
+                        1
+                      </Button>
+                    );
+                    if (startPage > 2) {
+                      pages.push(
+                        <span
+                          key='start-ellipsis'
+                          className='px-2 text-gray-500'
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+                  }
+
+                  // Add visible pages
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <Button
+                        key={i}
+                        variant={currentPage === i ? "default" : "outline"}
+                        size='sm'
+                        onClick={() => onPageChange && onPageChange(i)}
+                      >
+                        {i}
+                      </Button>
+                    );
+                  }
+
+                  // Add last page if not visible
+                  if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                      pages.push(
+                        <span key='end-ellipsis' className='px-2 text-gray-500'>
+                          ...
+                        </span>
+                      );
+                    }
+                    pages.push(
+                      <Button
+                        key={totalPages}
+                        variant='outline'
+                        size='sm'
+                        onClick={() => onPageChange && onPageChange(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    );
+                  }
+
+                  return pages;
+                })()}
                 <Button
                   variant='outline'
                   size='sm'
@@ -476,16 +578,17 @@ const CustomTable: React.FC<CustomTableProps> = ({
                   }
                   disabled={currentPage === totalPages}
                 >
-                  Next
+                  {/* Next */}
+                  <ChevronRight className='h-4 w-4' />
                 </Button>
-                <Button
+                {/* <Button
                   variant='outline'
                   size='sm'
                   onClick={() => onPageChange && onPageChange(totalPages)}
                   disabled={currentPage === totalPages}
                 >
-                  <ChevronsRight className='h-4 w-4' />
-                </Button>
+                  <ChevronRight className='h-4 w-4' />
+                </Button> */}
               </div>
             )}
 

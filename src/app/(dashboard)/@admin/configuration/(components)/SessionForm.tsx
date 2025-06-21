@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, ChevronDownIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -99,6 +99,7 @@ const SessionForm: React.FC<SessionFormProps> = ({
   isEditMode = false,
   onSuccess,
 }) => {
+  
   const [
     createSession,
     {
@@ -320,17 +321,28 @@ const SessionForm: React.FC<SessionFormProps> = ({
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Input
+                            {/* <Input
                               type='text'
                               placeholder='Select a date'
                               value={field.value || ""}
                               onChange={field.onChange}
                               className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 w-full'
                               readOnly
-                            />
+                            /> */}
+                            <Button
+                              variant='outline'
+                              id='date'
+                              className='w-full h-10 justify-between font-normal border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                            >
+                              {field.value ? field.value : "Select date"}
+                              <ChevronDownIcon />
+                            </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
+                        <PopoverContent
+                          className='w-auto overflow-hidden p-0'
+                          align='start'
+                        >
                           <Calendar
                             mode='single'
                             selected={
@@ -346,6 +358,8 @@ const SessionForm: React.FC<SessionFormProps> = ({
                               date < new Date("2000-01-01")
                             }
                             initialFocus
+                            className='rounded-md border shadow-sm'
+                            // captionLayout='dropdown'
                           />
                         </PopoverContent>
                       </Popover>
@@ -364,14 +378,22 @@ const SessionForm: React.FC<SessionFormProps> = ({
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
-                            <Input
+                            {/* <Input
                               type='text'
                               placeholder='Select a date'
                               value={field.value || ""}
                               onChange={field.onChange}
                               className='border-gray-300 focus:border-blue-500 focus:ring-blue-500 w-full'
                               readOnly
-                            />
+                            /> */}
+                            <Button
+                              variant='outline'
+                              id='date'
+                              className='w-full h-10 justify-between font-normal border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                            >
+                              {field.value ? field.value : "Select date"}
+                              <ChevronDownIcon />
+                            </Button>
                           </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className='w-auto p-0'>
@@ -390,7 +412,8 @@ const SessionForm: React.FC<SessionFormProps> = ({
                               date < new Date("2000-01-01")
                             }
                             initialFocus
-                            
+                            className='rounded-md border shadow-sm'
+                            // captionLayout='dropdown'
                           />
                         </PopoverContent>
                       </Popover>

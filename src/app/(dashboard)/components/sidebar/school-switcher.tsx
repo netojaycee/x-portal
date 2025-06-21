@@ -70,10 +70,14 @@ export function SchoolSwitcher() {
   }, [user?.schoolId, schools]);
 
   // Handle view_as toggle
-  const handleToggle = async (value: ENUM_ROLE, schoolId: string) => {
+  const handleToggle = async (
+    value: ENUM_ROLE,
+    schoolId: string,
+    schoolSlug: string
+  ) => {
     if (!user) return;
     try {
-      await setViewAs({ view_as: value, schoolId }).unwrap();
+      await setViewAs({ view_as: value, schoolId, schoolSlug }).unwrap();
       // window.location.href = "/dashboard"; // Force reload
     } catch (error) {
       console.error("Failed to toggle view:", error);
@@ -99,14 +103,14 @@ export function SchoolSwitcher() {
   // Switch to a school (view_as: ADMIN)
   const switchToSchool = (school: School) => {
     setActiveSchool(school);
-    handleToggle(ENUM_ROLE.ADMIN, school.id);
+    handleToggle(ENUM_ROLE.ADMIN, school.id, school.slug);
     setOpen(false);
   };
 
   // Switch to SuperAdmin
   const switchToSuperAdmin = () => {
     if (!user?.schoolId) return;
-    handleToggle(ENUM_ROLE.SUPERADMIN, "");
+    handleToggle(ENUM_ROLE.SUPERADMIN, "", "");
     setOpen(false);
     setActiveSchool(null);
   };

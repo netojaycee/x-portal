@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useUpdateSchoolInfoMutation } from "@/redux/api"; // Assume this is defined in your RTK setup
 import Image from "next/image";
+import { useImageConverter } from "@/lib/imageUtils";
+import { useUpdateSchoolConfigurationMutation } from "@/redux/api";
 
 // Define the form schema
 const schoolSchema = z.object({
@@ -28,48 +29,62 @@ const schoolSchema = z.object({
   state: z.string().min(1, "State is required"),
   address: z.string().min(1, "Address is required"),
   color: z.string().optional(),
-  logo: z.any().optional(),
+  logoBase64: z.string().optional(), // Changed from logo to logoBase64
 });
 
 type SchoolFormData = z.infer<typeof schoolSchema>;
 
-const SchoolInfoForm: React.FC = () => {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [updateSchoolInfo, { isLoading, isSuccess, isError, error }] =
-    useUpdateSchoolInfoMutation();
+export default function SchoolInfoForm({ data }: { data: any }) {
+  const [preview, setPreview] = useState<string | null>(data?.logo?.imageUrl);
+  const { convertImage } = useImageConverter();
+  const [updateSchoolConfiguration, { isLoading, isSuccess, isError, error }] =
+    useUpdateSchoolConfigurationMutation();
 
   const form = useForm<SchoolFormData>({
     resolver: zodResolver(schoolSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      country: "",
-      state: "",
-      address: "",
-      color: "#ff0000", // Default color (red)
-      logo: null,
+      name: data.school.name || "",
+      email: data.school.email || "",
+      country: data.country || "",
+      state: data.state || "",
+      address: data.school.address || "",
+      color: data.color || "#ff0000", // Default color (red)
+      logoBase64: "",
     },
   });
+  // console.log(data);
 
+  useEffect(() => {
+    if (data) {
+      form.reset({
+        name: data.school.name || "",
+        email: data.school.email || "",
+        country: data.country || "",
+        state: data.state || "",
+        address: data.school.address || "",
+        color: data.color || "#ff0000", // Default color (red)
+        logoBase64: data.logo?.imageUrl || "", // Set the initial logoBase64
+      });
+      setPreview(data.logo?.imageUrl || null);
+    }
+  }, [data, form]);
   const onSubmit = async (values: SchoolFormData) => {
     try {
-      const formData = new FormData();
-      formData.append("name", values.name);
-      formData.append("email", values.email);
-      formData.append("country", values.country);
-      formData.append("state", values.state);
-      formData.append("address", values.address);
-      if (values.color) formData.append("color", values.color);
-      if (values.logo && values.logo[0])
-        formData.append("logo", values.logo[0]);
+      // Send JSON data instead of FormData
+      const submissionData = {
+        name: values.name,
+        email: values.email,
+        country: values.country,
+        state: values.state,
+        address: values.address,
+        color: values.color,
+        logoBase64: values.logoBase64,
+      };
 
-      // Log the plain values for debugging
-      console.log("Form values:", values);
-      // Log the FormData entries for debugging
-      for (const [key, value] of formData.entries()) {
-        console.log(`FormData: ${key}:`, value);
-      }
-      await updateSchoolInfo(formData).unwrap();
+      // Log the values for debugging
+      console.log("Form values:", submissionData);
+
+      await updateSchoolConfiguration(submissionData).unwrap();
     } catch (error) {
       console.error("Update school info error:", error);
     }
@@ -78,7 +93,7 @@ const SchoolInfoForm: React.FC = () => {
   useEffect(() => {
     if (isSuccess) {
       toast.success("School information updated successfully");
-      form.reset();
+      // form.reset();
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
@@ -86,17 +101,25 @@ const SchoolInfoForm: React.FC = () => {
           : "An error occurred";
       toast.error(errorMessage);
     }
-  }, [isSuccess, isError, error, form]);
+  }, [isSuccess, isError, error]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      form.setValue("logo", e.target.files);
+      try {
+        const base64String = await convertImage(file, {
+          maxWidth: 800,
+          maxHeight: 600,
+          quality: 0.8,
+          outputFormat: "jpeg",
+        });
+
+        setPreview(base64String);
+        form.setValue("logoBase64", base64String);
+      } catch (error) {
+        console.error("Image conversion failed:", error);
+        toast.error("Failed to process image. Please try again.");
+      }
     }
   };
 
@@ -358,6 +381,6 @@ const SchoolInfoForm: React.FC = () => {
       </Form>
     </div>
   );
-};
+}
 
-export default SchoolInfoForm;
+// export default SchoolInfoForm;

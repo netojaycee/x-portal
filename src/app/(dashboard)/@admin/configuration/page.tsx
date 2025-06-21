@@ -39,7 +39,7 @@ export default function Configuration() {
       <h2 className='text-lg font-semibold text-gray-500 mb-4 font-lato'>
         Performance Configuration
       </h2>
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
         <SettingsCard
           title='Marking Scheme'
           iconSrc='Marking scheme.svg'
@@ -60,6 +60,19 @@ export default function Configuration() {
           iconSrc='result.svg'
           link='/configuration/report-sheet-settings'
         />
+      </div>
+
+       {/* Integration Configuration Section */}
+       <h2 className='text-lg font-semibold text-gray-500 mb-4 font-lato'>
+        Integration Configuration
+      </h2>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+        <SettingsCard
+          title='Payment Scheme'
+          iconSrc='sub.svg'
+          link='/configuration/payment'
+        />
+       
       </div>
     </div>
   );

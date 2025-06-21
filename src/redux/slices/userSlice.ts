@@ -4,7 +4,7 @@ import { User } from '@/lib/types';
 import { ENUM_ROLE } from '@/lib/types/enums';
 
 interface UserState {
-  user: User | null;
+  user:any;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -41,6 +41,7 @@ const userSlice = createSlice({
       if (state.user && state.user.role === ENUM_ROLE.SUPERADMIN) {
         state.user.view_as = action.payload || state.user.role;
         state.user.schoolId = action.payload || state.user.schoolId;
+        state.user.schoolSlug = action.payload || state.user.schoolSlug;
       }
     },
     setAuthenticated(state, action: PayloadAction<boolean>) {

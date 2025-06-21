@@ -92,14 +92,14 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
       <CustomTable
         title='Students List'
         columns={[
-          // { key: "sn", label: "SN", sortable: true },
+          { key: "sn", label: "SN" },
           { key: "fullname", label: "Name" },
           { key: "gender", label: "Gender" },
-          { key: "class", label: "Class" },
-          { key: "arm", label: "Arm" },
-          { key: "parentGuardian", label: "Parent/Guardian" },
-          { key: "createdDate", label: "Created Date" },
-          { key: "status", label: "Status" },
+          { key: "className", label: "Class" },
+          { key: "classArmName", label: "Arm" },
+          { key: "parentName", label: "Parent/Guardian" },
+          { key: "date", label: "Created Date" },
+          // { key: "status", label: "Status" },
           { key: "actions", label: "Actions" },
         ]}
         data={studentsData} // Show only 5 rows as per Subscriber List

@@ -21,7 +21,7 @@ import CreateClassArmArmForm from "../../@admin/configuration/(components)/Creat
 import SubjectForm from "../../@admin/configuration/(components)/SubjectForm";
 import AssignSubjectForm from "../../@admin/configuration/(components)/AssignSubject";
 import CreateClassCategoryForm from "../../@admin/configuration/(components)/CreateClassCategoryForm";
-import EnrollmentForm from "../../@admin/admissions/(components)/EnrollmentForm";
+import {EnrollmentForm} from "../../@admin/admissions/(components)/EnrollmentForm";
 import RejectionForm from "../../@admin/admissions/(components)/RejectionForm";
 // import { ModalType } from "@/lib/types";
 
@@ -32,6 +32,9 @@ interface CustomModalProps {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   status?: any;
+  children?: React.ReactNode;
+  title?: string;
+  description?: string;
 }
 
 export function CustomModal({
@@ -41,6 +44,9 @@ export function CustomModal({
   open,
   onOpenChange,
   status,
+  title,
+  description,
+  children,
 }: CustomModalProps) {
   const handleClose = () => onOpenChange(false);
 
@@ -64,9 +70,8 @@ export function CustomModal({
               }
               if (
                 (Object.values(ENUM_MODULES).includes(type) &&
-                  status === "confirmation") ||
-                (status === "approve" && type !== ENUM_MODULES.ADMISSION) ||
-                (status === "reject" && type !== ENUM_MODULES.ADMISSION)
+                  status === "confirmation")
+                
               ) {
                 return "Status Confirmation";
               }
@@ -145,6 +150,9 @@ export function CustomModal({
               if (type === ENUM_MODULES.CLASS && status === "custom") {
                 return `Assign arms for ${selectedRow?.name || "--"} session`;
               }
+              if (title) {
+                return title;
+              }
               return null;
             })()}
           </DialogTitle>
@@ -202,7 +210,7 @@ export function CustomModal({
                 return "Enter details to create a new school.";
               }
               if (type === ENUM_MODULES.STUDENT && isEditMode) {
-                return `Update details for ${selectedRow?.fullname || "--"}.`;
+                return `Update details for ${selectedRow?.firstname + " " + selectedRow?.lastname || "--"}.`;
               }
               if (type === ENUM_MODULES.STUDENT && !isEditMode) {
                 return "Enter details to create a new student.";
@@ -283,6 +291,9 @@ export function CustomModal({
               }
               if (type === ENUM_MODULES.ADMISSION && !isEditMode) {
                 return "Enter details to create a new student.";
+              }
+              if(description) {
+                return description;
               }
               return null;
             })()}
@@ -372,7 +383,7 @@ export function CustomModal({
           {/* Special handling for admission approval/rejection */}
           {type === ENUM_MODULES.ADMISSION && status === "approve" && (
             <EnrollmentForm
-              admissionId={selectedRow?.id}
+              admission={selectedRow}
               onSuccess={handleClose}
             />
           )}
@@ -387,9 +398,7 @@ export function CustomModal({
           {/* Use ConfirmationForm for other modules and actions */}
           {Object.values(ENUM_MODULES).includes(type) &&
             (status === "confirmation" ||
-              status === "delete" ||
-              (status === "approve" && type !== ENUM_MODULES.ADMISSION) ||
-              (status === "reject" && type !== ENUM_MODULES.ADMISSION)) && (
+              status === "delete") && (
               <ConfirmationForm
                 data={selectedRow}
                 onSuccess={handleClose}
@@ -409,10 +418,12 @@ export function CustomModal({
           )}
           {type === ENUM_MODULES.SUBJECT && status === "custom" && (
             <AssignSubjectForm
-              subjectId={selectedRow}
+              subject={selectedRow}
               onSuccess={handleClose}
             />
           )}
+
+          {children}
         </div>
       </DialogContent>
     </Dialog>

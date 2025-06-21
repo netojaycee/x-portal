@@ -1,0 +1,47 @@
+{/* Ultra Compact Summary */}
+<div className='space-y-2'>
+  <div className='flex items-center justify-between'>
+    <div className='flex items-center space-x-2'>
+      <Badge
+        variant='outline'
+        className='bg-yellow-50 text-yellow-700 border-yellow-300 text-xs'
+      >
+        {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.class.id))).length} Classes
+      </Badge>
+      <Badge
+        variant='outline'
+        className='bg-blue-50 text-blue-600 border-blue-300 text-xs'
+      >
+        {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.termDefinition.id))).length} Terms
+      </Badge>
+    </div>
+  </div>
+  
+  {/* Quick Preview */}
+  <div className='text-xs text-gray-500 truncate'>
+    {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.class.name)))
+      .slice(0, 3)
+      .join(', ')}
+    {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.class.name))).length > 3 && 
+      ` +${Array.from(new Set(scheme.classAssignments?.map((a: any) => a.class.name))).length - 3} more`
+    }
+  </div>
+</div>
+
+
+
+
+{/* Single Line Summary */}
+<div className='text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded'>
+  <span className='font-medium'>
+    {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.class.id))).length} classes
+  </span>
+  {' • '}
+  <span className='font-medium'>
+    {Array.from(new Set(scheme.classAssignments?.map((a: any) => a.termDefinition.id))).length} terms
+  </span>
+  {' • '}
+  <span>
+    {scheme.classAssignments?.length || 0} assignments
+  </span>
+</div>

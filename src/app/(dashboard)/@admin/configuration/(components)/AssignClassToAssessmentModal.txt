@@ -1,0 +1,633 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  X,
+  ChevronDown,
+  Loader2,
+  Search,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  useGetClassesQuery,
+  useGetClassArmsQuery,
+  useGetSessionsQuery,
+  useAssignClassesToAssessmentSchemeMutation,
+} from "@/redux/api";
+import LoaderComponent from "@/components/local/LoaderComponent";
+import { Input } from "@/components/ui/input";
+
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface AssignClassToAssessmentModalProps {
+  scheme?: any; // The scheme to edit
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+interface FormData {
+  terms: string[];
+  classes: {
+    classId: string;
+    className: string;
+    selectAllArms: boolean;
+    arms: {
+      armId: string;
+      armName: string;
+      selected: boolean;
+    }[];
+  }[];
+}
+
+export default function AssignClassToAssessmentModal({
+  scheme,
+  isOpen,
+  onClose,
+  onSuccess,
+}: AssignClassToAssessmentModalProps) {
+  const [selectedTerms, setSelectedTerms] = useState<string[]>([]);
+  const [showTermsDropdown, setShowTermsDropdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [classSearch, setClassSearch] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [expandedClasses, setExpandedClasses] = useState<string[]>([]);
+
+  // Fetch data
+  const { data: classesData = [], isLoading: isLoadingClasses } =
+    useGetClassesQuery({});
+  const { data: classArmsData = [], isLoading: isLoadingArms } =
+    useGetClassArmsQuery({});
+  const { data: sessionsData, isLoading: isLoadingSessions } =
+    useGetSessionsQuery({});
+
+  // Extract all terms from sessions
+  const allTerms = React.useMemo(() => {
+    if (!sessionsData?.data) return [];
+
+    const terms: { id: string; name: string }[] = [];
+    sessionsData.data.forEach((session) => {
+      if (session.terms) {
+        session.terms.forEach((term) => {
+          terms.push({
+            id: term.id,
+            name: term.name,
+          });
+        });
+      }
+    });
+
+    return terms;
+  }, [sessionsData]);
+
+  // Initialize form
+  const form = useForm<FormData>({
+    defaultValues: {
+      terms: scheme?.terms || [],
+      classes: [],
+    },
+  });
+
+  // Set up classes and arms
+  useEffect(() => {
+    if (!isLoadingClasses && !isLoadingArms && classesData && classArmsData) {
+      // Extract existing classes and arms from scheme
+      const existingClasses = scheme?.classes || [];
+
+      // Format classes with arms
+      const formattedClasses = classesData.map((cls: any) => {
+        // Find this class in the scheme
+        const existingClass = existingClasses.find(
+          (c: any) => c.name === cls.name
+        );
+
+        // Get arms for this class
+        const classArms = classArmsData.filter(() => true); // In a real scenario, filter by class association
+
+        // Format arms
+        const arms = classArms.map((arm: any) => {
+          const isSelected = existingClass?.arms?.includes(arm.name);
+          return {
+            armId: arm.id,
+            armName: arm.name,
+            selected: !!isSelected,
+          };
+        });
+
+        // Determine if all arms are selected
+        const allArmsSelected =
+          arms.length > 0 && arms.every((arm) => arm.selected);
+
+        return {
+          classId: cls.id,
+          className: cls.name,
+          selectAllArms: allArmsSelected,
+          arms,
+        };
+      });
+
+      // Set form values
+      form.setValue("classes", formattedClasses);
+
+      // Set selected terms
+      if (scheme?.terms) {
+        setSelectedTerms(scheme.terms);
+      }
+    }
+  }, [
+    isLoadingClasses,
+    isLoadingArms,
+    classesData,
+    classArmsData,
+    scheme,
+    form,
+  ]);
+
+  // API mutation
+  const [assignClassesToAssessmentScheme] =
+    useAssignClassesToAssessmentSchemeMutation();
+
+  // Handle form submission
+  const onSubmit = async (data: FormData) => {
+    if (selectedTerms.length === 0) {
+      toast.error("Please select at least one term");
+      setErrorMessage("Please select at least one term");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      // Prepare data for submission
+      const selectedClasses = data.classes.filter(
+        (cls) => cls.selectAllArms || cls.arms.some((arm) => arm.selected)
+      );
+
+      const payload = {
+        schemeId: scheme?.id,
+        terms: selectedTerms,
+        classes: selectedClasses.map((cls) => ({
+          classId: cls.classId,
+          className: cls.className,
+          allArms: cls.selectAllArms,
+          arms: cls.selectAllArms
+            ? []
+            : cls.arms
+                .filter((arm) => arm.selected)
+                .map((arm) => ({ id: arm.armId, name: arm.armName })),
+        })),
+      };
+
+      // Call the API
+      await assignClassesToAssessmentScheme(payload).unwrap();
+
+      toast.success("Classes assigned successfully");
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error assigning classes:", error);
+      const errorMsg = error?.data?.message || "Failed to assign classes";
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Toggle class selection (all arms)
+  const toggleClass = (index: number, checked: boolean) => {
+    const updatedClasses = [...form.getValues().classes];
+    updatedClasses[index].selectAllArms = checked;
+
+    // When selecting all arms, set all individual arms to selected
+    if (checked) {
+      updatedClasses[index].arms = updatedClasses[index].arms.map((arm) => ({
+        ...arm,
+        selected: true,
+      }));
+    }
+
+    form.setValue("classes", updatedClasses);
+  };
+
+  // Toggle arm selection
+  const toggleArm = (
+    classIndex: number,
+    armIndex: number,
+    checked: boolean
+  ) => {
+    const updatedClasses = [...form.getValues().classes];
+    updatedClasses[classIndex].arms[armIndex].selected = checked;
+
+    // Update the selectAllArms flag based on arm selections
+    updatedClasses[classIndex].selectAllArms = updatedClasses[
+      classIndex
+    ].arms.every((arm) => arm.selected);
+
+    form.setValue("classes", updatedClasses);
+  };
+
+  // Toggle terms dropdown
+  const toggleTermsDropdown = () => {
+    setShowTermsDropdown(!showTermsDropdown);
+  };
+
+  // Toggle term selection
+  const toggleTerm = (termId: string) => {
+    if (selectedTerms.includes(termId)) {
+      setSelectedTerms(selectedTerms.filter((id) => id !== termId));
+    } else {
+      setSelectedTerms([...selectedTerms, termId]);
+    }
+  };
+
+  // Remove term
+  const removeTerm = (termId: string) => {
+    setSelectedTerms(selectedTerms.filter((id) => id !== termId));
+  };
+
+  // Filter classes by search term
+  const filteredClasses =
+    classSearch.trim() === ""
+      ? form.getValues().classes
+      : form
+          .getValues()
+          .classes.filter((cls) =>
+            cls.className.toLowerCase().includes(classSearch.toLowerCase())
+          );
+
+  // Toggle class accordion
+  const toggleClassAccordion = (classId: string) => {
+    if (expandedClasses.includes(classId)) {
+      setExpandedClasses(expandedClasses.filter((id) => id !== classId));
+    } else {
+      setExpandedClasses([...expandedClasses, classId]);
+    }
+  };
+
+  // Select all classes
+  const selectAllClasses = (checked: boolean) => {
+    const updatedClasses = [...form.getValues().classes].map((cls) => ({
+      ...cls,
+      selectAllArms: checked,
+      arms: cls.arms.map((arm) => ({
+        ...arm,
+        selected: checked,
+      })),
+    }));
+
+    form.setValue("classes", updatedClasses);
+  };
+
+  // Count selected classes and arms
+  const selectedCount = React.useMemo(() => {
+    const classes = form.getValues().classes;
+    let classCount = 0;
+    let armCount = 0;
+
+    classes.forEach((cls) => {
+      if (cls.selectAllArms) {
+        classCount++;
+        armCount += cls.arms.length;
+      } else {
+        const selectedArms = cls.arms.filter((arm) => arm.selected);
+        if (selectedArms.length > 0) {
+          classCount++;
+          armCount += selectedArms.length;
+        }
+      }
+    });
+
+    return { classCount, armCount };
+  }, [form]);
+
+  if (isLoadingClasses || isLoadingArms || isLoadingSessions) {
+    return <LoaderComponent />;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className='sm:max-w-[600px] max-h-[90vh] overflow-y-auto'>
+        <DialogHeader>
+          <DialogTitle>
+            Assign Classes to {scheme?.name || "Assessment"}
+          </DialogTitle>
+          <DialogDescription>
+            Select terms and classes to assign to this assessment scheme.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className='space-y-5'>
+          {/* Scheme Summary */}
+          <div className='p-3 bg-gray-50 rounded-md'>
+            <h3 className='text-sm font-medium mb-2'>Assessment Details</h3>
+            <div className='flex flex-col gap-1'>
+              <div className='flex justify-between items-center text-sm'>
+                <span className='font-medium'>Type:</span>
+                <Badge
+                  variant='outline'
+                  className={`${
+                    scheme?.type === "CA"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  }`}
+                >
+                  {scheme?.type}
+                </Badge>
+              </div>
+              <div className='flex justify-between items-center text-sm'>
+                <span className='font-medium'>Total Score:</span>
+                <span>
+                  {scheme?.assessments.reduce(
+                    (sum: number, assessment: any) => sum + assessment.score,
+                    0
+                  )}
+                  %
+                </span>
+              </div>
+              <div className='flex justify-between items-center text-sm'>
+                <span className='font-medium'>Sub-assessments:</span>
+                <span>{scheme?.assessments.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Terms Selection */}
+          <div className='space-y-2'>
+            <label className='block text-sm font-medium'>
+              Select Terms <span className='text-red-500'>*</span>
+            </label>
+            <div className='relative'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={toggleTermsDropdown}
+                className='w-full justify-between'
+              >
+                <span>
+                  {selectedTerms.length > 0
+                    ? `${selectedTerms.length} Terms Selected`
+                    : "Select Terms"}
+                </span>
+                <ChevronDown className='h-4 w-4 opacity-50' />
+              </Button>
+
+              {showTermsDropdown && (
+                <div className='absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200'>
+                  <div className='max-h-60 overflow-auto p-2 space-y-1'>
+                    {allTerms.map((term) => (
+                      <div
+                        key={term.id}
+                        className='flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-md cursor-pointer'
+                        onClick={() => toggleTerm(term.id)}
+                      >
+                        <Checkbox checked={selectedTerms.includes(term.id)} />
+                        <span>{term.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Selected Terms */}
+            {selectedTerms.length > 0 && (
+              <div className='flex flex-wrap gap-2 mt-2'>
+                {selectedTerms.map((termId) => {
+                  const term = allTerms.find((t) => t.id === termId);
+                  return term ? (
+                    <Badge
+                      key={termId}
+                      variant='secondary'
+                      className='pl-2 pr-1 py-1.5'
+                    >
+                      {term.name}
+                      <button
+                        type='button'
+                        onClick={() => removeTerm(termId)}
+                        className='ml-1 text-gray-500 hover:text-gray-700'
+                      >
+                        <X className='h-3 w-3' />
+                      </button>
+                    </Badge>
+                  ) : null;
+                })}
+              </div>
+            )}
+
+            {selectedTerms.length === 0 && (
+              <p className='text-sm text-red-500'>
+                Please select at least one term
+              </p>
+            )}
+          </div>
+
+          {/* Classes List with Search */}
+          <div className='space-y-2'>
+            <div className='flex justify-between items-center'>
+              <label className='block text-sm font-medium'>
+                Select Classes and Arms
+              </label>
+              <div className='flex items-center gap-2'>
+                <span className='text-xs text-gray-500'>
+                  {selectedCount.classCount} classes, {selectedCount.armCount}{" "}
+                  arms selected
+                </span>
+              </div>
+            </div>
+
+            {/* Search box */}
+            <div className='relative mb-2'>
+              <Search className='absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500' />
+              <Input
+                placeholder='Search classes...'
+                className='pl-8'
+                value={classSearch}
+                onChange={(e) => setClassSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Select all checkbox */}
+            <div className='flex items-center space-x-2 p-2 border-b'>
+              <Checkbox
+                id='select-all-classes'
+                onCheckedChange={(checked) =>
+                  selectAllClasses(checked === true)
+                }
+                className='h-4 w-4'
+              />
+              <label
+                htmlFor='select-all-classes'
+                className='text-sm font-medium'
+              >
+                Select All Classes
+              </label>
+            </div>
+
+            {/* Classes accordion */}
+            <ScrollArea className='h-[300px] pr-4'>
+              {filteredClasses.length === 0 ? (
+                <div className='p-4 text-center text-sm text-gray-500'>
+                  No classes match your search
+                </div>
+              ) : (
+                <div className='space-y-2'>
+                  {filteredClasses.map((cls) => {
+                    const originalIndex = form
+                      .getValues()
+                      .classes.findIndex((c) => c.classId === cls.classId);
+                    return (
+                      <div
+                        key={cls.classId}
+                        className='border rounded-md overflow-hidden'
+                      >
+                        {/* Class header */}
+                        <div
+                          className='flex items-center justify-between p-3 bg-gray-50 cursor-pointer'
+                          onClick={() => toggleClassAccordion(cls.classId)}
+                        >
+                          <div className='flex items-center space-x-3'>
+                            <Checkbox
+                              id={`class-${cls.classId}`}
+                              checked={cls.selectAllArms}
+                              onCheckedChange={(checked) => {
+                                toggleClass(originalIndex, checked === true);
+                                // Prevent accordion toggle when clicking checkbox
+                                event?.stopPropagation();
+                              }}
+                              className={`${
+                                cls.selectAllArms
+                                  ? "data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
+                                  : ""
+                              } h-4 w-4`}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <label className='text-sm font-medium'>
+                              {cls.className}
+                            </label>
+                          </div>
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${
+                              expandedClasses.includes(cls.classId)
+                                ? "transform rotate-180"
+                                : ""
+                            }`}
+                          />
+                        </div>
+
+                        {/* Arms */}
+                        {expandedClasses.includes(cls.classId) && (
+                          <div className='p-2 bg-white'>
+                            {cls.arms.length > 0 ? (
+                              <div className='grid grid-cols-2 gap-2 p-2'>
+                                {cls.arms.map((arm) => {
+                                  const origArmIndex = form
+                                    .getValues()
+                                    .classes[originalIndex].arms.findIndex(
+                                      (a) => a.armId === arm.armId
+                                    );
+                                  return (
+                                    <div
+                                      key={arm.armId}
+                                      className='flex items-center space-x-2'
+                                    >
+                                      <Checkbox
+                                        id={`arm-${cls.classId}-${arm.armId}`}
+                                        checked={arm.selected}
+                                        onCheckedChange={(checked) =>
+                                          toggleArm(
+                                            originalIndex,
+                                            origArmIndex,
+                                            checked === true
+                                          )
+                                        }
+                                        className={`${
+                                          arm.selected
+                                            ? "data-[state=checked]:text-green-700 data-[state=checked]:bg-white data-[state=checked]:border-green-700"
+                                            : ""
+                                        } h-4 w-4`}
+                                      />
+                                      <label
+                                        htmlFor={`arm-${cls.classId}-${arm.armId}`}
+                                        className='text-xs'
+                                      >
+                                        {arm.armName}
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className='text-xs text-gray-500 p-2'>
+                                No arms available for this class
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          {/* Error message */}
+          {errorMessage && (
+            <div className='p-3 bg-red-50 border border-red-200 rounded-md flex items-start'>
+              <AlertTriangle className='h-5 w-5 text-red-500 mr-2 mt-0.5' />
+              <span className='text-red-600 text-sm'>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* Summary */}
+          <div className='p-3 bg-blue-50 rounded-md flex items-start'>
+            <Info className='h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0' />
+            <div className='text-sm'>
+              <p className='text-blue-800 font-medium'>Assignment Summary</p>
+              <p className='text-blue-700 mt-1'>
+                {selectedTerms.length} terms, {selectedCount.classCount}{" "}
+                classes, and {selectedCount.armCount} class arms selected
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type='button' variant='outline' onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => onSubmit(form.getValues())}
+            disabled={
+              isSubmitting ||
+              selectedTerms.length === 0 ||
+              selectedCount.armCount === 0
+            }
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

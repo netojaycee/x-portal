@@ -6,6 +6,8 @@ import WeekInfo from "./WeekInfo";
 import { useGetSchoolByIdQuery, useGetSessionsQuery } from "@/redux/api";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { ENUM_ROLE } from "@/lib/types/enums";
+
 
 // Interface for term data
 interface TermData {
@@ -24,7 +26,7 @@ export default function TermProgressWrapper() {
   const { data: school, isLoading: isFetchingSchool } = useGetSchoolByIdQuery(
     userData?.schoolId || "",
     {
-      skip: !userData?.schoolId,
+      skip: !userData?.schoolId || userData?.view_as !== ENUM_ROLE.ADMIN,
     }
   );
   console.log(school);
@@ -32,31 +34,30 @@ export default function TermProgressWrapper() {
 
   // Function to find the active term and session
   const getActiveTermData = useCallback((): TermData => {
-    const currentDate = new Date(); // Always gets the current date/time on each call
+    const currentDate = new Date();
 
-    for (const session of sessions) {
-      const activeTerm = session.terms.find(
-        (term: any) =>
-          new Date(term.startDate) <= currentDate &&
-          new Date(term.endDate) >= currentDate
-      );
+    // Find active session
+    const activeSession = sessions.find((session: any) => session.status);
+    
+    if (activeSession) {
+      // Find active term in the active session
+      const activeTerm = activeSession.terms?.find((term: any) => term.status);
+      
       if (activeTerm) {
         // Calculate weeks
         const termStart = new Date(activeTerm.startDate);
         const termEnd = new Date(activeTerm.endDate);
         const today = currentDate;
 
-        const totalDays =
-          (termEnd.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24);
-        const elapsedDays =
-          (today.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24);
+        const totalDays = (termEnd.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24);
+        const elapsedDays = (today.getTime() - termStart.getTime()) / (1000 * 60 * 60 * 24);
         const totalWeeks = Math.ceil(totalDays / 7);
         const currentWeek = Math.ceil(elapsedDays / 7);
         const remainingWeeks = totalWeeks - currentWeek;
 
         return {
-          title: `${activeTerm.name}, ${session.name} Session`,
-          currentDate: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
+          title: `${activeTerm.name}, ${activeSession.name} Session`,
+          currentDate: currentDate.toISOString().split("T")[0],
           termStart: termStart.toISOString().split("T")[0],
           termEnd: termEnd.toISOString().split("T")[0],
           currentWeek,

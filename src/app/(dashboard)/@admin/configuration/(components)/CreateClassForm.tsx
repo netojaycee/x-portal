@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useCreateClassMutation, useUpdateClassMutation } from "@/redux/api";
+import {
+  useCreateClassMutation,
+  useUpdateClassMutation,
+  useGetClassCategoriesQuery,
+} from "@/redux/api";
 import {
   Select,
   SelectContent,
@@ -28,9 +32,7 @@ import {
 
 // Define the form schema
 const classSchema = z.object({
-  category: z.enum(["junior", "senior"], {
-    required_error: "Class category is required",
-  }),
+  category: z.string().min(1, "Class category is required"),
   name: z.string().min(1, "Class name is required"),
   isActive: z.boolean().optional(),
 });
@@ -38,7 +40,7 @@ const classSchema = z.object({
 type ClassFormData = z.infer<typeof classSchema>;
 
 interface ClassFormProps {
-  classData?: ClassFormData & { id: string }; // For edit mode
+  classData?: any & { id: string }; // For edit mode
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -48,6 +50,15 @@ const CreateClassForm: React.FC<ClassFormProps> = ({
   isEditMode = false,
   onSuccess,
 }) => {
+  // Fetch class categories
+  const { data: categoriesData, isLoading: categoriesLoading } =
+    useGetClassCategoriesQuery({});
+
+  // console.log(classData);
+
+  const categories = categoriesData?.classCategories || [];
+
+  // console.log(categoriesData)
   const [
     createClass,
     {
@@ -75,20 +86,30 @@ const CreateClassForm: React.FC<ClassFormProps> = ({
   const form = useForm<ClassFormData>({
     resolver: zodResolver(classSchema),
     defaultValues: {
-      category: classData?.category || "junior",
+      category: classData?.classCategory?.id || "",
       name: classData?.name || "",
-      isActive: classData?.isActive || true, // Default to true for add mode
+      isActive: classData?.isActive ?? true,
     },
   });
+
+  useEffect(() => {
+    if (classData) {
+      form.reset({
+        category: classData.classCategory?.id || "",
+        name: classData?.name || "",
+        isActive: classData?.isActive ?? true,
+      });
+    }
+  }, [classData, form]);
 
   // console.log("Class Data:", classData);
 
   const onSubmit = async (values: ClassFormData) => {
     try {
       const credentials = {
-        ...values
+        ...values,
       };
-      console.log(credentials);
+      // console.log(credentials);
       if (isEditMode && classData?.id) {
         await updateClass({ id: classData.id, ...credentials }).unwrap();
       } else {
@@ -136,12 +157,24 @@ const CreateClassForm: React.FC<ClassFormProps> = ({
                       <SelectValue placeholder='Select a class category' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='junior'>
-                        Junior Secondary School
-                      </SelectItem>
-                      <SelectItem value='senior'>
-                        Senior Secondary School
-                      </SelectItem>
+                      {categoriesLoading ? (
+                        <SelectItem value='loading' disabled>
+                          Loading...
+                        </SelectItem>
+                      ) : categories && categories.length > 0 ? (
+                        categories.map((category: any) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value='no-categories' disabled>
+                          No categories available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </FormControl>

@@ -7,10 +7,14 @@ import { Loader2, ArrowRight, ToggleLeft, ToggleRight } from "lucide-react";
 import {
   useDeleteClassArmsMutation,
   useDeleteClassMutation,
+  useDeleteClassCategoryMutation,
   useDeleteSchoolMutation,
   useDeleteSessionMutation,
   useToggleSchoolActiveMutation,
-  useManageAdmissionMutation,
+  useDeleteSubjectMutation,
+  useDeleteMarkingSchemeMutation,
+  useDeleteGradingSystemMutation,
+  useApproveResultMutation,
 } from "@/redux/api";
 import { ENUM_MODULES } from "@/lib/types/enums";
 
@@ -27,7 +31,7 @@ interface ConfirmationFormProps {
   data: any;
   type: ENUM_MODULES;
   onSuccess: () => void;
-  status: "approve" | "reject" | "delete" | "confirmation"; // Updated status options
+  status: "delete" | "confirmation"; // Updated status options
 }
 
 export default function ConfirmationForm({
@@ -45,7 +49,7 @@ export default function ConfirmationForm({
       error: errorToggle,
     },
   ] = useToggleSchoolActiveMutation();
-
+  // mutation for approve result
   const [
     deleteSchool,
     {
@@ -55,6 +59,36 @@ export default function ConfirmationForm({
       error: errorDeleteSchool,
     },
   ] = useDeleteSchoolMutation();
+
+  const [
+    approveResult,
+    {
+      isLoading: isLoadingApproveResult,
+      isSuccess: isSuccessApproveResult,
+      isError: isErrorApproveResult,
+      error: errorApproveResult,
+    },
+  ] = useApproveResultMutation();
+
+  const [
+    deleteMarkingScheme,
+    {
+      isLoading: isLoadingDeleteMarkingScheme,
+      isSuccess: isSuccessDeleteMarkingScheme,
+      isError: isErrorDeleteMarkingScheme,
+      error: errorDeleteMarkingScheme,
+    },
+  ] = useDeleteMarkingSchemeMutation();
+
+  const [
+    deleteGradingSystem,
+    {
+      isLoading: isLoadingDeleteGradingSystem,
+      isSuccess: isSuccessDeleteGradingSystem,
+      isError: isErrorDeleteGradingSystem,
+      error: errorDeleteGradingSystem,
+    },
+  ] = useDeleteGradingSystemMutation();
 
   const [
     deleteSession,
@@ -77,6 +111,16 @@ export default function ConfirmationForm({
   ] = useDeleteClassMutation();
 
   const [
+    deleteClassCategory,
+    {
+      isLoading: isLoadingDeleteClassCategory,
+      isSuccess: isSuccessDeleteClassCategory,
+      isError: isErrorDeleteClassCategory,
+      error: errorDeleteClassCategory,
+    },
+  ] = useDeleteClassCategoryMutation();
+
+  const [
     deleteClassArm,
     {
       isLoading: isLoadingDeleteClassArm,
@@ -94,17 +138,7 @@ export default function ConfirmationForm({
       isError: isErrorDeleteSubject,
       error: errorDeleteSubject,
     },
-  ] = useDeleteClassArmsMutation();
-
-  const [
-    approveOrRejectAdmission,
-    {
-      isLoading: isLoadingAdmission,
-      isSuccess: isSuccessAdmission,
-      isError: isErrorAdmission,
-      error: errorAdmission,
-    },
-  ] = useManageAdmissionMutation();
+  ] = useDeleteSubjectMutation();
 
   // Map entity types to their delete mutations
   const deleteMutations: Partial<Record<ENUM_MODULES, MutationConfig>> = {
@@ -129,6 +163,13 @@ export default function ConfirmationForm({
       isError: isErrorDeleteClass,
       error: errorDeleteClass,
     },
+    [ENUM_MODULES.CLASS_CATEGORY]: {
+      mutation: deleteClassCategory,
+      isLoading: isLoadingDeleteClassCategory,
+      isSuccess: isSuccessDeleteClassCategory,
+      isError: isErrorDeleteClassCategory,
+      error: errorDeleteClassCategory,
+    },
     [ENUM_MODULES.CLASS_ARM]: {
       mutation: deleteClassArm,
       isLoading: isLoadingDeleteClassArm,
@@ -143,6 +184,21 @@ export default function ConfirmationForm({
       isError: isErrorDeleteSubject,
       error: errorDeleteSubject,
     },
+    [ENUM_MODULES.MARKING_SCHEME]: {
+      mutation: deleteMarkingScheme,
+      isLoading: isLoadingDeleteMarkingScheme,
+      isSuccess: isSuccessDeleteMarkingScheme,
+      isError: isErrorDeleteMarkingScheme,
+      error: errorDeleteMarkingScheme,
+    },
+    [ENUM_MODULES.GRADING_SYSTEM]: {
+      mutation: deleteGradingSystem,
+      isLoading: isLoadingDeleteGradingSystem,
+      isSuccess: isSuccessDeleteGradingSystem,
+      isError: isErrorDeleteGradingSystem,
+      error: errorDeleteGradingSystem,
+    },
+    
   };
 
   // Map entity types to their toggle mutations
@@ -154,16 +210,12 @@ export default function ConfirmationForm({
       isError: isErrorToggle,
       error: errorToggle,
     },
-  };
-
-  // Map entity types to their approve/reject mutations
-  const admissionMutations: Partial<Record<ENUM_MODULES, MutationConfig>> = {
-    [ENUM_MODULES.ADMISSION]: {
-      mutation: approveOrRejectAdmission,
-      isLoading: isLoadingAdmission,
-      isSuccess: isSuccessAdmission,
-      isError: isErrorAdmission,
-      error: errorAdmission,
+    [ENUM_MODULES.RESULT]: {
+      mutation: approveResult,
+      isLoading: isLoadingApproveResult,
+      isSuccess: isSuccessApproveResult,
+      isError: isErrorApproveResult,
+      error: errorApproveResult,
     },
   };
 
@@ -171,8 +223,6 @@ export default function ConfirmationForm({
   let mutationConfig: MutationConfig | null = null;
   if (status === "delete") {
     mutationConfig = deleteMutations[type] || null;
-  } else if (status === "approve" || status === "reject") {
-    mutationConfig = admissionMutations[type] || null;
   } else if (status === "confirmation") {
     mutationConfig = toggleMutations[type] || null;
   }
@@ -190,21 +240,6 @@ export default function ConfirmationForm({
         } else {
           throw new Error(`Delete operation not supported for type: ${type}`);
         }
-      } else if (status === "approve" || status === "reject") {
-        if (admissionMutations[type]) {
-          const admissionStatus =
-            status === "approve" ? "approved" : "rejected";
-          await admissionMutations[type]
-            .mutation({
-              id: data.id,
-              status: admissionStatus,
-            })
-            .unwrap();
-        } else {
-          throw new Error(
-            `Admission operation not supported for type: ${type}`
-          );
-        }
       } else if (status === "confirmation") {
         if (toggleMutations[type]) {
           await toggleMutations[type].mutation(data.id).unwrap();
@@ -217,13 +252,7 @@ export default function ConfirmationForm({
     } catch (error) {
       console.error(
         `${
-          status === "delete"
-            ? `Delete ${type}`
-            : status === "approve"
-            ? `Approve ${type}`
-            : status === "reject"
-            ? `Reject ${type}`
-            : `Confirm ${type} toggle`
+          status === "delete" ? `Delete ${type}` : `Confirm ${type} toggle`
         } error:`,
         error
       );
@@ -235,11 +264,9 @@ export default function ConfirmationForm({
       toast.success(
         status === "delete"
           ? "Delete Successful"
-          : status === "approve"
-          ? "Admission Approved Successfully"
-          : status === "reject"
-          ? "Admission Rejected Successfully"
-          : "Toggle Confirmed Successfully"
+          : status === "confirmation"
+          ? "Toggle Confirmed Successfully"
+          : "Operation Successful"
       );
       if (onSuccess) onSuccess();
     } else if (isError && error) {
@@ -261,11 +288,7 @@ export default function ConfirmationForm({
         disabled={isLoading}
         onClick={() => onSubmit()}
         className={`w-full flex items-center justify-center gap-2 text-white ${
-          status === "approve"
-            ? "bg-green-600 hover:bg-green-700"
-            : status === "reject"
-            ? "bg-red-600 hover:bg-red-700"
-            : status === "confirmation"
+          status === "confirmation"
             ? "bg-yellow-600 hover:bg-yellow-700"
             : "bg-primary hover:bg-primary/90"
         }`}
@@ -277,15 +300,7 @@ export default function ConfirmationForm({
           </>
         ) : (
           <>
-            <span>
-              {status === "delete"
-                ? "Delete"
-                : status === "approve"
-                ? "Approve"
-                : status === "reject"
-                ? "Reject"
-                : "Confirm"}
-            </span>
+            <span>{status === "delete" ? "Delete" : "Confirm"}</span>
             {status === "confirmation" ? (
               data.isActive ? (
                 <ToggleLeft className='h-5 w-5' />

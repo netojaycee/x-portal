@@ -8,80 +8,86 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useGetAdmissionByIdQuery } from "@/redux/api";
+import LoaderComponent from "@/components/local/LoaderComponent";
 
 interface AdmissionDetailProps {
   id: string;
 }
 
 // This would be replaced with your actual API call
-const useGetAdmissionByIdQuery = (id: string) => {
-  // Mocked data for demonstration
-  return {
-    data: {
-      id,
-      status: "pending", // Can be 'pending', 'approved', 'rejected'
-      rejectionReason: "Documents incomplete", // Only available if status is 'rejected'
-      student: {
-        firstname: "John",
-        lastname: "Doe",
-        email: "john.doe@example.com",
-        gender: "male",
-        dateOfBirth: "2010-05-15T00:00:00.000Z",
-        sessionId: "session123",
-        sessionName: "2023/2024",
-        presentClassId: "class123",
-        presentClassName: "JSS 2",
-        classApplyingForId: "class234",
-        classApplyingForName: "JSS 3",
-        homeAddress: "123 Main St, City",
-        contact: "08012345678",
-        religion: "Christianity",
-        nationality: "Nigerian",
-        stateOfOrigin: "Lagos",
-        lga: "Eti-Osa",
-        imageUrl: "/avatar.png", // URL to student image
-      },
-      guardian: {
-        lastName: "Doe",
-        firstName: "Jane",
-        otherName: "Mary",
-        address: "123 Main St, City",
-        tel: "08023456789",
-        email: "jane.doe@example.com",
-        relationship: "mother",
-      },
-      formerSchool: {
-        name: "Previous School Academy",
-        address: "456 School Road, City",
-        contact: "07034567890",
-      },
-      otherInfo: {
-        specialHealthProblems: "None",
-        howHeardAboutUs: "From friends",
-      },
-      createdAt: "2023-09-01T10:30:00.000Z",
-    },
-    isLoading: false,
-    error: null,
-  };
-};
+// const useGetAdmissionByIdQuery = (id: string) => {
+//   // Mocked data for demonstration
+//   return {
+//     data: {
+//       id,
+//       status: "pending", // Can be 'pending', 'approved', 'rejected'
+//       rejectionReason: "Documents incomplete", // Only available if status is 'rejected'
+//       student: {
+//         firstname: "John",
+//         lastname: "Doe",
+//         email: "john.doe@example.com",
+//         gender: "male",
+//         dateOfBirth: "2010-05-15T00:00:00.000Z",
+//         sessionId: "session123",
+//         sessionName: "2023/2024",
+//         presentClassId: "class123",
+//         presentClassName: "JSS 2",
+//         classApplyingForId: "class234",
+//         classApplyingForName: "JSS 3",
+//         homeAddress: "123 Main St, City",
+//         contact: "08012345678",
+//         religion: "Christianity",
+//         nationality: "Nigerian",
+//         stateOfOrigin: "Lagos",
+//         lga: "Eti-Osa",
+//         imageUrl: "/avatar.png", // URL to student image
+//       },
+//       guardian: {
+//         lastName: "Doe",
+//         firstName: "Jane",
+//         otherName: "Mary",
+//         address: "123 Main St, City",
+//         tel: "08023456789",
+//         email: "jane.doe@example.com",
+//         relationship: "mother",
+//       },
+//       formerSchool: {
+//         name: "Previous School Academy",
+//         address: "456 School Road, City",
+//         contact: "07034567890",
+//       },
+//       otherInfo: {
+//         specialHealthProblems: "None",
+//         howHeardAboutUs: "From friends",
+//       },
+//       createdAt: "2023-09-01T10:30:00.000Z",
+//     },
+//     isLoading: false,
+//     error: null,
+//   };
+// };
 
 const AdmissionDetail: React.FC<AdmissionDetailProps> = ({ id }) => {
   // Fetch admission data
-  const { data: admission, isLoading } = useGetAdmissionByIdQuery(id);
+const { data: admission, isLoading } = useGetAdmissionByIdQuery(id, {
+    skip: !id
+});
 
-  if (isLoading) {
-    return <div className='p-4 text-center'>Loading admission details...</div>;
-  }
+ 
+     if (isLoading) {
+       return <LoaderComponent />;
+     }
 
   if (!admission) {
     return <div className='p-4 text-center'>Admission not found</div>;
   }
+  console.log(admission)
 
   // Helper function for status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved":
+      case "accepted":
         return "bg-green-100 text-green-800 hover:bg-green-100";
       case "rejected":
         return "bg-red-100 text-red-800 hover:bg-red-100";

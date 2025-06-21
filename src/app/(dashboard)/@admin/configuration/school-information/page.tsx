@@ -5,8 +5,18 @@ import Link from "next/link";
 import React from "react";
 import SchoolInfoForm from "../(components)/SchoolInfoForm";
 import SchoolStaffForm from "../(components)/SchoolStaffForm";
+import LoaderComponent from "@/components/local/LoaderComponent";
+import { useGetSchoolConfigurationQuery } from "@/redux/api";
 
 export default function SchoolInformation() {
+  const {data, isLoading} = useGetSchoolConfigurationQuery({})
+
+  const configuration = data && data?.school ||[];
+  console.log(configuration && configuration, "congif");
+
+  if(isLoading) {
+    return <LoaderComponent />
+  }
   return (
     <div>
         {/* back button with role name */}
@@ -40,9 +50,9 @@ export default function SchoolInformation() {
                 </TabsTrigger>
               </TabsList>
             </div>
-            <TabsContent value='school'><SchoolInfoForm /></TabsContent>
+            <TabsContent value='school'><SchoolInfoForm data={configuration} /></TabsContent>
             <TabsContent value='management'>
-              <SchoolStaffForm />
+              <SchoolStaffForm data={configuration} />
             </TabsContent>
           </Tabs>
         </div>

@@ -67,7 +67,7 @@ export default function ClassTab() {
         title='Class List'
         columns={[
           { key: "sn", label: "Order" },
-          { key: "category", label: "Category" },
+          { key: "classCategory", label: "Category" },
           { key: "name", label: "Class Name" },
           //   { key: "no_of_arms", label: "No. of Arms" },
           { key: "isActive", label: "Status" },

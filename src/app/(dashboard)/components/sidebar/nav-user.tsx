@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronsUpDown, School } from "lucide-react";
+import { Bell, ChevronsUpDown, CreditCard, School } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -55,10 +55,13 @@ export function NavUser({ user }: { user: User | null }) {
               <div className='grid flex-1 text-left text-sm leading-tight'>
                 {user && (
                   <span className='truncate font-semibold'>
-                    {user?.firstname || "anonymous"} {user?.lastname || "anonymous"}
+                    {user?.firstname || "anonymous"}{" "}
+                    {user?.lastname || "anonymous"}
                   </span>
                 )}
-                <span className='truncate text-xs'>{user?.email || "anonymous"}</span>
+                <span className='truncate text-xs'>
+                  {user?.email || "anonymous"}
+                </span>
               </div>
               <ChevronsUpDown className='ml-auto size-4' />
             </SidebarMenuButton>
@@ -93,7 +96,9 @@ export function NavUser({ user }: { user: User | null }) {
                     <span className='truncate font-semibold'>
                       {user?.firstname || "anonymous"}
                     </span>
-                    <span className='truncate text-xs'>{user?.email || "anonymous"}</span>
+                    <span className='truncate text-xs'>
+                      {user?.email || "anonymous"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -105,6 +110,10 @@ export function NavUser({ user }: { user: User | null }) {
                 <Bell />
                 Notifications
               </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.location.href = '/payment'}>
+                  <CreditCard />
+                  Subscription
+                </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             {/* <DropdownMenuItem onClick={handleLogout}>

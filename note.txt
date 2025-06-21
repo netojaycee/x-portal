@@ -15,3 +15,13 @@ modify classcategory fomr to use rtk for classcatregory and class form to fetch 
 implement admission and attendance integration
 in enrollmen form the class and class arm should be fetch form the sessionclassclassarm model
 add sessionclasssubjectstaff model and combine classroom and subject modal togethrr collect it manage assignment
+modify fetch session detail in header to fetch only if school id exists esp for super admin
+
+
+on asing aems component hit the sessionclassassignment model to link the sessionid with class and classes, also have a fetch endpoint that uses session id to fetch class and class arms to show in same form....instead of using session, in session just return terms remove classa nd class arms for now
+
+on subject LOAD ALL CLASSES AND CLASS ARMS IN SCHOOL AND THEN ASSIGN SUBJECT TO CLASSARMS WITHIN CLASS RIGHT N CLASSArmsubjectasssigments and also fetch from this model to display, on checnhe delte and replce entire recored
+
+on accept admission add student and promtoio aso populate student subject with subject from StudentSubjectAssignment per session 
+
+on scores page use queries to fetch students if for subject and to  fetch students and all subjects if for class, then use state to navigate throguh students, alsofetch marking scheme and use to contruct table and ids to submit score also submit max score per score field or just inou tmax score into result instead but validate to ensure sore is less or equal to max score frm marking scheme

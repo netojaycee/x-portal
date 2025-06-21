@@ -65,14 +65,14 @@ export const adminMenu = [
         title: 'Scores',
         icon: BarChart,
         url: '/scores',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'score:read',
     },
     {
         title: 'Results',
         icon: FileText,
         url: '/results',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'result:read',
     },
     {

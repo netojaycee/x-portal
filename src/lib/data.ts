@@ -170,6 +170,28 @@ export const subscribersData = [
     },
 ];
 
+export const studentDetails = [
+    { label: "First Name", value: "Tolu" },
+    { label: "Last Name", value: "Adebayo" },
+    { label: "Admission Number", value: "JSS/2023/001" },
+    { label: "Class", value: "JSS1" },
+    { label: "Arm", value: "Gold" },
+    { label: "Date of Birth", value: "15 January 2010" },
+    { label: "Gender", value: "Male" },
+    { label: "Email Address", value: "tolu.adebayo@example.com" },
+    { label: "Address", value: "123 Lagos Street, Ikeja" },
+    { label: "State", value: "Lagos" },
+    { label: "LG Origin", value: "Ikeja" },
+    { label: "Parent Name", value: "Mr Adebayo" },
+    { label: "Parent Phone", value: "+234 801 234 5678" },
+    { label: "Parent Email", value: "mr.adebayo@example.com" },
+    { label: "Blood Group", value: "O+" },
+    { label: "Religion", value: "Christianity" },
+    { label: "Nationality", value: "Nigerian" },
+    { label: "Admission Date", value: "1 September 2023" },
+    { label: "Previous School", value: "Bright Future Elementary" },
+    { label: "Medical Conditions", value: "None" },
+  ];
 // Attendance mock data for a month (e.g. May 2025)
 export const mockAttendanceMay2025 = {
     "2025-05-01": { present: 5, absent: 1, late: 0 },
