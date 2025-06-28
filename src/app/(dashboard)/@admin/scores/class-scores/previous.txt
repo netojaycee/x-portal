@@ -1,21 +1,23 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { 
-  ChevronLeft, 
-  Save, 
-  RefreshCw, 
-  BookOpen, 
-  User, 
+import {
+  ChevronLeft,
+  Save,
+  RefreshCw,
+  BookOpen,
   ChevronRight,
   CheckCircle,
-  SkipForward,
-  UserCheck
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import {
@@ -25,8 +27,15 @@ import {
   useSubmitStudentScoresMutation,
   useGetClassSubjectsQuery,
 } from "@/redux/api";
+import Image from "next/image";
+import {
+  decodeScoreContext,
+  generateSubjectCardTexts,
+  type ScoreContext,
+} from "@/lib/contextUtils";
+import SubjectCard from "../(components)/SubjectCard";
 
-// Interface definitions
+// Enhanced interface definitions
 interface Student {
   student: {
     id: string;
@@ -38,9 +47,11 @@ interface Student {
 }
 
 interface Subject {
-  id: string;
-  name: string;
-  code: string;
+  subject: {
+    id: string;
+    name: string;
+    code: string;
+  };
 }
 
 interface SubComponent {
@@ -64,45 +75,78 @@ interface MarkingScheme {
 }
 
 interface StudentScore {
-  studentId: string;
-  componentId: string;
-  subComponentId?: string;
-  score: number;
-}
   id: string;
-  name: string;
-  components: MarkingComponent[];
-}
-
-interface StudentScore {
   studentId: string;
+  subjectId: string;
   componentId: string;
   subComponentId?: string;
   score: number;
+  maxScore: number;
 }
 
 export default function ClassScoresPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isChangingStudent, setIsChangingStudent] = useState(false);
 
-  // Extract query parameters from URL
-  const sessionId = searchParams.get("sessionId") || "";
-  const termId = searchParams.get("termId") || "";
-  const classId = searchParams.get("classId") || "";
-  const classArmId = searchParams.get("classArmId") || "";
+  // Extract and decode context from URL parameters
+  const contextParam = searchParams.get("context");
+  let context: ScoreContext | null = null;
+  let sessionId = "";
+  let termId = "";
+  let classId = "";
+  let classArmId = "";
 
-  // State for managing score inputs and calculations
-  const [scores, setScores] = useState<
-    Record<string, Record<string, Record<string, number>>>
-  >({});
+  try {
+    if (contextParam) {
+      context = decodeScoreContext(contextParam);
+      if (context) {
+        sessionId = context.sessionId;
+        termId = context.termId;
+        classId = context.classId;
+        classArmId = context.classArmId;
+      } else {
+        throw new Error("Failed to decode context");
+      }
+    } else {
+      // Fallback to individual query parameters for backward compatibility
+      sessionId = searchParams.get("sessionId") || "";
+      termId = searchParams.get("termId") || "";
+      classId = searchParams.get("classId") || "";
+      classArmId = searchParams.get("classArmId") || "";
+    }
+  } catch (error) {
+    console.error("Failed to decode context:", error);
+    // Fallback to individual query parameters
+    sessionId = searchParams.get("sessionId") || "";
+    termId = searchParams.get("termId") || "";
+    classId = searchParams.get("classId") || "";
+    classArmId = searchParams.get("classArmId") || "";
+  }
+
+  // State for student navigation and score management
+  const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
+  const [scores, setScores] = useState<Record<string, Record<string, number>>>(
+    {}
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [submittedStudents, setSubmittedStudents] = useState<Set<string>>(
+    new Set()
+  );
+  const [behaviorScores, setBehaviorScores] = useState<
+    Record<string, Record<string, Record<string, string>>>
+  >({});
+  const [attendanceScores, setAttendanceScores] = useState<
+    Record<string, { present: number; absent: number }>
+  >({});
+  const [comments, setComments] = useState<
+    Record<string, { teacher: string; principal: string }>
+  >({});
 
   // Validate required parameters
   const hasRequiredParams = sessionId && termId && classId && classArmId;
 
   // API Queries
-  // 1. Fetch students in the selected class arm
   const {
     data: studentsData,
     isLoading: studentsLoading,
@@ -112,7 +156,6 @@ export default function ClassScoresPage() {
     { skip: !hasRequiredParams }
   );
 
-  // 2. Fetch subjects for the class
   const {
     data: subjectsData,
     isLoading: subjectsLoading,
@@ -122,7 +165,7 @@ export default function ClassScoresPage() {
     { skip: !hasRequiredParams }
   );
 
-  // 3. Fetch marking scheme for the class and term
+  console.log(subjectsData, "subjectdata");
   const {
     data: markingSchemeData,
     isLoading: markingSchemeLoading,
@@ -132,110 +175,246 @@ export default function ClassScoresPage() {
     { skip: !hasRequiredParams }
   );
 
-  // 4. Fetch existing scores for all subjects
-  const { data: existingScoresData, isLoading: scoresLoading } =
-    useGetStudentScoresQuery(
-      { sessionId, classId, classArmId, termId, subjectId: "all" },
-      { skip: !hasRequiredParams }
-    );
+  const currentStudent = useMemo(() => {
+    const students = studentsData?.data?.students || [];
+    return students[currentStudentIndex];
+  }, [studentsData?.data?.students, currentStudentIndex]);
 
-  // 5. Submit scores mutation
+  // Fetch existing scores for current student
+  const { data: existingScoresData, refetch } = useGetStudentScoresQuery(
+    {
+      sessionId,
+      classId,
+      classArmId,
+      termId,
+      // subjectId: "all",
+      studentId: currentStudent?.student?.id,
+    },
+    { skip: !hasRequiredParams || !currentStudent }
+  );
+  console.log(existingScoresData, "existingscores");
+
   const [submitScores] = useSubmitStudentScoresMutation();
 
-  // Extract data from API responses with memoization
+  // Extract data with memoization
   const students: Student[] = useMemo(
-    () => studentsData?.data || [],
-    [studentsData?.data]
+    () => studentsData?.data?.students || [],
+    [studentsData?.data?.students]
   );
+
   const subjects: Subject[] = useMemo(
-    () => subjectsData?.data || [],
-    [subjectsData?.data]
+    () => subjectsData?.data?.subjects || [],
+    [subjectsData?.data?.subjects]
   );
+
   const markingScheme: MarkingScheme = useMemo(
     () => markingSchemeData?.data?.markingScheme,
     [markingSchemeData?.data?.markingScheme]
   );
-  const existingScores: StudentScore[] = useMemo(
-    () => existingScoresData?.data || [],
-    [existingScoresData?.data]
-  );
 
-  // Set first subject as selected by default
-  useEffect(() => {
-    if (subjects.length > 0 && !selectedSubject) {
-      setSelectedSubject(subjects[0].id);
-    }
-  }, [subjects, selectedSubject]);
+  const existingScores: StudentScore[] = useMemo(
+    () => existingScoresData?.data?.scores || [],
+    [existingScoresData?.data?.scores]
+  );
 
   // Populate existing scores when data loads
   useEffect(() => {
-    if (existingScores.length > 0) {
-      const scoresMap: Record<
-        string,
-        Record<string, Record<string, number>>
-      > = {};
+    if (existingScores.length > 0 && currentStudent) {
+      const scoresMap: Record<string, Record<string, number>> = {};
 
       existingScores.forEach((score: any) => {
         if (!scoresMap[score.subjectId]) {
           scoresMap[score.subjectId] = {};
         }
-        if (!scoresMap[score.subjectId][score.studentId]) {
-          scoresMap[score.subjectId][score.studentId] = {};
-        }
 
-        // Create a unique key for each score field
         const key = score.subComponentId
           ? `${score.componentId}_${score.subComponentId}`
           : score.componentId;
 
-        scoresMap[score.subjectId][score.studentId][key] = score.score;
+        scoresMap[score.subjectId][key] = score.score;
       });
 
       setScores(scoresMap);
-    }
-  }, [existingScores]);
+      setIsChangingStudent(false);
+    } else {
+      // Reset scores when changing student
 
-  // Calculate total score for each student in a subject
-  const calculateStudentTotal = (
-    studentId: string,
-    subjectId: string
-  ): number => {
-    if (!markingScheme?.components || !scores[subjectId]?.[studentId]) return 0;
+      setScores({});
+      setIsChangingStudent(false);
+    }
+  }, [existingScores, currentStudent]);
+
+  // Calculate total score for current student in a subject
+  const calculateSubjectTotal = (subjectId: string): number => {
+    if (!markingScheme?.components || !scores[subjectId]) return 0;
 
     let total = 0;
     markingScheme.components.forEach((component) => {
       if (component.subComponents.length > 0) {
         component.subComponents.forEach((subComp) => {
           const key = `${component.id}_${subComp.id}`;
-          total += scores[subjectId][studentId][key] || 0;
+          total += scores[subjectId][key] || 0;
         });
       } else {
-        total += scores[subjectId][studentId][component.id] || 0;
+        total += scores[subjectId][component.id] || 0;
       }
     });
 
     return total;
   };
 
-  // Handle score input changes
-  const handleScoreChange = (
+  // Calculate total score for a specific component (parent) across all subjects
+  const calculateComponentTotal = (
     subjectId: string,
-    studentId: string,
-    key: string,
-    value: string
-  ) => {
+    componentId: string
+  ): number => {
+    if (!markingScheme?.components || !scores[subjectId]) return 0;
+
+    const component = markingScheme.components.find(
+      (comp) => comp.id === componentId
+    );
+    if (!component) return 0;
+
+    let total = 0;
+    if (component.subComponents.length > 0) {
+      component.subComponents.forEach((subComp) => {
+        const key = `${component.id}_${subComp.id}`;
+        total += scores[subjectId][key] || 0;
+      });
+    } else {
+      total += scores[subjectId][component.id] || 0;
+    }
+
+    return total;
+  };
+
+  // Handle score input changes
+  const handleScoreChange = (subjectId: string, key: string, value: string) => {
     const numValue = value === "" ? 0 : Math.max(0, parseFloat(value) || 0);
 
     setScores((prev) => ({
       ...prev,
       [subjectId]: {
         ...prev[subjectId],
-        [studentId]: {
-          ...prev[subjectId]?.[studentId],
-          [key]: numValue,
-        },
+        [key]: numValue,
       },
     }));
+  };
+
+  // Navigate to next/previous student
+  // Improve the navigateStudent function
+  const navigateStudent = (direction: "next" | "prev") => {
+    setIsChangingStudent(true); // Set loading state first
+    refetch();
+
+    // Use setTimeout to ensure the loading state is applied before changing student
+    setTimeout(() => {
+      if (direction === "next" && currentStudentIndex < students.length - 1) {
+        setCurrentStudentIndex((prev) => prev + 1);
+      } else if (direction === "prev" && currentStudentIndex > 0) {
+        setCurrentStudentIndex((prev) => prev - 1);
+      }
+    }, 500); // Small delay to ensure loading state shows
+  };
+
+  // useEffect(() => {
+  //   // This will run when currentStudent changes
+  //   if (currentStudent) {
+  //     setIsChangingStudent(true);
+  //   }
+  // }, [currentStudent?.student?.id]);
+  // Submit scores for current student
+  const handleSubmitCurrentStudent = async () => {
+    if (!markingScheme?.components || !currentStudent) {
+      toast.error("Missing required data");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Submit scores for each subject
+      for (const subject of subjects) {
+        const scoresArray: Array<{
+          studentId: string;
+          componentId: string;
+          subComponentId?: string;
+          parentComponentId?: string;
+          score: number;
+          maxScore: number;
+          type: "CA" | "EXAM";
+        }> = [];
+
+        markingScheme.components.forEach((component) => {
+          if (component.subComponents.length > 0) {
+            component.subComponents.forEach((subComp) => {
+              const key = `${component.id}_${subComp.id}`;
+              const score = scores[subject.subject.id]?.[key] || 0;
+
+              scoresArray.push({
+                studentId: currentStudent.student.id,
+                componentId: subComp.id,
+                subComponentId: subComp.id,
+                parentComponentId: component.id,
+                score,
+                maxScore: subComp.score,
+                type: component.type,
+              });
+            });
+          } else {
+            const score = scores[subject.subject.id]?.[component.id] || 0;
+
+            scoresArray.push({
+              studentId: currentStudent.student.id,
+              componentId: component.id,
+              score,
+              maxScore: component.score,
+              type: component.type,
+            });
+          }
+        });
+
+        if (scoresArray.length > 0) {
+          console.log({
+            sessionId,
+            classId,
+            classArmId,
+            termId,
+            subjectId: subject.subject.id,
+            scores: scoresArray,
+          });
+          await submitScores({
+            sessionId,
+            classId,
+            classArmId,
+            termId,
+            subjectId: subject.subject.id,
+            scores: scoresArray,
+          }).unwrap();
+        }
+      }
+
+      // Mark student as submitted
+      setSubmittedStudents((prev) =>
+        new Set(prev).add(currentStudent.student.id)
+      );
+
+      toast.success(
+        `Scores submitted successfully for ${currentStudent.student.firstname} ${currentStudent.student.lastname}!`
+      );
+
+      // Auto-navigate to next student if not the last one
+      if (currentStudentIndex < students.length - 1) {
+        setTimeout(() => {
+          navigateStudent("next");
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Error submitting scores:", error);
+      toast.error("Failed to submit scores. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Generate table columns based on marking scheme
@@ -272,91 +451,8 @@ export default function ClassScoresPage() {
     return columns;
   };
 
-  // Handle form submission for a specific subject
-  const handleSubmitSubject = async (subjectId: string) => {
-    if (!markingScheme?.components) {
-      toast.error("Marking scheme not loaded");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const scoresArray: Array<{
-        studentId: string;
-        componentId: string;
-        subComponentId?: string;
-        parentComponentId?: string;
-        score: number;
-        maxScore: number;
-        type: "CA" | "EXAM";
-      }> = [];
-
-      students.forEach((student) => {
-        markingScheme.components.forEach((component) => {
-          if (component.subComponents.length > 0) {
-            component.subComponents.forEach((subComp) => {
-              const key = `${component.id}_${subComp.id}`;
-              const score = scores[subjectId]?.[student.id]?.[key] || 0;
-
-              scoresArray.push({
-                studentId: student.id,
-                componentId: subComp.id,
-                subComponentId: subComp.id,
-                parentComponentId: component.id,
-                score,
-                maxScore: subComp.score,
-                type: component.type,
-              });
-            });
-          } else {
-            const score = scores[subjectId]?.[student.id]?.[component.id] || 0;
-
-            scoresArray.push({
-              studentId: student.id,
-              componentId: component.id,
-              score,
-              maxScore: component.score,
-              type: component.type,
-            });
-          }
-        });
-      });
-
-      await submitScores({
-        sessionId,
-        classId,
-        classArmId,
-        termId,
-        subjectId,
-        scores: scoresArray,
-      }).unwrap();
-
-      const subjectName =
-        subjects.find((s) => s.id === subjectId)?.name || "Subject";
-      toast.success(`${subjectName} scores submitted successfully!`);
-    } catch (error) {
-      console.error("Error submitting scores:", error);
-      toast.error("Failed to submit scores. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle submission for all subjects
-  const handleSubmitAll = async () => {
-    for (const subject of subjects) {
-      await handleSubmitSubject(subject.id);
-    }
-  };
-
   // Loading state
-  if (
-    studentsLoading ||
-    subjectsLoading ||
-    markingSchemeLoading ||
-    scoresLoading
-  ) {
+  if (studentsLoading || subjectsLoading || markingSchemeLoading) {
     return <LoaderComponent />;
   }
 
@@ -364,7 +460,7 @@ export default function ClassScoresPage() {
   if (!hasRequiredParams) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
-        <Card className='p-6'>
+        <Card className=''>
           <CardContent>
             <p className='text-red-600'>
               Missing required parameters. Please go back and select all
@@ -383,7 +479,7 @@ export default function ClassScoresPage() {
   if (studentsError || subjectsError || markingSchemeError) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
-        <Card className='p-6'>
+        <Card className=''>
           <CardContent>
             <p className='text-red-600'>
               Error loading data. Please try again.
@@ -398,259 +494,253 @@ export default function ClassScoresPage() {
     );
   }
 
+  if (students.length === 0) {
+    return (
+      <div className='flex items-center justify-center min-h-[400px]'>
+        <Card className=''>
+          <CardContent>
+            <p className='text-gray-600'>No students found for this class.</p>
+            <Button onClick={() => router.back()} className='mt-4'>
+              <ChevronLeft className='h-4 w-4 mr-2' />
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const tableColumns = generateTableColumns();
-  const totalMaxScore =
-    markingScheme?.components.reduce((total, comp) => total + comp.score, 0) ||
-    100;
+  const progressPercentage =
+    ((currentStudentIndex + 1) / students.length) * 100;
+  const isStudentSubmitted = submittedStudents.has(
+    currentStudent?.student?.id || ""
+  );
+
+  console.log(currentStudent);
 
   return (
-    <div className='space-y-6 p-6'>
-      {/* Header with breadcrumb and actions */}
+    <div className='space-y-6'>
+      {/* Header with Navigation */}
       <div className='flex items-center justify-between'>
-        <div className='flex items-center space-x-2'>
-          <Button onClick={() => router.back()} variant='ghost' size='sm'>
-            <ChevronLeft className='h-4 w-4 mr-1' />
+        <div className='flex items-center gap-4'>
+          <Button
+            variant='ghost'
+            onClick={() => router.back()}
+            className='flex items-center gap-2'
+          >
+            <ChevronLeft className='h-4 w-4' />
             Back to Scores
           </Button>
-          <span className='text-gray-500'>/</span>
-          <span className='font-medium'>Class Scores</span>
-        </div>
-
-        <div className='flex space-x-2'>
-          <Button
-            onClick={() => window.location.reload()}
-            variant='outline'
-            size='sm'
-          >
-            <RefreshCw className='h-4 w-4 mr-2' />
-            Refresh
-          </Button>
-          <Button
-            onClick={handleSubmitAll}
-            disabled={isSubmitting}
-            className='bg-blue-600 hover:bg-blue-700'
-          >
-            {isSubmitting ? (
-              <>
-                <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <Save className='h-4 w-4 mr-2' />
-                Submit All Scores
-              </>
-            )}
-          </Button>
+          <Separator orientation='vertical' className='h-6' />
         </div>
       </div>
+      {/* Subject/Class Information Card */}
+      <SubjectCard
+        {...(() => {
+          if (context) {
+            return generateSubjectCardTexts(context);
+          }
+          // Fallback for class scores
+          return {
+            topText: `${studentsData?.data?.class?.name || "Class"}, ${
+              studentsData?.data?.classArm?.name || "Arm"
+            }`,
+            subject: "Class Scores",
+            subText: `${studentsData?.data?.term?.name || "Term"}, ${
+              studentsData?.data?.session?.name || "Session"
+            } / Score entry for all subjects`,
+          };
+        })()}
+      />
 
-      {/* Score entry information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center justify-between'>
-            <span className='flex items-center gap-2'>
-              <Users className='h-5 w-5' />
-              Class Score Entry
-            </span>
-            <div className='flex gap-2'>
-              <Badge variant='outline'>Students: {students.length}</Badge>
-              <Badge variant='outline'>Subjects: {subjects.length}</Badge>
+      {/* Progress and Student Navigation */}
+      <Card className='border-l-4 border-l-blue-500'>
+        <CardHeader className='pb-4'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-4'>
+              <div className='flex items-center gap-2'>
+                <div className='w-[60px] h-[60px] rounded-full overflow-hidden'>
+                  <Image
+                    src={currentStudent?.student?.avatar}
+                    className='object-cover w-[60px] h-[60px]'
+                    alt={currentStudent?.student?.firstname}
+                    width={60}
+                    height={60}
+                  />
+                </div>
+                <span className='text-lg font-semibold'>
+                  {currentStudent?.student?.firstname}{" "}
+                  {currentStudent?.student?.lastname}
+                </span>
+                {isStudentSubmitted && (
+                  <Badge
+                    variant='secondary'
+                    className='bg-green-100 text-green-800'
+                  >
+                    <CheckCircle className='h-3 w-3 mr-1' />
+                    Submitted
+                  </Badge>
+                )}
+              </div>
+              <Badge variant='outline'>{currentStudent?.student?.regNo}</Badge>
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
-            <div>
-              <span className='font-medium'>Session:</span>
-              <p className='text-gray-600'>{sessionId}</p>
-            </div>
-            <div>
-              <span className='font-medium'>Term:</span>
-              <p className='text-gray-600'>{termId}</p>
-            </div>
-            <div>
-              <span className='font-medium'>Class:</span>
-              <p className='text-gray-600'>
-                {classId}/{classArmId}
-              </p>
-            </div>
-            <div>
-              <span className='font-medium'>Marking Scheme:</span>
-              <p className='text-gray-600'>{markingScheme?.name}</p>
+
+            <div className='flex items-center gap-3'>
+              <span className='text-sm text-gray-600'>
+                Student {currentStudentIndex + 1} of {students.length}
+              </span>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => navigateStudent("prev")}
+                  disabled={currentStudentIndex === 0}
+                >
+                  <ChevronLeft className='h-4 w-4' />
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => navigateStudent("next")}
+                  disabled={currentStudentIndex === students.length - 1}
+                >
+                  <ChevronRight className='h-4 w-4' />
+                </Button>
+              </div>
             </div>
           </div>
-        </CardContent>
+
+          <div className='space-y-2'>
+            <div className='flex items-center justify-between text-sm text-gray-600'>
+              <span>Progress</span>
+              <span>{Math.round(progressPercentage)}%</span>
+            </div>
+            <Progress value={progressPercentage} className='h-2' />
+          </div>
+        </CardHeader>
       </Card>
 
-      {/* Subject tabs for score entry */}
+      {/* Score Entry Table */}
       <Card>
-        <CardContent className='p-0'>
-          <Tabs
-            value={selectedSubject}
-            onValueChange={setSelectedSubject}
-            className='w-full'
-          >
-            <div className='border-b p-4'>
-              <TabsList className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-1 h-auto'>
-                {subjects.map((subject) => (
-                  <TabsTrigger
-                    key={subject.id}
-                    value={subject.id}
-                    className='flex flex-col items-center gap-1 p-3 text-xs'
-                  >
-                    <BookOpen className='h-4 w-4' />
-                    <span className='font-medium'>{subject.name}</span>
-                    <span className='text-gray-500'>({subject.code})</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <BookOpen className='h-5 w-5' />
+            Score Entry - {currentStudent?.student?.firstname}{" "}
+            {currentStudent?.student?.lastname}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {isChangingStudent ? (
+            <div className='flex items-center justify-center py-8'>
+              <div className='text-center'>
+                <RefreshCw className='h-8 w-8 animate-spin mx-auto mb-2' />
+                <p>Loading student scores...</p>
+              </div>
             </div>
-
-            {subjects.map((subject) => (
-              <TabsContent key={subject.id} value={subject.id} className='m-0'>
-                <div className='p-4'>
-                  <div className='flex items-center justify-between mb-4'>
-                    <h3 className='text-lg font-semibold'>
-                      {subject.name} ({subject.code}) - Score Entry
-                    </h3>
-                    <Button
-                      onClick={() => handleSubmitSubject(subject.id)}
-                      disabled={isSubmitting}
-                      size='sm'
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className='h-4 w-4 mr-2 animate-spin' />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Save className='h-4 w-4 mr-2' />
-                          Submit {subject.name}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  <div className='overflow-x-auto'>
-                    <table className='w-full border-collapse'>
-                      {/* Table header */}
-                      <thead>
-                        {/* Main header row */}
-                        <tr className='bg-gray-50'>
+          ) : subjects.length === 0 ? (
+            <p className='text-center text-gray-500 py-8'>
+              No subjects assigned to this class.
+            </p>
+          ) : (
+            <div className='space-y-6'>
+              {/* Main Scores Table */}
+              <div className='bg-white rounded-lg border overflow-hidden'>
+                <div className='overflow-x-auto'>
+                  <table className='w-full border-collapse'>
+                    {/* Table Header */}
+                    <thead>
+                      <tr className='bg-[#E1E8F8]'>
+                        <th className='border border-gray-300 p-3 text-left font-semibold text-gray-700 min-w-[200px]'>
+                          {/* Assessment Components */}
+                        </th>
+                        {subjects.map((subject) => (
                           <th
-                            rowSpan={2}
-                            className='border border-gray-300 p-3 text-left font-medium min-w-[50px]'
+                            key={subject.subject.id}
+                            className='border border-gray-300 p-3 text-center font-semibold text-gray-700 min-w-[120px]'
                           >
-                            SN
+                            {subject.subject.name}
+                            <div className='text-xs font-normal text-gray-600'>
+                              ({subject.subject.code})
+                            </div>
                           </th>
-                          <th
-                            rowSpan={2}
-                            className='border border-gray-300 p-3 text-left font-medium min-w-[200px]'
-                          >
-                            NAME
-                          </th>
-                          {tableColumns.map((column) => (
-                            <th
-                              key={column.key}
-                              colSpan={
-                                column.subColumns ? column.subColumns.length : 1
-                              }
-                              className='border border-gray-300 p-3 text-center font-medium'
-                            >
-                              {column.label}
-                            </th>
-                          ))}
-                          <th
-                            rowSpan={2}
-                            className='border border-gray-300 p-3 text-center font-medium min-w-[80px]'
-                          >
-                            Total
-                          </th>
-                        </tr>
+                        ))}
+                      </tr>
+                    </thead>
 
-                        {/* Sub-header row for components with sub-columns */}
-                        <tr className='bg-gray-100'>
-                          {tableColumns.map((column) =>
-                            column.subColumns ? (
-                              column.subColumns.map((subCol) => (
-                                <th
-                                  key={subCol.key}
-                                  className='border border-gray-300 p-2 text-center font-medium text-sm'
-                                >
-                                  {subCol.label}
-                                </th>
-                              ))
-                            ) : (
-                              <th
-                                key={column.key}
-                                className='border border-gray-300 p-2 text-center font-medium text-sm'
-                              >
-                                {column.maxScore}
-                              </th>
-                            )
-                          )}
-                        </tr>
-                      </thead>
-
-                      {/* Table body */}
-                      <tbody>
-                        {students.map((student, index) => (
-                          <tr key={student.id} className='hover:bg-gray-50'>
-                            {/* Serial number */}
-                            <td className='border border-gray-300 p-3 text-center'>
-                              {index + 1}
-                            </td>
-
-                            {/* Student name */}
-                            <td className='border border-gray-300 p-3'>
-                              <div>
-                                <p className='font-medium'>
-                                  {student.user.firstName}{" "}
-                                  {student.user.lastName}
-                                </p>
-                                <p className='text-sm text-gray-500'>
-                                  ID: {student.studentId}
-                                </p>
-                              </div>
-                            </td>
-
-                            {/* Score input fields */}
-                            {tableColumns.map((column) =>
-                              column.subColumns ? (
-                                // Components with sub-components
-                                column.subColumns.map((subCol) => (
+                    {/* Table Body */}
+                    <tbody>
+                      {tableColumns.map((column) => (
+                        <React.Fragment key={column.key}>
+                          {/* Parent Component Row */}
+                          {column.subColumns && column.subColumns.length > 0 ? (
+                            <>
+                              {/* Parent header row */}
+                              <tr className='bg-gray-50'>
+                                <td className='border border-gray-300 p-3 font-semibold text-gray-800'>
+                                  {column.label}
+                                </td>
+                                {subjects.map((subject) => (
                                   <td
-                                    key={subCol.key}
-                                    className='border border-gray-300 p-2'
+                                    key={subject.subject.id}
+                                    className='border border-gray-300 p-3 text-center font-medium'
                                   >
-                                    <Input
-                                      type='number'
-                                      min='0'
-                                      max={subCol.maxScore}
-                                      value={
-                                        scores[subject.id]?.[student.id]?.[
-                                          subCol.key
-                                        ] || ""
-                                      }
-                                      onChange={(e) =>
-                                        handleScoreChange(
-                                          subject.id,
-                                          student.id,
-                                          subCol.key,
-                                          e.target.value
-                                        )
-                                      }
-                                      className='w-full text-center'
-                                      placeholder='0'
-                                    />
+                                    {calculateComponentTotal(
+                                      subject.subject.id,
+                                      column.key
+                                    )}
                                   </td>
-                                ))
-                              ) : (
-                                // Components without sub-components
+                                ))}
+                              </tr>
+
+                              {/* Sub-component rows */}
+                              {column.subColumns.map((subCol) => (
+                                <tr
+                                  key={subCol.key}
+                                  className='hover:bg-gray-50'
+                                >
+                                  <td className='border border-gray-300 p-3 pl-8 text-gray-700'>
+                                    {subCol.label} ({subCol.maxScore} marks)
+                                  </td>
+                                  {subjects.map((subject) => (
+                                    <td
+                                      key={subject.subject.id}
+                                      className='border border-gray-300 p-2'
+                                    >
+                                      <Input
+                                        type='number'
+                                        min='0'
+                                        max={subCol.maxScore}
+                                        value={
+                                          scores[subject.subject.id]?.[
+                                            subCol.key
+                                          ] || ""
+                                        }
+                                        onChange={(e) =>
+                                          handleScoreChange(
+                                            subject.subject.id,
+                                            subCol.key,
+                                            e.target.value
+                                          )
+                                        }
+                                        className='w-full text-center h-9'
+                                        placeholder='0'
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </>
+                          ) : (
+                            /* Single Component Row */
+                            <tr className='hover:bg-gray-50'>
+                              <td className='border border-gray-300 p-3 font-medium text-gray-800'>
+                                {column.label} ({column.maxScore} marks)
+                              </td>
+                              {subjects.map((subject) => (
                                 <td
-                                  key={column.key}
+                                  key={subject.subject.id}
                                   className='border border-gray-300 p-2'
                                 >
                                   <Input
@@ -658,56 +748,319 @@ export default function ClassScoresPage() {
                                     min='0'
                                     max={column.maxScore}
                                     value={
-                                      scores[subject.id]?.[student.id]?.[
+                                      scores[subject.subject.id]?.[
                                         column.key
                                       ] || ""
                                     }
                                     onChange={(e) =>
                                       handleScoreChange(
-                                        subject.id,
-                                        student.id,
+                                        subject.subject.id,
                                         column.key,
                                         e.target.value
                                       )
                                     }
-                                    className='w-full text-center'
+                                    className='w-full text-center h-9'
                                     placeholder='0'
                                   />
                                 </td>
-                              )
-                            )}
+                              ))}
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
 
-                            {/* Total score */}
-                            <td className='border border-gray-300 p-3 text-center font-medium'>
-                              {calculateStudentTotal(
-                                student.id,
-                                subject.id
-                              ).toFixed(1)}
-                            </td>
-                          </tr>
+                      {/* Total Row */}
+                      <tr className='bg-blue-50 font-semibold'>
+                        <td className='border border-gray-300 p-3 text-gray-800'>
+                          TOTAL
+                        </td>
+                        {subjects.map((subject) => (
+                          <td
+                            key={subject.subject.id}
+                            className='border border-gray-300 p-3 text-center text-lg'
+                          >
+                            {calculateSubjectTotal(subject.subject.id)}
+                          </td>
                         ))}
-                      </tbody>
-                    </table>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Behavioral Assessment and Attendance Section - Side by Side */}
+              <div
+                className='grid grid-cols-1 lg:grid-cols-3 gap-6'
+                style={{ maxWidth: "80%" }}
+              >
+                {/* Behavioral Assessment - Takes 2/3 of the width */}
+                <div className='lg:col-span-2'>
+                  <div className='bg-white rounded-lg border overflow-hidden'>
+                    <div className='bg-[#E1E8F8] p-3 border-b'>
+                      {/* <h3 className='font-semibold text-gray-700'>
+                        Behavioral Assessment
+                      </h3> */}
+                    </div>
+                    <div className='overflow-x-auto'>
+                      <table className='w-full border-collapse'>
+                        <thead>
+                          <tr className='bg-gray-100'>
+                            <th className='border border-gray-300 p-3 text-left font-semibold text-gray-700'>
+                              Criteria
+                            </th>
+                            <th className='border border-gray-300 p-2 text-center font-semibold text-gray-700 text-sm'>
+                              Excellent
+                            </th>
+                            <th className='border border-gray-300 p-2 text-center font-semibold text-gray-700 text-sm'>
+                              Very Good
+                            </th>
+                            <th className='border border-gray-300 p-2 text-center font-semibold text-gray-700 text-sm'>
+                              Good
+                            </th>
+                            <th className='border border-gray-300 p-2 text-center font-semibold text-gray-700 text-sm'>
+                              Fair
+                            </th>
+                            <th className='border border-gray-300 p-2 text-center font-semibold text-gray-700 text-sm'>
+                              Poor
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            "Punctuality",
+                            "Attentiveness",
+                            "Leadership Skills",
+                            "Neatness",
+                          ].map((criteria) => (
+                            <tr key={criteria} className='hover:bg-gray-50'>
+                              <td className='border border-gray-300 p-3 font-medium'>
+                                {criteria}
+                              </td>
+                              {[
+                                "Excellent",
+                                "Very Good",
+                                "Good",
+                                "Fair",
+                                "Poor",
+                              ].map((rating) => (
+                                <td
+                                  key={rating}
+                                  className='border border-gray-300 p-2 text-center'
+                                >
+                                  <Checkbox
+                                    checked={
+                                      behaviorScores[
+                                        currentStudent?.student?.id || ""
+                                      ]?.[criteria]?.[rating] === "true"
+                                    }
+                                    onCheckedChange={(checked) => {
+                                      const studentId =
+                                        currentStudent?.student?.id || "";
+                                      setBehaviorScores((prev) => ({
+                                        ...prev,
+                                        [studentId]: {
+                                          ...prev[studentId],
+                                          [criteria]: {
+                                            ...(prev[studentId]?.[criteria] ||
+                                              {}),
+                                            [rating]: checked
+                                              ? "true"
+                                              : "false",
+                                          },
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+
+                {/* Attendance - Takes 1/3 of the width */}
+                <div className='lg:col-span-1'>
+                  <div className='bg-white rounded-lg border overflow-hidden'>
+                    <div className='bg-[#E1E8F8] p-3 border-b'>
+                      <h3 className='font-semibold text-gray-700'>
+                        Attendance
+                      </h3>
+                    </div>
+                    <div className='p-2 space-y-4'>
+                      <div className='space-y-2 flex gap-2 items-center'>
+                        <label className='text-sm font-medium text-gray-700'>
+                          Present
+                        </label>
+                        <Input
+                          type='number'
+                          min='0'
+                          value={
+                            attendanceScores[currentStudent?.student?.id || ""]
+                              ?.present || ""
+                          }
+                          onChange={(e) =>
+                            setAttendanceScores((prev) => ({
+                              ...prev,
+                              [currentStudent?.student?.id || ""]: {
+                                ...prev[currentStudent?.student?.id || ""],
+                                present: parseInt(e.target.value) || 0,
+                                absent:
+                                  prev[currentStudent?.student?.id || ""]
+                                    ?.absent || 0,
+                              },
+                            }))
+                          }
+                          className='w-full text-center'
+                          placeholder='0'
+                        />
+                      </div>
+
+                      <div className='space-y-2 flex gap-2 items-center'>
+                        <label className='text-sm font-medium text-gray-700'>
+                          Absent
+                        </label>
+                        <Input
+                          type='number'
+                          min='0'
+                          value={
+                            attendanceScores[currentStudent?.student?.id || ""]
+                              ?.absent || ""
+                          }
+                          onChange={(e) =>
+                            setAttendanceScores((prev) => ({
+                              ...prev,
+                              [currentStudent?.student?.id || ""]: {
+                                ...prev[currentStudent?.student?.id || ""],
+                                absent: parseInt(e.target.value) || 0,
+                                present:
+                                  prev[currentStudent?.student?.id || ""]
+                                    ?.present || 0,
+                              },
+                            }))
+                          }
+                          className='w-full text-center'
+                          placeholder='0'
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-gray-700'>
+                    Class Teacher&apos;s Comment
+                  </label>
+                  <Textarea
+                    placeholder='Enter class teacher comment...'
+                    value={
+                      comments[currentStudent?.student?.id || ""]?.teacher || ""
+                    }
+                    onChange={(e) =>
+                      setComments((prev) => ({
+                        ...prev,
+                        [currentStudent?.student?.id || ""]: {
+                          ...prev[currentStudent?.student?.id || ""],
+                          teacher: e.target.value,
+                          principal:
+                            prev[currentStudent?.student?.id || ""]
+                              ?.principal || "",
+                        },
+                      }))
+                    }
+                    className='min-h-[100px]'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-gray-700'>
+                    Principal&apos;s Comment
+                  </label>
+                  <Textarea
+                    placeholder='Enter principal comment...'
+                    value={
+                      comments[currentStudent?.student?.id || ""]?.principal ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setComments((prev) => ({
+                        ...prev,
+                        [currentStudent?.student?.id || ""]: {
+                          ...prev[currentStudent?.student?.id || ""],
+                          principal: e.target.value,
+                          teacher:
+                            prev[currentStudent?.student?.id || ""]?.teacher ||
+                            "",
+                        },
+                      }))
+                    }
+                    className='min-h-[100px]'
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Summary footer */}
+      {/* Action Buttons */}
       <Card>
-        <CardContent className='flex justify-between items-center'>
-          <div className='text-sm text-gray-600'>
-            <span className='font-medium'>
-              Total Possible Score per Subject:
-            </span>{" "}
-            {totalMaxScore} marks
-          </div>
-          <div className='text-sm text-gray-600'>
-            <span className='font-medium'>Students:</span> {students.length} |{" "}
-            <span className='font-medium'>Subjects:</span> {subjects.length}
+        <CardContent className='pt-6'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-4'>
+              <div className='text-sm text-gray-600'>
+                {submittedStudents.size} of {students.length} students completed
+              </div>
+              {isStudentSubmitted && (
+                <Badge
+                  variant='secondary'
+                  className='bg-green-100 text-green-800'
+                >
+                  <UserCheck className='h-3 w-3 mr-1' />
+                  Already Submitted
+                </Badge>
+              )}
+            </div>
+
+            <div className='flex items-center gap-3'>
+              {/* {currentStudentIndex < students.length - 1 && (
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    handleSubmitCurrentStudent();
+                  }}
+                  disabled={isSubmitting}
+                  className='flex items-center gap-2'
+                >
+                  {isSubmitting ? (
+                    <RefreshCw className='h-4 w-4 animate-spin' />
+                  ) : (
+                    <SkipForward className='h-4 w-4' />
+                  )}
+                  Save & Next
+                </Button>
+              )} */}
+
+              <Button
+                onClick={handleSubmitCurrentStudent}
+                disabled={isSubmitting}
+                className='flex items-center gap-2'
+              >
+                {isSubmitting ? (
+                  <RefreshCw className='h-4 w-4 animate-spin' />
+                ) : (
+                  <Save className='h-4 w-4' />
+                )}
+                {currentStudentIndex === students.length - 1
+                  ? "Save Final"
+                  : "Save Scores"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

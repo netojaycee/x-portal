@@ -61,6 +61,9 @@ export const api = createApi({
         "ClassesPublic",
         "Results",
         "MarkingSchemesClass",
+        "BroadsheetResults",
+        "Transcript",
+        "PromotionStudents",
     ],
     endpoints: (builder) => ({
         // Register Endpoint
@@ -1042,6 +1045,38 @@ export const api = createApi({
             providesTags: (result) =>
                 result ? [{ type: 'Results', id: result.id }] : ['Results'],
         }),
+        getBroadsheetResultById: builder.query({
+            query: ({id, type}) => ({
+                url: `/results/${id}/${type}`,
+            }),
+            providesTags: (result) =>
+                result ? [{ type: 'BroadsheetResults', id: result.id }] : ['BroadsheetResults'],
+        }),
+        getTranscript: builder.query({
+            query: ({ studentIdentifier, classCategoryId }) => ({
+                url: `/results/transcript/${classCategoryId}/${studentIdentifier}`,
+            }),
+            providesTags: (result) =>
+                result ? [{ type: 'Transcript', id: result.id }] : ['Transcript'],
+        }),
+       
+        getStudentsPromotion: builder.query({
+            query: ({ classId, classArmId, sessionId }) => ({
+                url: `/results/promotion/${sessionId}/${classId}/${classArmId}`,
+            }),
+            providesTags: (result) =>
+                result ? [{ type: 'PromotionStudents', id: result.id }] : ['PromotionStudents'],
+        }),
+
+        // use promote students mutation
+        promoteStudents: builder.mutation({
+            query: (credentials) => ({
+                url: `/results/promotion/promote`,
+                method: "POST",
+                body: credentials,
+            }),
+            invalidatesTags: ["PromotionStudents", "Students", "Results"],
+        }),
 
     }),
 });
@@ -1162,7 +1197,10 @@ export const {
     useComputeResultMutation,
     useApproveResultMutation,
     useGetResultByIdQuery,
-
+    useGetBroadsheetResultByIdQuery,
+    useGetTranscriptQuery,
+    useGetStudentsPromotionQuery,
+usePromoteStudentsMutation,
 } = api;
 
 export type AppApi = typeof api;

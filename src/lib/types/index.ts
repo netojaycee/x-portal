@@ -22,6 +22,7 @@ export interface BaseUser {
     createdBy?: string;
     updatedBy?: string;
     schoolId?: string;
+    schoolSlug?: string;
     subRoleId?: string;
     view_as?: ENUM_ROLE;
     permissions?: string[];

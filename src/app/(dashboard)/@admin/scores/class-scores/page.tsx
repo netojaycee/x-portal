@@ -7,15 +7,32 @@ import {
   RefreshCw,
   BookOpen,
   ChevronRight,
-  CheckCircle,
-  UserCheck,
+  // CheckCircle,
+  // UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+// import { Badge } from "@/components/ui/badge";
+// import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+
 import { toast } from "sonner";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import {
@@ -25,7 +42,13 @@ import {
   useSubmitStudentScoresMutation,
   useGetClassSubjectsQuery,
 } from "@/redux/api";
-import Image from "next/image";
+import {
+  decodeScoreContext,
+  generateSubjectCardTexts,
+  type ScoreContext,
+  type ClassScoreContext,
+} from "@/lib/contextUtils";
+import SubjectCard from "../(components)/SubjectCard";
 
 // Enhanced interface definitions
 interface Student {
@@ -81,21 +104,77 @@ export default function ClassScoresPage() {
   const searchParams = useSearchParams();
   const [isChangingStudent, setIsChangingStudent] = useState(false);
 
-  // Extract query parameters from URL
-  const sessionId = searchParams.get("sessionId") || "";
-  const termId = searchParams.get("termId") || "";
-  const classId = searchParams.get("classId") || "";
-  const classArmId = searchParams.get("classArmId") || "";
+  // Extract and decode context from URL parameters
+  const contextParam = searchParams.get("context");
+  let context: ScoreContext | ClassScoreContext | null = null;
+  let sessionId = "";
+  let termId = "";
+  let classId = "";
+  let classArmId = "";
+
+  try {
+    if (contextParam) {
+      console.log("Context param received:", contextParam);
+      context = decodeScoreContext(contextParam);
+      console.log("Decoded context:", context);
+      if (context) {
+        sessionId = context.sessionId;
+        termId = context.termId;
+        classId = context.classId;
+        classArmId = context.classArmId;
+        console.log("Extracted IDs:", {
+          sessionId,
+          termId,
+          classId,
+          classArmId,
+        });
+      } else {
+        console.error("Context decoded but is null/undefined");
+        throw new Error("Failed to decode context");
+      }
+    } else {
+      console.log("No context param found, using individual parameters");
+      // Fallback to individual query parameters for backward compatibility
+      sessionId = searchParams.get("sessionId") || "";
+      termId = searchParams.get("termId") || "";
+      classId = searchParams.get("classId") || "";
+      classArmId = searchParams.get("classArmId") || "";
+    }
+  } catch (error) {
+    console.error("Failed to decode context:", error);
+    console.log("Falling back to individual query parameters");
+    console.log(
+      "Available search params:",
+      Object.fromEntries(searchParams.entries())
+    );
+    // Fallback to individual query parameters
+    sessionId = searchParams.get("sessionId") || "";
+    termId = searchParams.get("termId") || "";
+    classId = searchParams.get("classId") || "";
+    classArmId = searchParams.get("classArmId") || "";
+    console.log("Fallback IDs:", { sessionId, termId, classId, classArmId });
+  }
 
   // State for student navigation and score management
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [scores, setScores] = useState<Record<string, Record<string, number>>>(
     {}
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedStudents, setSubmittedStudents] = useState<Set<string>>(
-    new Set()
-  );
+  // const [submittedStudents, setSubmittedStudents] = useState<Set<string>>(
+  //   new Set()
+  // );
+  const [behaviorScores, setBehaviorScores] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [attendanceScores, setAttendanceScores] = useState<
+    Record<string, { present: number; absent: number }>
+  >({});
+  const [comments, setComments] = useState<
+    Record<string, { teacher: string; principal: string }>
+  >({});
 
   // Validate required parameters
   const hasRequiredParams = sessionId && termId && classId && classArmId;
@@ -129,18 +208,34 @@ export default function ClassScoresPage() {
     { skip: !hasRequiredParams }
   );
 
+  const [submitScores] = useSubmitStudentScoresMutation();
+
+  // Extract data with memoization
+  const students: Student[] = useMemo(
+    () => studentsData?.data?.students || [],
+    [studentsData?.data?.students]
+  );
+
+  // Filter students based on search term
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm.trim()) return students;
+
+    return students.filter((student) => {
+      const fullName =
+        `${student.student.firstname} ${student.student.lastname}`.toLowerCase();
+      return (
+        fullName.includes(searchTerm.toLowerCase()) ||
+        student.student.regNo?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+  }, [students, searchTerm]);
+
   const currentStudent = useMemo(() => {
-    const students = studentsData?.data?.students || [];
-    return students[currentStudentIndex];
-  }, [studentsData?.data?.students, currentStudentIndex]);
+    return filteredStudents[currentStudentIndex];
+  }, [filteredStudents, currentStudentIndex]);
 
   // Fetch existing scores for current student
-  const {
-    data: existingScoresData,
-    isLoading: isLoadingScores,
-    isFetching,
-    refetch,
-  } = useGetStudentScoresQuery(
+  const { data: existingScoresData, refetch } = useGetStudentScoresQuery(
     {
       sessionId,
       classId,
@@ -152,14 +247,6 @@ export default function ClassScoresPage() {
     { skip: !hasRequiredParams || !currentStudent }
   );
   console.log(existingScoresData, "existingscores");
-
-  const [submitScores] = useSubmitStudentScoresMutation();
-
-  // Extract data with memoization
-  const students: Student[] = useMemo(
-    () => studentsData?.data?.students || [],
-    [studentsData?.data?.students]
-  );
 
   const subjects: Subject[] = useMemo(
     () => subjectsData?.data?.subjects || [],
@@ -197,11 +284,98 @@ export default function ClassScoresPage() {
       setIsChangingStudent(false);
     } else {
       // Reset scores when changing student
-
       setScores({});
       setIsChangingStudent(false);
     }
   }, [existingScores, currentStudent]);
+
+  // Populate existing additional data (behavioral, attendance, comments) when data loads
+  useEffect(() => {
+    if (existingScoresData?.data?.additionalData && currentStudent) {
+      const additionalData = existingScoresData.data.additionalData.find(
+        (data: any) => data.studentId === currentStudent.student.id
+      );
+
+      if (additionalData) {
+        const studentId = currentStudent.student.id;
+
+        // Helper function to convert underscore format back to display format
+        const formatBehaviorValue = (value: string) => {
+          return value
+            ?.replace(/_/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        };
+
+        // Populate behavioral scores
+        if (
+          additionalData.punctuality ||
+          additionalData.attentiveness ||
+          additionalData.leadershipSkills ||
+          additionalData.neatness
+        ) {
+          setBehaviorScores((prev) => ({
+            ...prev,
+            [studentId]: {
+              Punctuality:
+                formatBehaviorValue(additionalData.punctuality) || "",
+              Attentiveness:
+                formatBehaviorValue(additionalData.attentiveness) || "",
+              "Leadership Skills":
+                formatBehaviorValue(additionalData.leadershipSkills) || "",
+              Neatness: formatBehaviorValue(additionalData.neatness) || "",
+            },
+          }));
+        }
+
+        // Populate attendance scores
+        if (
+          additionalData.attendancePresent !== undefined ||
+          additionalData.attendanceAbsent !== undefined
+        ) {
+          setAttendanceScores((prev) => ({
+            ...prev,
+            [studentId]: {
+              present: additionalData.attendancePresent || 0,
+              absent: additionalData.attendanceAbsent || 0,
+            },
+          }));
+        }
+
+        // Populate comments
+        if (
+          additionalData.classTeacherComment ||
+          additionalData.principalComment
+        ) {
+          setComments((prev) => ({
+            ...prev,
+            [studentId]: {
+              teacher: additionalData.classTeacherComment || "",
+              principal: additionalData.principalComment || "",
+            },
+          }));
+        }
+      }
+    } else if (currentStudent) {
+      // Reset additional data when changing student if no existing data
+      const studentId = currentStudent.student.id;
+      setBehaviorScores((prev) => ({ ...prev, [studentId]: {} }));
+      setAttendanceScores((prev) => ({
+        ...prev,
+        [studentId]: { present: 0, absent: 0 },
+      }));
+      setComments((prev) => ({
+        ...prev,
+        [studentId]: { teacher: "", principal: "" },
+      }));
+    }
+  }, [existingScoresData?.data?.additionalData, currentStudent]);
+
+  // Reset student index when search term changes
+  useEffect(() => {
+    setCurrentStudentIndex(0);
+  }, [searchTerm]);
 
   // Calculate total score for current student in a subject
   const calculateSubjectTotal = (subjectId: string): number => {
@@ -222,12 +396,28 @@ export default function ClassScoresPage() {
     return total;
   };
 
-  // Calculate overall total for current student
-  const calculateOverallTotal = (): number => {
+  // Calculate total score for a specific component (parent) across all subjects
+  const calculateComponentTotal = (
+    subjectId: string,
+    componentId: string
+  ): number => {
+    if (!markingScheme?.components || !scores[subjectId]) return 0;
+
+    const component = markingScheme.components.find(
+      (comp) => comp.id === componentId
+    );
+    if (!component) return 0;
+
     let total = 0;
-    subjects.forEach((subject) => {
-      total += calculateSubjectTotal(subject.subject.id);
-    });
+    if (component.subComponents.length > 0) {
+      component.subComponents.forEach((subComp) => {
+        const key = `${component.id}_${subComp.id}`;
+        total += scores[subjectId][key] || 0;
+      });
+    } else {
+      total += scores[subjectId][component.id] || 0;
+    }
+
     return total;
   };
 
@@ -252,12 +442,27 @@ export default function ClassScoresPage() {
 
     // Use setTimeout to ensure the loading state is applied before changing student
     setTimeout(() => {
-      if (direction === "next" && currentStudentIndex < students.length - 1) {
+      if (
+        direction === "next" &&
+        currentStudentIndex < filteredStudents.length - 1
+      ) {
         setCurrentStudentIndex((prev) => prev + 1);
       } else if (direction === "prev" && currentStudentIndex > 0) {
         setCurrentStudentIndex((prev) => prev - 1);
       }
     }, 500); // Small delay to ensure loading state shows
+  };
+
+  // Navigate directly to a specific student
+  const navigateToStudent = (studentId: string) => {
+    const studentIndex = filteredStudents.findIndex(
+      (s) => s.student.id === studentId
+    );
+    if (studentIndex !== -1 && studentIndex !== currentStudentIndex) {
+      setIsChangingStudent(true);
+      setCurrentStudentIndex(studentIndex);
+      refetch();
+    }
   };
 
   // useEffect(() => {
@@ -276,6 +481,46 @@ export default function ClassScoresPage() {
     setIsSubmitting(true);
 
     try {
+      // Prepare additional data for the current student (only once)
+      const studentId = currentStudent.student.id;
+      const additionalData = {
+        studentId,
+        // Behavioral ratings (convert to lowercase with underscores, only if they exist)
+        ...(behaviorScores[studentId]?.["Punctuality"] && {
+          punctuality: behaviorScores[studentId]["Punctuality"]
+            .toLowerCase()
+            .replace(/ /g, "_"),
+        }),
+        ...(behaviorScores[studentId]?.["Attentiveness"] && {
+          attentiveness: behaviorScores[studentId]["Attentiveness"]
+            .toLowerCase()
+            .replace(/ /g, "_"),
+        }),
+        ...(behaviorScores[studentId]?.["Leadership Skills"] && {
+          leadershipSkills: behaviorScores[studentId]["Leadership Skills"]
+            .toLowerCase()
+            .replace(/ /g, "_"),
+        }),
+        ...(behaviorScores[studentId]?.["Neatness"] && {
+          neatness: behaviorScores[studentId]["Neatness"]
+            .toLowerCase()
+            .replace(/ /g, "_"),
+        }),
+        // Attendance data
+        attendancePresent: attendanceScores[studentId]?.present || 0,
+        attendanceAbsent: attendanceScores[studentId]?.absent || 0,
+        attendanceTotal:
+          (attendanceScores[studentId]?.present || 0) +
+          (attendanceScores[studentId]?.absent || 0),
+        // Comments (only if they exist)
+        ...(comments[studentId]?.teacher && {
+          classTeacherComment: comments[studentId].teacher,
+        }),
+        ...(comments[studentId]?.principal && {
+          principalComment: comments[studentId].principal,
+        }),
+      };
+
       // Submit scores for each subject
       for (const subject of subjects) {
         const scoresArray: Array<{
@@ -318,14 +563,20 @@ export default function ClassScoresPage() {
         });
 
         if (scoresArray.length > 0) {
-          console.log({
+          console.log("Submitting scores for subject:", {
             sessionId,
             classId,
             classArmId,
             termId,
             subjectId: subject.subject.id,
             scores: scoresArray,
+            // Only include additionalData for the first subject to avoid duplication
+            ...(subjects.indexOf(subject) === 0 && {
+              additionalData: [additionalData],
+            }),
           });
+
+          console.log("Additional Data being submitted:", additionalData);
           await submitScores({
             sessionId,
             classId,
@@ -333,21 +584,25 @@ export default function ClassScoresPage() {
             termId,
             subjectId: subject.subject.id,
             scores: scoresArray,
+            // Only include additionalData for the first subject to avoid duplication
+            ...(subjects.indexOf(subject) === 0 && {
+              additionalData: [additionalData],
+            }),
           }).unwrap();
         }
       }
 
       // Mark student as submitted
-      setSubmittedStudents((prev) =>
-        new Set(prev).add(currentStudent.student.id)
-      );
+      // setSubmittedStudents((prev) =>
+      //   new Set(prev).add(currentStudent.student.id)
+      // );
 
       toast.success(
         `Scores submitted successfully for ${currentStudent.student.firstname} ${currentStudent.student.lastname}!`
       );
 
       // Auto-navigate to next student if not the last one
-      if (currentStudentIndex < students.length - 1) {
+      if (currentStudentIndex < filteredStudents.length - 1) {
         setTimeout(() => {
           navigateStudent("next");
         }, 1000);
@@ -454,11 +709,11 @@ export default function ClassScoresPage() {
   }
 
   const tableColumns = generateTableColumns();
-  const progressPercentage =
-    ((currentStudentIndex + 1) / students.length) * 100;
-  const isStudentSubmitted = submittedStudents.has(
-    currentStudent?.student?.id || ""
-  );
+  // const progressPercentage =
+  //   ((currentStudentIndex + 1) / filteredStudents.length) * 100;
+  // const isStudentSubmitted = submittedStudents.has(
+  //   currentStudent?.student?.id || ""
+  // );
 
   console.log(currentStudent);
 
@@ -476,29 +731,76 @@ export default function ClassScoresPage() {
             Back to Scores
           </Button>
           <Separator orientation='vertical' className='h-6' />
-          <div className='flex items-center gap-2'>
-            <BookOpen className='h-5 w-5 text-blue-600' />
-            <h1 className='text-2xl font-bold text-gray-900'>
-              Class Score Entry
-            </h1>
-          </div>
         </div>
       </div>
+      {/* Subject/Class Information Card */}
+      <SubjectCard
+        type='class'
+        {...(() => {
+          if (context) {
+            return generateSubjectCardTexts(context);
+          }
+          // Fallback for class scores
+          return {
+            topText: `${studentsData?.data?.class?.name || "Class"}, ${
+              studentsData?.data?.classArm?.name || "Arm"
+            }`,
+            subject: "Class Scores",
+            subText: `${studentsData?.data?.term?.name || "Term"}, ${
+              studentsData?.data?.session?.name || "Session"
+            } / Score entry for all subjects`,
+          };
+        })()}
+      />
+
+      {/* Student Search and Navigation */}
+      <Card className='border-l-4 border-l-indigo-500'>
+        <CardHeader className='pb-4'>
+          <div className='flex items-center gap-4'>
+            <div className='flex-1'>
+              <Input
+                placeholder='Search student by name or registration number...'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className='max-w-md'
+              />
+            </div>
+            <div className='min-w-[200px]'>
+              <Select
+                value={currentStudent?.student?.id || ""}
+                onValueChange={(value) => navigateToStudent(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Jump to student...' />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredStudents.map((student) => (
+                    <SelectItem
+                      key={student.student.id}
+                      value={student.student.id}
+                    >
+                      {student.student.firstname} {student.student.lastname} (
+                      {student.student.regNo})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Progress and Student Navigation */}
-      <Card className='border-l-4 border-l-blue-500'>
+      {/* <Card className='border-l-4 border-l-blue-500'>
         <CardHeader className='pb-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-4'>
               <div className='flex items-center gap-2'>
-                <div className='w-[60px] h-[60px] rounded-full overflow-hidden'>
-                  <Image
-                    src={currentStudent?.student?.avatar}
-                    className='object-cover w-[60px] h-[60px]'
-                    alt={currentStudent?.student?.firstname}
-                    width={60}
-                    height={60}
-                  />
+                <div className='w-[60px] h-[60px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
+                  <span className='text-xl font-semibold text-gray-600'>
+                    {currentStudent?.student?.firstname?.charAt(0)}
+                    {currentStudent?.student?.lastname?.charAt(0)}
+                  </span>
                 </div>
                 <span className='text-lg font-semibold'>
                   {currentStudent?.student?.firstname}{" "}
@@ -519,7 +821,7 @@ export default function ClassScoresPage() {
 
             <div className='flex items-center gap-3'>
               <span className='text-sm text-gray-600'>
-                Student {currentStudentIndex + 1} of {students.length}
+                Student {currentStudentIndex + 1} of {filteredStudents.length}
               </span>
               <div className='flex items-center gap-2'>
                 <Button
@@ -550,173 +852,411 @@ export default function ClassScoresPage() {
             <Progress value={progressPercentage} className='h-2' />
           </div>
         </CardHeader>
-      </Card>
+      </Card> */}
 
       {/* Score Entry Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className='flex justify-between items-center'>
           <CardTitle className='flex items-center gap-2'>
             <BookOpen className='h-5 w-5' />
-            Subject Scores
+            Score Entry - {currentStudent?.student?.firstname}{" "}
+            {currentStudent?.student?.lastname}
           </CardTitle>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => navigateStudent("prev")}
+              disabled={currentStudentIndex === 0}
+            >
+              <ChevronLeft className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => navigateStudent("next")}
+              disabled={currentStudentIndex === students.length - 1}
+            >
+              <ChevronRight className='h-4 w-4' />
+            </Button>
+          </div>
         </CardHeader>
+
         <CardContent>
-          {subjects.length === 0 ? (
+          {isChangingStudent ? (
+            <div className='flex items-center justify-center py-8'>
+              <div className='text-center'>
+                <RefreshCw className='h-8 w-8 animate-spin mx-auto mb-2' />
+                <p>Loading student scores...</p>
+              </div>
+            </div>
+          ) : subjects.length === 0 ? (
             <p className='text-center text-gray-500 py-8'>
               No subjects assigned to this class.
             </p>
-          ) : isChangingStudent || isFetching || isLoadingScores ? (
-            <LoaderComponent />
           ) : (
-            <div className='overflow-x-auto'>
-              <table className='w-full border-collapse'>
-                <thead>
-                  <tr>
-                    <th className='border p-2 text-left bg-gray-50 font-semibold min-w-[150px]'>
-                      Subject
-                    </th>
-                    {tableColumns.map((column) => (
-                      <th
-                        key={column.key}
-                        className='border p-2 text-center bg-gray-50 font-semibold'
-                        colSpan={
-                          column.subColumns ? column.subColumns.length : 1
-                        }
-                      >
-                        {column.label}
-                        {column.maxScore && (
-                          <div className='text-xs text-gray-500 font-normal'>
-                            Max: {column.maxScore}
-                          </div>
-                        )}
-                      </th>
-                    ))}
-                    <th className='border p-2 text-center bg-blue-50 font-semibold'>
-                      Total
-                    </th>
-                  </tr>
-
-                  {/* Sub-header for components with sub-components */}
-                  {tableColumns.some((col) => col.subColumns) && (
-                    <tr>
-                      <th className='border p-2 bg-gray-50'></th>
-                      {tableColumns.map((column) =>
-                        column.subColumns ? (
-                          column.subColumns.map((subCol) => (
-                            <th
-                              key={subCol.key}
-                              className='border p-2 text-center bg-gray-50 text-sm'
-                            >
-                              {subCol.label}
-                              <div className='text-xs text-gray-500 font-normal'>
-                                Max: {subCol.maxScore}
-                              </div>
-                            </th>
-                          ))
-                        ) : (
-                          <th
-                            key={column.key}
-                            className='border p-2 bg-gray-50'
-                          ></th>
-                        )
-                      )}
-                      <th className='border p-2 bg-blue-50'></th>
-                    </tr>
-                  )}
-                </thead>
-
-                <tbody>
-                  {subjects.map((subject) => (
-                    <tr key={subject.subject.id} className='hover:bg-gray-50'>
-                      <td className='border p-2 font-medium'>
-                        <div>
-                          <div className='font-semibold'>
+            <div className='space-y-6'>
+              {/* Main Scores Table */}
+              <div className='bg-white rounded-lg border overflow-hidden score-table'>
+                <div className='overflow-x-auto'>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className='bg-[#E1E8F8] hover:bg-[#E1E8F8]'>
+                        <TableHead className='font-semibold text-gray-700 min-w-[200px] border-r'>
+                          {/* Assessment Components */}
+                        </TableHead>
+                        {subjects.map((subject) => (
+                          <TableHead
+                            key={subject.subject.id}
+                            className='text-center font-semibold text-gray-700 min-w-[120px] border-r'
+                          >
                             {subject.subject.name}
-                          </div>
-                          {/* <div className='text-sm text-gray-500'>
-                            {subject.subject.code}
-                          </div> */}
-                        </div>
-                      </td>
+                            <div className='text-xs font-normal text-gray-600'>
+                              ({subject.subject.code})
+                            </div>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
 
-                      {tableColumns.map((column) =>
-                        column.subColumns ? (
-                          column.subColumns.map((subCol) => (
-                            <td
-                              key={`${subject.subject.id}_${subCol.key}`}
-                              className='border p-1'
-                            >
+                    <TableBody>
+                      {tableColumns.map((column) => (
+                        <React.Fragment key={column.key}>
+                          {/* Parent Component Row */}
+                          {column.subColumns && column.subColumns.length > 0 ? (
+                            <>
+                              {/* Parent header row */}
+                              <TableRow className='bg-gray-50 hover:bg-gray-50'>
+                                <TableCell className='font-semibold text-gray-800 border-r'>
+                                  {column.label}
+                                </TableCell>
+                                {subjects.map((subject) => (
+                                  <TableCell
+                                    key={subject.subject.id}
+                                    className='text-center font-medium border-r'
+                                  >
+                                    {calculateComponentTotal(
+                                      subject.subject.id,
+                                      column.key
+                                    )}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+
+                              {/* Sub-component rows */}
+                              {column.subColumns.map((subCol) => (
+                                <TableRow key={subCol.key}>
+                                  <TableCell className='pl-8 text-gray-700 border-r'>
+                                    {subCol.label} ({subCol.maxScore} marks)
+                                  </TableCell>
+                                  {subjects.map((subject) => (
+                                    <TableCell
+                                      key={subject.subject.id}
+                                      className='p-2 border-r'
+                                    >
+                                      <Input
+                                        type='number'
+                                        min='0'
+                                        max={subCol.maxScore}
+                                        value={
+                                          scores[subject.subject.id]?.[
+                                            subCol.key
+                                          ] || ""
+                                        }
+                                        onChange={(e) =>
+                                          handleScoreChange(
+                                            subject.subject.id,
+                                            subCol.key,
+                                            e.target.value
+                                          )
+                                        }
+                                        className='w-full text-center h-9'
+                                        placeholder='0'
+                                      />
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </>
+                          ) : (
+                            /* Single Component Row */
+                            <TableRow>
+                              <TableCell className='font-medium text-gray-800 border-r'>
+                                {column.label} ({column.maxScore} marks)
+                              </TableCell>
+                              {subjects.map((subject) => (
+                                <TableCell
+                                  key={subject.subject.id}
+                                  className='p-2 border-r'
+                                >
+                                  <Input
+                                    type='number'
+                                    min='0'
+                                    max={column.maxScore}
+                                    value={
+                                      scores[subject.subject.id]?.[
+                                        column.key
+                                      ] || ""
+                                    }
+                                    onChange={(e) =>
+                                      handleScoreChange(
+                                        subject.subject.id,
+                                        column.key,
+                                        e.target.value
+                                      )
+                                    }
+                                    className='w-full text-center h-9'
+                                    placeholder='0'
+                                  />
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      ))}
+
+                      {/* Total Row */}
+                      <TableRow className='bg-blue-50 hover:bg-blue-50 font-semibold'>
+                        <TableCell className='text-gray-800 border-r'>
+                          TOTAL
+                        </TableCell>
+                        {subjects.map((subject) => (
+                          <TableCell
+                            key={subject.subject.id}
+                            className='text-center text-lg border-r'
+                          >
+                            {calculateSubjectTotal(subject.subject.id)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Behavioral Assessment and Attendance Section - Side by Side */}
+              <div
+                className='grid grid-cols-1 lg:grid-cols-3 gap-6'
+                style={{ maxWidth: "80%" }}
+              >
+                {/* Behavioral Assessment - Takes 2/3 of the width */}
+                <div className='lg:col-span-2'>
+                  <div className='bg-white rounded-lg border overflow-hidden score-table'>
+                    <div className='overflow-x-auto'>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className='bg-[#E1E8F8]'>
+                            <TableHead className='text-left font-semibold text-gray-700 border-r'>
+                              {/* Criteria */}
+                            </TableHead>
+                            <TableHead className='text-center font-semibold text-gray-700 text-sm border-r'>
+                              Excellent
+                            </TableHead>
+                            <TableHead className='text-center font-semibold text-gray-700 text-sm border-r'>
+                              Very Good
+                            </TableHead>
+                            <TableHead className='text-center font-semibold text-gray-700 text-sm border-r'>
+                              Good
+                            </TableHead>
+                            <TableHead className='text-center font-semibold text-gray-700 text-sm border-r'>
+                              Fair
+                            </TableHead>
+                            <TableHead className='text-center font-semibold text-gray-700 text-sm'>
+                              Poor
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[
+                            "Punctuality",
+                            "Attentiveness",
+                            "Leadership Skills",
+                            "Neatness",
+                          ].map((criteria) => (
+                            <TableRow key={criteria}>
+                              <TableCell className='font-medium border-r'>
+                                {criteria}
+                              </TableCell>
+                              {[
+                                "Excellent",
+                                "Very Good",
+                                "Good",
+                                "Fair",
+                                "Poor",
+                              ].map((rating) => (
+                                <TableCell
+                                  key={rating}
+                                  className='text-center border-r'
+                                >
+                                  <div className='flex justify-center'>
+                                    <input
+                                      type='radio'
+                                      name={`${currentStudent?.student?.id}-${criteria}`}
+                                      value={rating}
+                                      checked={
+                                        behaviorScores[
+                                          currentStudent?.student?.id || ""
+                                        ]?.[criteria] === rating
+                                      }
+                                      onChange={(e) => {
+                                        const studentId =
+                                          currentStudent?.student?.id || "";
+                                        setBehaviorScores((prev) => ({
+                                          ...prev,
+                                          [studentId]: {
+                                            ...prev[studentId],
+                                            [criteria]: e.target.value,
+                                          },
+                                        }));
+                                      }}
+                                      className='w-4 h-4'
+                                    />
+                                  </div>
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attendance - Takes 1/3 of the width */}
+                <div className='lg:col-span-1'>
+                  <div className='bg-white rounded-lg border overflow-hidden score-table'>
+                    <div className='bg-[#E1E8F8] p-3 border-b'>
+                      <h3 className='font-semibold text-gray-700'>
+                        Attendance
+                      </h3>
+                    </div>
+                    <div className='overflow-x-auto'>
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className='font-medium text-gray-700 border-r w-24'>
+                              Present
+                            </TableCell>
+                            <TableCell className='p-2'>
                               <Input
                                 type='number'
                                 min='0'
-                                max={subCol.maxScore}
                                 value={
-                                  scores[subject.subject.id]?.[subCol.key] || ""
+                                  attendanceScores[
+                                    currentStudent?.student?.id || ""
+                                  ]?.present || ""
                                 }
                                 onChange={(e) =>
-                                  handleScoreChange(
-                                    subject.subject.id,
-                                    subCol.key,
-                                    e.target.value
-                                  )
+                                  setAttendanceScores((prev) => ({
+                                    ...prev,
+                                    [currentStudent?.student?.id || ""]: {
+                                      ...prev[
+                                        currentStudent?.student?.id || ""
+                                      ],
+                                      present: parseInt(e.target.value) || 0,
+                                      absent:
+                                        prev[currentStudent?.student?.id || ""]
+                                          ?.absent || 0,
+                                    },
+                                  }))
                                 }
-                                className='w-full text-center'
+                                className='w-full text-center h-9'
                                 placeholder='0'
                               />
-                            </td>
-                          ))
-                        ) : (
-                          <td
-                            key={`${subject.subject.id}_${column.key}`}
-                            className='border p-1'
-                          >
-                            <Input
-                              type='number'
-                              min='0'
-                              max={column.maxScore}
-                              value={
-                                scores[subject.subject.id]?.[column.key] || ""
-                              }
-                              onChange={(e) =>
-                                handleScoreChange(
-                                  subject.subject.id,
-                                  column.key,
-                                  e.target.value
-                                )
-                              }
-                              className='w-full text-center'
-                              placeholder='0'
-                            />
-                          </td>
-                        )
-                      )}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className='font-medium text-gray-700 border-r'>
+                              Absent
+                            </TableCell>
+                            <TableCell className='p-2'>
+                              <Input
+                                type='number'
+                                min='0'
+                                value={
+                                  attendanceScores[
+                                    currentStudent?.student?.id || ""
+                                  ]?.absent || ""
+                                }
+                                onChange={(e) =>
+                                  setAttendanceScores((prev) => ({
+                                    ...prev,
+                                    [currentStudent?.student?.id || ""]: {
+                                      ...prev[
+                                        currentStudent?.student?.id || ""
+                                      ],
+                                      absent: parseInt(e.target.value) || 0,
+                                      present:
+                                        prev[currentStudent?.student?.id || ""]
+                                          ?.present || 0,
+                                    },
+                                  }))
+                                }
+                                className='w-full text-center h-9'
+                                placeholder='0'
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                      <td className='border p-2 text-center font-semibold bg-blue-50'>
-                        {calculateSubjectTotal(subject.subject.id)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+              {/* Comments Section */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-gray-700'>
+                    Class Teacher&apos;s Comment
+                  </label>
+                  <Textarea
+                    placeholder='Enter class teacher comment...'
+                    value={
+                      comments[currentStudent?.student?.id || ""]?.teacher || ""
+                    }
+                    onChange={(e) =>
+                      setComments((prev) => ({
+                        ...prev,
+                        [currentStudent?.student?.id || ""]: {
+                          ...prev[currentStudent?.student?.id || ""],
+                          teacher: e.target.value,
+                          principal:
+                            prev[currentStudent?.student?.id || ""]
+                              ?.principal || "",
+                        },
+                      }))
+                    }
+                    className='min-h-[100px]'
+                  />
+                </div>
 
-                <tfoot>
-                  <tr className='bg-gray-100'>
-                    <td className='border p-2 font-bold text-right'>
-                      Overall Total:
-                    </td>
-                    <td
-                      className='border p-2 text-center font-bold text-lg'
-                      colSpan={tableColumns.reduce(
-                        (acc, col) =>
-                          acc + (col.subColumns ? col.subColumns.length : 1),
-                        0
-                      )}
-                    >
-                      {calculateOverallTotal()}
-                    </td>
-                    <td className='border p-2 bg-blue-100'></td>
-                  </tr>
-                </tfoot>
-              </table>
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-gray-700'>
+                    Principal&apos;s Comment
+                  </label>
+                  <Textarea
+                    placeholder='Enter principal comment...'
+                    value={
+                      comments[currentStudent?.student?.id || ""]?.principal ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setComments((prev) => ({
+                        ...prev,
+                        [currentStudent?.student?.id || ""]: {
+                          ...prev[currentStudent?.student?.id || ""],
+                          principal: e.target.value,
+                          teacher:
+                            prev[currentStudent?.student?.id || ""]?.teacher ||
+                            "",
+                        },
+                      }))
+                    }
+                    className='min-h-[100px]'
+                  />
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -725,10 +1265,11 @@ export default function ClassScoresPage() {
       {/* Action Buttons */}
       <Card>
         <CardContent className='pt-6'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-4'>
+          <div className='flex items-center justify-end'>
+            {/* <div className='flex items-center gap-4'>
               <div className='text-sm text-gray-600'>
-                {submittedStudents.size} of {students.length} students completed
+                {submittedStudents.size} of {filteredStudents.length} students
+                completed
               </div>
               {isStudentSubmitted && (
                 <Badge
@@ -739,7 +1280,7 @@ export default function ClassScoresPage() {
                   Already Submitted
                 </Badge>
               )}
-            </div>
+            </div> */}
 
             <div className='flex items-center gap-3'>
               {/* {currentStudentIndex < students.length - 1 && (
@@ -770,7 +1311,7 @@ export default function ClassScoresPage() {
                 ) : (
                   <Save className='h-4 w-4' />
                 )}
-                {currentStudentIndex === students.length - 1
+                {currentStudentIndex === filteredStudents.length - 1
                   ? "Save Final"
                   : "Save Scores"}
               </Button>

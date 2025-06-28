@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  useGetClassCategoriesQuery,
-} from "@/redux/api";
+import { useGetClassCategoriesQuery } from "@/redux/api";
 
 const ViewTranscriptFormSchema = z.object({
-  studentIdentifier: z.string().min(1, { message: "Please enter student name or registration number" }),
+  studentIdentifier: z
+    .string()
+    .min(1, { message: "Please enter student name or registration number" }),
   categoryId: z.string().min(1, { message: "Please select a category" }),
 });
 
@@ -37,7 +37,6 @@ type ViewTranscriptFormValues = z.infer<typeof ViewTranscriptFormSchema>;
 interface Category {
   id: string;
   name: string;
-  description?: string;
 }
 
 interface ViewTranscriptFormProps {
@@ -59,10 +58,12 @@ export function ViewTranscriptForm({ onClose }: ViewTranscriptFormProps) {
   const { data: categoriesData, isLoading: categoriesLoading } =
     useGetClassCategoriesQuery({});
 
+  console.log(categoriesData, "F");
+
   const onSubmit = (values: ViewTranscriptFormValues) => {
     // Build query parameters
     const queryParams = new URLSearchParams({
-      name: values.studentIdentifier,
+      name: encodeURIComponent(values.studentIdentifier),
       categoryId: values.categoryId,
     });
 
@@ -80,7 +81,7 @@ export function ViewTranscriptForm({ onClose }: ViewTranscriptFormProps) {
           name='studentIdentifier'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Student Name or Registration Number</FormLabel>
+              <FormLabel>Student fullName or Registration Number</FormLabel>
               <FormControl>
                 <Input
                   {...field}
@@ -115,15 +116,10 @@ export function ViewTranscriptForm({ onClose }: ViewTranscriptFormProps) {
                     <SelectItem value='loading' disabled>
                       Loading categories...
                     </SelectItem>
-                  ) : categoriesData?.data?.length ? (
-                    categoriesData.data.map((category: Category) => (
+                  ) : categoriesData?.classCategories?.length > 0 ? (
+                    categoriesData.classCategories.map((category: Category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
-                        {category.description && (
-                          <span className='text-sm text-gray-500 ml-2'>
-                            - {category.description}
-                          </span>
-                        )}
                       </SelectItem>
                     ))
                   ) : (
@@ -142,9 +138,7 @@ export function ViewTranscriptForm({ onClose }: ViewTranscriptFormProps) {
           <Button type='button' variant='outline' onClick={onClose}>
             Cancel
           </Button>
-          <Button type='submit'>
-            View Transcript
-          </Button>
+          <Button type='submit'>View Transcript</Button>
         </div>
       </form>
     </Form>

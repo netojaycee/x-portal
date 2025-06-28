@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, Calculator } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetSessionsQuery,
@@ -201,8 +201,8 @@ export function ResultSubmissionForm({
   };
 
   return (
-    <div className='space-y-6'>
-      <div className='space-y-2'>
+    <div className='space-y-4'>
+      {/* <div className='space-y-2'>
         <h3 className='text-lg font-semibold flex items-center gap-2'>
           <Calculator className='h-5 w-5 text-primary' />
           Submit Result for Computation
@@ -211,10 +211,10 @@ export function ResultSubmissionForm({
           Select the academic session, term, class, class arm, and marking
           scheme to compute results.
         </p>
-      </div>
+      </div> */}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4'>
           {/* Academic Session */}
           <FormField
             control={form.control}
@@ -228,7 +228,7 @@ export function ResultSubmissionForm({
                   disabled={sessionsLoading}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-full'>
                       <SelectValue placeholder='Select academic session' />
                     </SelectTrigger>
                   </FormControl>
@@ -258,7 +258,7 @@ export function ResultSubmissionForm({
                   disabled={termsLoading || !selectedSessionId}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-full'>
                       <SelectValue placeholder='Select term' />
                     </SelectTrigger>
                   </FormControl>
@@ -288,7 +288,7 @@ export function ResultSubmissionForm({
                   disabled={classesLoading || !selectedSessionId}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-full'>
                       <SelectValue placeholder='Select class' />
                     </SelectTrigger>
                   </FormControl>
@@ -318,7 +318,7 @@ export function ResultSubmissionForm({
                   disabled={!selectedClassId || availableArms.length === 0}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-full'>
                       <SelectValue placeholder='Select class arm' />
                     </SelectTrigger>
                   </FormControl>
@@ -350,7 +350,7 @@ export function ResultSubmissionForm({
                   }
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-full'>
                       <SelectValue placeholder='Select marking scheme component' />
                     </SelectTrigger>
                   </FormControl>

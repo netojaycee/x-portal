@@ -620,7 +620,7 @@ const StudentTranscript: React.FC<StudentTranscriptProps> = ({
         }
       `}</style>
 
-      <div className='max-w-5xl mx-auto p-6 bg-white'>
+      <div className='max-w-6xl mx-auto p-6 bg-white'>
         {/* School Header */}
         <div className='bg-white mb-4'>
           <div className='flex items-center justify-between'>

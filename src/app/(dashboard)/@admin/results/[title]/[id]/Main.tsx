@@ -4,6 +4,7 @@ import React from "react";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import ReportCard from "../../(components)/ReportCard";
 import { useGetResultByIdQuery } from "@/redux/api";
+import { Button } from "@/components/ui/button";
 
 interface ResultDetailsProps {
   id: string;
@@ -14,36 +15,92 @@ interface ResultDetailsProps {
 interface MarkingSchemeHeader {
   key: string;
   label: string;
-  maxScore: number;
+  maxScore: number | null;
+  parentComponent: string | null;
 }
 
-interface ComponentScore {
-  componentId: string;
-  score: number;
-  maxScore: number;
+interface ComponentScores {
+  [componentId: string]: {
+    total: number;
+    maxScore: number;
+    subComponents: {
+      [subComponentId: string]: number;
+    };
+  };
 }
 
 interface Subject {
-  subjectId: string;
-  subjectName: string;
-  componentScores: ComponentScore[];
+  subject: {
+    id: string;
+    name: string;
+    code: string;
+  };
   totalScore: number;
-  percentage: number;
-  grade: string;
+  obtainableScore: number;
+  position: number;
+  grade: any;
   comment: string;
+  componentScores: ComponentScores;
+  percentage: number;
+}
+
+interface SubjectData {
+  id: string;
+  name: string;
+  code: string;
 }
 
 interface Student {
-  studentId: string;
-  studentName: string;
-  gender: string;
+  id: string;
+  studentRegNo: string;
+  user: {
+    id: string;
+    firstname: string;
+    lastname: string;
+    othername: string | null;
+    username: string;
+    gender: string;
+    avatar: any;
+  };
+  dateOfBirth: string;
   age: number;
-  studentPhoto?: string;
   subjects: Subject[];
   totalScore: number;
-  percentage: number;
-  grade: string;
-  position: number;
+  averageScore: number;
+  overallPosition: number;
+  behavioralData: {
+    [key: string]: string;
+  };
+  attendanceData: {
+    total: number;
+    present: number;
+    absent: number;
+    percentage: number;
+  };
+  comments: {
+    classTeacher: string;
+    principal: string;
+  };
+  totalObtainable: number;
+  overallPercentage: number;
+  overallGrade: any;
+}
+
+interface GradingSystem {
+  id: string;
+  name: string;
+  grades: Grade[];
+}
+
+interface Grade {
+  id: string;
+  name: string;
+  remark: string;
+  scoreRange: {
+    min: number;
+    max: number;
+    display: string;
+  };
 }
 
 interface ResultBatchData {
@@ -53,9 +110,10 @@ interface ResultBatchData {
     termDefinition: { name: string };
     class: { name: string };
     classArm: { name: string };
-    markingSchemeComponent: { name: string };
+    markingSchemeComponent?: { name: string };
     resultScope: string;
-    status: string;
+    title: string;
+    status?: string;
     createdAt: string;
   };
   markingSchemeStructure: {
@@ -64,11 +122,32 @@ interface ResultBatchData {
     };
   };
   students: Student[];
-  statistics: {
+  classStats: {
     totalStudents: number;
+    totalSubjects?: number;
+    totalObtainableScore?: number;
+    totalObtainedScore?: number;
+    classPercentage?: number;
     highestScore: number;
+    highestPercentage?: number;
     lowestScore: number;
-    averageScore: number;
+    lowestPercentage?: number;
+    classAverage?: number;
+    attendance?: {
+      totalDays: number;
+      totalPresent: number;
+      totalAbsent: number;
+      attendancePercentage: number;
+    };
+    subjectStats?: any[];
+  };
+  subjects: SubjectData[];
+  gradingSystem?: GradingSystem;
+  metadata?: {
+    generatedAt: string;
+    totalRecords: number;
+    hasStudentTermRecords: boolean;
+    gradingSystemId: any;
   };
 }
 
@@ -105,76 +184,50 @@ export const Main: React.FC<ResultDetailsProps> = ({ id, title }) => {
 
   // Type assertion for the response data
   const resultBatchData = data as ResultBatchData;
-  const { resultBatch, markingSchemeStructure, students, statistics } =
-    resultBatchData;
+  const {
+    resultBatch,
+    markingSchemeStructure,
+    students,
+    classStats,
+    subjects,
+    gradingSystem,
+  } = resultBatchData;
+
+  console.log(data, "result data");
 
   return (
     <div className='space-y-4'>
       {/* Header Information */}
-      <div className='bg-white p-6 rounded-lg shadow-sm border mb-6 no-print'>
-        <h1 className='text-2xl font-bold mb-4'>
-          Result Batch: {resultBatch.class.name} {resultBatch.classArm.name}
-        </h1>
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm'>
-          <div>
-            <span className='font-semibold'>Session:</span>{" "}
-            {resultBatch.session.name}
-          </div>
-          <div>
-            <span className='font-semibold'>Term:</span> {resultBatch.termDefinition.name}
-          </div>
-          <div>
-            <span className='font-semibold'>Component:</span>{" "}
-            {resultBatch?.markingSchemeComponent?.name}
-          </div>
-          <div>
-            <span className='font-semibold'>Scope:</span>{" "}
-            {resultBatch.resultScope}
-          </div>
-          <div>
-            <span className='font-semibold'>Total Students:</span>{" "}
-            {statistics?.totalStudents}
-          </div>
-          <div>
-            <span className='font-semibold'>Class Average:</span>{" "}
-            {statistics?.averageScore?.toFixed(2)}%
-          </div>
+      <div className='bg-[#fcfcfc] px-9 pt-16 pb-8 flex items-center justify-between'>
+        <div>
+          <h1 className='text-3xl font-bold text-gray-900 mb-3'>View Result</h1>
+          <p className='text-gray-500 text-base'>
+            Below are results for {resultBatch?.title}
+            {students && students.length > 0 && (
+              <span className='ml-2 text-sm font-medium text-[#5C6AC4]'>
+                ({students.length} student{students.length !== 1 ? "s" : ""})
+              </span>
+            )}
+          </p>
         </div>
+        <Button>Print Result</Button>
       </div>
 
       {/* Report Cards for Each Student */}
-      {students.map((student, index) => (
-        <div key={student.studentId} className={index > 0 ? "print-break" : ""}>
-          <ReportCard
-            studentData={student}
-            resultBatchInfo={resultBatch}
-            markingSchemeStructure={markingSchemeStructure}
-            statistics={statistics}
-          />
-        </div>
-      ))}
-
-      {/* Print All Button */}
-      <div className='mt-8 text-center no-print'>
-        <button
-          onClick={() => window.print()}
-          className='bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors'
-        >
-          Print All Report Cards ({students.length} students)
-        </button>
+      <div className='space-y-8 max-w-7xl mx-auto px-4'>
+        {students.map((student, index) => (
+          <div key={`${student.id}-${index}`}>
+            <ReportCard
+              studentData={student}
+              resultBatchInfo={resultBatch}
+              markingSchemeStructure={markingSchemeStructure}
+              statistics={classStats}
+              subjects={subjects}
+              gradingSystem={gradingSystem}
+            />
+          </div>
+        ))}
       </div>
-
-      {/* Print Styles */}
-      <style jsx>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          .print-break {
-            page-break-before: always;
-          }
-        }
-      `}</style>
     </div>
   );
 };

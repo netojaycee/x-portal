@@ -122,7 +122,7 @@ export function PromoteStudentsForm({ onClose }: PromoteStudentsFormProps) {
     });
 
     // Navigate to promote students page
-    router.push(`/results/promote?${queryParams.toString()}`);
+    router.push(`/results/promotion?${queryParams.toString()}`);
     onClose?.();
   };
 

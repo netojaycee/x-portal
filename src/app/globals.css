@@ -52,7 +52,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #3F51B5;
+  --primary: #3f51b5;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -131,5 +131,21 @@
   .scrollbar-super-thin::-webkit-scrollbar {
     width: 3px;
     height: 3px;
+  }
+
+  /* Enhanced table borders for score tables */
+  .score-table
+    [data-table-body]
+    [data-table-row]:not(:last-child)
+    [data-table-cell] {
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  .score-table [data-table-cell].border-r {
+    border-right: 1px solid #d1d5db;
+  }
+
+  .score-table [data-table-header] [data-table-head] {
+    border-bottom: 2px solid #9ca3af;
   }
 }

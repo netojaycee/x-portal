@@ -10,358 +10,107 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useGetSchoolConfigurationQuery } from "@/redux/api";
 
-// Mock hook - replace with actual RTK query
-const useGetClassBroadsheetQuery = () => {
-  // Mock data structure
-  const mockData = {
-    class: {
-      name: "Basic 7 Diamond",
-      term: "First Term",
-      examType: "Exam",
-      session: "2023/2024",
-      reportTitle: "Broadsheet Report",
-    },
-    subjects: [
-      { code: "AGS", name: "Agricultural Science", maxScore: 50 },
-      { code: "BIZ", name: "Business Studies", maxScore: 50 },
-      { code: "CCA", name: "Civic Education", maxScore: 50 },
-      { code: "CRS", name: "Christian Religion Studies", maxScore: 50 },
-      { code: "ENG", name: "English Language", maxScore: 50 },
-      { code: "FRE", name: "French Language", maxScore: 50 },
-      { code: "HAU", name: "Hausa Language", maxScore: 50 },
-      { code: "HIS", name: "History", maxScore: 50 },
-      { code: "IGH", name: "Igbo Language", maxScore: 50 },
-      { code: "MAT", name: "Mathematics", maxScore: 50 },
-      { code: "SOS", name: "Social Studies", maxScore: 50 },
-      { code: "YOR", name: "Yoruba Language", maxScore: 50 },
-    ],
-    students: [
-      {
-        id: "1",
-        name: "Adebayo Tolu",
-        scores: {
-          AGS: 45,
-          BIZ: 42,
-          CCA: 48,
-          CRS: 50,
-          ENG: 46,
-          FRE: 38,
-          HAU: 35,
-          HIS: 44,
-          IGH: 49,
-          MAT: 48,
-          SOS: 47,
-          YOR: 40,
-        },
-        total: 532,
-        average: 44.33,
-        position: 1,
-        grade: "B",
-      },
-      {
-        id: "2",
-        name: "Adebayo Ben",
-        scores: {
-          AGS: 43,
-          BIZ: 40,
-          CCA: 46,
-          CRS: 48,
-          ENG: 44,
-          FRE: 36,
-          HAU: 33,
-          HIS: 42,
-          IGH: 47,
-          MAT: 46,
-          SOS: 45,
-          YOR: 38,
-        },
-        total: 508,
-        average: 42.33,
-        position: 2,
-        grade: "B",
-      },
-      {
-        id: "3",
-        name: "Adebayo Joy",
-        scores: {
-          AGS: 41,
-          BIZ: 38,
-          CCA: 44,
-          CRS: 46,
-          ENG: 42,
-          FRE: 34,
-          HAU: 31,
-          HIS: 40,
-          IGH: 45,
-          MAT: 44,
-          SOS: 43,
-          YOR: 36,
-        },
-        total: 484,
-        average: 40.33,
-        position: 3,
-        grade: "C",
-      },
-      {
-        id: "4",
-        name: "Adebayo Seun",
-        scores: {
-          AGS: 39,
-          BIZ: 36,
-          CCA: 42,
-          CRS: 44,
-          ENG: 40,
-          FRE: 32,
-          HAU: 29,
-          HIS: 38,
-          IGH: 43,
-          MAT: 42,
-          SOS: 41,
-          YOR: 34,
-        },
-        total: 460,
-        average: 38.33,
-        position: 4,
-        grade: "C",
-      },
-      {
-        id: "5",
-        name: "Adebayo Kemi",
-        scores: {
-          AGS: 37,
-          BIZ: 34,
-          CCA: 40,
-          CRS: 42,
-          ENG: 38,
-          FRE: 30,
-          HAU: 27,
-          HIS: 36,
-          IGH: 41,
-          MAT: 40,
-          SOS: 39,
-          YOR: 32,
-        },
-        total: 436,
-        average: 36.33,
-        position: 5,
-        grade: "C",
-      },
-      {
-        id: "6",
-        name: "Adebayo Tope",
-        scores: {
-          AGS: 35,
-          BIZ: 32,
-          CCA: 38,
-          CRS: 40,
-          ENG: 36,
-          FRE: 28,
-          HAU: 25,
-          HIS: 34,
-          IGH: 39,
-          MAT: 38,
-          SOS: 37,
-          YOR: 30,
-        },
-        total: 412,
-        average: 34.33,
-        position: 6,
-        grade: "D",
-      },
-      {
-        id: "7",
-        name: "Adebayo Bola",
-        scores: {
-          AGS: 33,
-          BIZ: 30,
-          CCA: 36,
-          CRS: 38,
-          ENG: 34,
-          FRE: 26,
-          HAU: 23,
-          HIS: 32,
-          IGH: 37,
-          MAT: 36,
-          SOS: 35,
-          YOR: 28,
-        },
-        total: 388,
-        average: 32.33,
-        position: 7,
-        grade: "D",
-      },
-      {
-        id: "8",
-        name: "Adebayo Wale",
-        scores: {
-          AGS: 31,
-          BIZ: 28,
-          CCA: 34,
-          CRS: 36,
-          ENG: 32,
-          FRE: 24,
-          HAU: 21,
-          HIS: 30,
-          IGH: 35,
-          MAT: 34,
-          SOS: 33,
-          YOR: 26,
-        },
-        total: 364,
-        average: 30.33,
-        position: 8,
-        grade: "D",
-      },
-      {
-        id: "9",
-        name: "Adebayo Nike",
-        scores: {
-          AGS: 29,
-          BIZ: 26,
-          CCA: 32,
-          CRS: 34,
-          ENG: 30,
-          FRE: 22,
-          HAU: 19,
-          HIS: 28,
-          IGH: 33,
-          MAT: 32,
-          SOS: 31,
-          YOR: 24,
-        },
-        total: 340,
-        average: 28.33,
-        position: 9,
-        grade: "F",
-      },
-      {
-        id: "10",
-        name: "Adebayo Dupe",
-        scores: {
-          AGS: 27,
-          BIZ: 24,
-          CCA: 30,
-          CRS: 32,
-          ENG: 28,
-          FRE: 20,
-          HAU: 17,
-          HIS: 26,
-          IGH: 31,
-          MAT: 30,
-          SOS: 29,
-          YOR: 22,
-        },
-        total: 316,
-        average: 26.33,
-        position: 10,
-        grade: "F",
-      },
-    ],
-    statistics: {
-      subjectAverages: {
-        AGS: 36.0,
-        BIZ: 33.0,
-        CCA: 39.0,
-        CRS: 41.0,
-        ENG: 37.0,
-        FRE: 29.0,
-        HAU: 26.0,
-        HIS: 35.0,
-        IGH: 40.0,
-        MAT: 39.0,
-        SOS: 38.0,
-        YOR: 31.0,
-      },
-      classAverage: 35.25,
-      highestTotal: 532,
-      lowestTotal: 316,
-    },
-    keyToSubject: [
-      { code: "AGS", subject: "Agricultural Science" },
-      { code: "BIZ", subject: "Business Studies" },
-      { code: "CCA", subject: "Civic Education" },
-      { code: "CRS", subject: "Christian Religion Studies" },
-      { code: "ENG", subject: "English Language" },
-      { code: "FRE", subject: "French Language" },
-      { code: "HAU", subject: "Hausa Language" },
-      { code: "HIS", subject: "History" },
-      { code: "IGH", subject: "Igbo Language" },
-      { code: "MAT", subject: "Mathematics" },
-      { code: "SOS", subject: "Social Studies" },
-      { code: "YOR", subject: "Yoruba Language" },
-    ],
-  };
+// Types for the new data structure
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+}
 
-  return {
-    data: mockData,
-    isLoading: false,
-    error: null,
+interface Grade {
+  id: string;
+  name: string;
+  remark: string;
+  scoreStartPoint: number;
+  scoreEndPoint: number;
+  teacherComment?: string;
+  principalComment?: string;
+}
+
+interface StudentSubject {
+  subject: Subject;
+  totalScore: number;
+  obtainableScore: number;
+  position: number;
+  grade?: Grade; // Only present in grades type
+}
+
+interface Student {
+  id: string;
+  studentRegNo: string;
+  firstname: string;
+  lastname: string;
+  othername: string | null;
+  age: number;
+  gender: string;
+  subjects: StudentSubject[];
+  totalScore: number;
+  averageScore: number;
+  overallGrade: Grade;
+  overallPosition: number;
+}
+
+interface SubjectStats {
+  subject: Subject;
+  highestScore?: number;
+  lowestScore?: number;
+  averageScore?: number;
+  highestGrade?: Grade;
+  lowestGrade?: Grade;
+  averageGrade?: Grade;
+  totalStudents: number;
+  obtainableScore: number;
+}
+
+interface BroadsheetData {
+  resultBatch: {
+    id: string;
+    title: string;
+    resultScope: string;
+    session: { id: string; name: string };
+    termDefinition: { id: string; name: string; displayName?: string };
+    class: { id: string; name: string };
+    classArm: { id: string; name: string };
+    resultType: { id: string; name: string };
   };
-};
+  type: "scores" | "grades";
+  students: Student[];
+  subjects: Subject[];
+  subjectStats: SubjectStats[];
+  classStats: {
+    totalStudents: number;
+    totalSubjects: number;
+  };
+  metadata: {
+    generatedAt: string;
+    responseType: string;
+  };
+}
 
 interface ClassBroadsheetReportProps {
-  classId?: string;
-  sessionId?: string;
-  termId?: string;
-  examType?: string;
-  // School header props
-  schoolName?: string;
-  leftLogoSrc?: string;
-  rightLogoSrc?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  schoolNameColor?: string;
+  data?: BroadsheetData;
 }
 
 const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
-  // classId,
-  // sessionId,
-  // termId,
-  // examType,
-  schoolName = "DEEPER LIFE HIGH SCHOOL",
-  leftLogoSrc = "/school-logo.png",
-  rightLogoSrc = "/school-logo.png",
-  address = "KLM 10, Abeokuta-Ibadan Road, Odeda,Abeokuta, Ogun State",
-  email = "info@deeperlifehighschool.org",
-  phone = "08033319011,08035540255",
-  schoolNameColor = "#E91E63",
+  data,
 }) => {
-  // API call - replace with actual RTK query
-  const {
-    data: broadsheetData,
-    isLoading,
-    error,
-  } = useGetClassBroadsheetQuery(
-    // {
-    // classId,
-    // sessionId,
-    // termId,
-    // examType,
-  // }
-);
+  // Fetch school configuration
+  const { data: schoolConfigRaw } = useGetSchoolConfigurationQuery({});
+  const schoolConfig = schoolConfigRaw?.school;
 
-  if (isLoading) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-primary'></div>
-      </div>
-    );
-  }
+  // Use school config data
+  const schoolInfo = {
+    name: schoolConfig?.school?.name || "School Name",
+    logo: schoolConfig?.logo?.imageUrl || "/default-logo.png",
+    address: schoolConfig?.school?.address || "",
+    email: schoolConfig?.school?.email || "",
+    contact: schoolConfig?.school?.contact || "",
+    color: schoolConfig?.color || "#E91E63",
+  };
 
-  if (error) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-red-500 text-center'>
-          <h2 className='text-2xl font-bold mb-2'>Error Loading Broadsheet</h2>
-          <p>Please try again later.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!broadsheetData) {
+  if (!data) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-gray-500 text-center'>
@@ -372,16 +121,20 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
     );
   }
 
-  const {
-    class: classInfo,
-    subjects,
-    students,
-    statistics,
-    keyToSubject,
-  } = broadsheetData;
+  const { resultBatch, type, students, subjects, subjectStats } = data;
+
+  // Format display name for term
+  const termDisplay =
+    resultBatch.termDefinition.displayName ||
+    resultBatch.termDefinition.name
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+
+  // Format class display
+  const classDisplay = `${resultBatch.class.name} ${resultBatch.classArm.name}`;
 
   const getGradeColor = (grade: string) => {
-    switch (grade) {
+    switch (grade.charAt(0)) {
       case "A":
         return "text-green-600 font-bold";
       case "B":
@@ -397,26 +150,55 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
     }
   };
 
+  // Get subject score or grade for a student
+  const getSubjectValue = (student: Student, subjectId: string) => {
+    const subjectData = student.subjects.find(
+      (s) => s.subject.id === subjectId
+    );
+    if (!subjectData) return type === "grades" ? "-" : "0";
+
+    if (type === "grades") {
+      return subjectData.grade?.name || "-";
+    } else {
+      return subjectData.totalScore.toString();
+    }
+  };
+
+  // Calculate statistics for display
+  const getSubjectStatValue = (
+    subjectId: string,
+    statType: "highest" | "lowest" | "average"
+  ) => {
+    const stat = subjectStats.find((s) => s.subject.id === subjectId);
+    if (!stat) return type === "grades" ? "-" : "0";
+
+    if (type === "grades") {
+      switch (statType) {
+        case "highest":
+          return stat.highestGrade?.name || "-";
+        case "lowest":
+          return stat.lowestGrade?.name || "-";
+        case "average":
+          return stat.averageGrade?.name || "-";
+        default:
+          return "-";
+      }
+    } else {
+      switch (statType) {
+        case "highest":
+          return stat.highestScore?.toString() || "0";
+        case "lowest":
+          return stat.lowestScore?.toString() || "0";
+        case "average":
+          return stat.averageScore?.toFixed(2) || "0.00";
+        default:
+          return "0";
+      }
+    }
+  };
+
   return (
     <div className='bg-white min-h-screen'>
-      {/* Print Styles */}
-      <style jsx>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          .print-break {
-            page-break-after: always;
-          }
-          body {
-            font-size: 10px;
-          }
-          table {
-            font-size: 8px;
-          }
-        }
-      `}</style>
-
       <div className='max-w-7xl mx-auto p-4 bg-white'>
         {/* School Header */}
         <div className='bg-white mb-4'>
@@ -424,7 +206,7 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
             {/* Left Logo */}
             <div className='flex-shrink-0'>
               <Image
-                src={leftLogoSrc}
+                src={schoolInfo.logo}
                 alt='School Logo'
                 width={60}
                 height={60}
@@ -436,21 +218,26 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
             <div className='text-center flex-1 mx-6'>
               <h1
                 className='text-xl md:text-2xl font-bold mb-1'
-                style={{ color: schoolNameColor }}
+                style={{
+                  color:
+                    schoolInfo.color && !schoolInfo.color.includes("oklch")
+                      ? schoolInfo.color
+                      : "#E91E63",
+                }}
               >
-                {schoolName}
+                {schoolInfo.name}
               </h1>
               <div className='text-gray-600 text-xs space-y-1'>
-                <p>{address}</p>
-                <p>E-Mail: {email}</p>
-                <p>Tel: {phone}</p>
+                <p>{schoolInfo.address}</p>
+                <p>E-Mail: {schoolInfo.email}</p>
+                <p>Tel: {schoolInfo.contact}</p>
               </div>
             </div>
 
             {/* Right Logo */}
             <div className='flex-shrink-0'>
               <Image
-                src={rightLogoSrc}
+                src={schoolInfo.logo}
                 alt='School Logo'
                 width={60}
                 height={60}
@@ -463,8 +250,9 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
         {/* Report Title */}
         <div className='text-center mb-4'>
           <h2 className='text-base font-bold text-gray-700'>
-            {classInfo.name} {classInfo.term} {classInfo.examType}{" "}
-            {classInfo.reportTitle} {classInfo.session}
+            {classDisplay} {termDisplay} {resultBatch.resultType.name}{" "}
+            {type === "grades" ? "Grades" : "Scores"} Broadsheet{" "}
+            {resultBatch.session.name}
           </h2>
         </div>
 
@@ -476,10 +264,16 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
                 <TableHead className='border border-gray-300 font-bold text-black text-center p-1 min-w-[120px]'>
                   NAME
                 </TableHead>
+                <TableHead className='border border-gray-300 font-bold text-black text-center p-1 min-w-[40px]'>
+                  AGE
+                </TableHead>
+                <TableHead className='border border-gray-300 font-bold text-black text-center p-1 min-w-[50px]'>
+                  GENDER
+                </TableHead>
                 {subjects.map((subject) => (
                   <TableHead
-                    key={subject.code}
-                    className='border border-gray-300 font-bold text-black text-center p-1 min-w-[40px]'
+                    key={subject.id}
+                    className='border border-gray-300 font-bold text-black text-center p-1 min-w-[50px]'
                   >
                     {subject.code}
                   </TableHead>
@@ -505,57 +299,84 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
                   className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                 >
                   <TableCell className='border border-gray-300 p-1 font-medium text-left'>
-                    {student.name}
+                    {student.firstname} {student.lastname}
+                  </TableCell>
+                  <TableCell className='border border-gray-300 text-center p-1'>
+                    {student.age}
+                  </TableCell>
+                  <TableCell className='border border-gray-300 text-center p-1 capitalize'>
+                    {student.gender}
                   </TableCell>
                   {subjects.map((subject) => (
                     <TableCell
-                      key={subject.code}
+                      key={subject.id}
                       className='border border-gray-300 text-center p-1'
                     >
-                      {student.scores[
-                        subject.code as keyof typeof student.scores
-                      ] || "-"}
+                      <span
+                        className={
+                          type === "grades"
+                            ? getGradeColor(
+                                getSubjectValue(student, subject.id)
+                              )
+                            : ""
+                        }
+                      >
+                        {getSubjectValue(student, subject.id)}
+                      </span>
                     </TableCell>
                   ))}
-                  <TableCell className='border border-gray-300 text-center p-1 font-semibold'>
-                    {student.total}
+                  <TableCell className='border border-gray-300 text-center p-1 font-bold'>
+                    {student.totalScore}
                   </TableCell>
-                  <TableCell className='border border-gray-300 text-center p-1 font-semibold'>
-                    {student.average.toFixed(2)}
+                  <TableCell className='border border-gray-300 text-center p-1 font-bold'>
+                    {student.averageScore?.toFixed(2)}
                   </TableCell>
-                  <TableCell className='border border-gray-300 text-center p-1 font-semibold'>
-                    {student.position}
+                  <TableCell className='border border-gray-300 text-center p-1 font-bold'>
+                    {student.overallPosition}
                   </TableCell>
                   <TableCell
                     className={`border border-gray-300 text-center p-1 ${getGradeColor(
-                      student.grade
+                      student.overallGrade?.name || ""
                     )}`}
                   >
-                    {student.grade}
+                    {student.overallGrade?.name || "-"}
                   </TableCell>
                 </TableRow>
               ))}
 
-              {/* Subject Averages Row */}
+              {/* Subject Statistics Rows */}
               <TableRow className='bg-yellow-100'>
-                <TableCell className='border border-gray-300 p-1 font-bold text-center'>
-                  SUBJECT AVERAGES
+                <TableCell
+                  className='border border-gray-300 p-1 font-bold text-center'
+                  colSpan={3}
+                >
+                  {type === "grades"
+                    ? "SUBJECT AVERAGE GRADES"
+                    : "SUBJECT AVERAGES"}
                 </TableCell>
                 {subjects.map((subject) => (
                   <TableCell
-                    key={subject.code}
+                    key={subject.id}
                     className='border border-gray-300 text-center p-1 font-bold'
                   >
-                    {statistics.subjectAverages[
-                      subject.code as keyof typeof statistics.subjectAverages
-                    ]?.toFixed(1) || "-"}
+                    <span
+                      className={
+                        type === "grades"
+                          ? getGradeColor(
+                              getSubjectStatValue(subject.id, "average")
+                            )
+                          : ""
+                      }
+                    >
+                      {getSubjectStatValue(subject.id, "average")}
+                    </span>
                   </TableCell>
                 ))}
-                <TableCell className='border border-gray-300 text-center p-1 font-bold'>
-                  {statistics.highestTotal}
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
                 </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1 font-bold'>
-                  {statistics.classAverage.toFixed(2)}
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
                 </TableCell>
                 <TableCell className='border border-gray-300 text-center p-1'>
                   -
@@ -565,87 +386,70 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
                 </TableCell>
               </TableRow>
 
-              {/* Lowest Score Row */}
+              {/* Lowest Score/Grade Row */}
               <TableRow className='bg-red-100'>
-                <TableCell className='border border-gray-300 p-1 font-bold text-center'>
-                  LOWEST SCORE
-                </TableCell>
-                {subjects.map((subject) => {
-                  const lowestScore = Math.min(
-                    ...students.map(
-                      (s) =>
-                        s.scores[subject.code as keyof typeof s.scores] || 0
-                    )
-                  );
-                  return (
-                    <TableCell
-                      key={subject.code}
-                      className='border border-gray-300 text-center p-1 font-bold'
-                    >
-                      {lowestScore}
-                    </TableCell>
-                  );
-                })}
-                <TableCell className='border border-gray-300 text-center p-1 font-bold'>
-                  {statistics.lowestTotal}
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-              </TableRow>
-
-              {/* Highest Score Row */}
-              <TableRow className='bg-green-100'>
-                <TableCell className='border border-gray-300 p-1 font-bold text-center'>
-                  HIGHEST SCORE
-                </TableCell>
-                {subjects.map((subject) => {
-                  const highestScore = Math.max(
-                    ...students.map(
-                      (s) =>
-                        s.scores[subject.code as keyof typeof s.scores] || 0
-                    )
-                  );
-                  return (
-                    <TableCell
-                      key={subject.code}
-                      className='border border-gray-300 text-center p-1 font-bold'
-                    >
-                      {highestScore}
-                    </TableCell>
-                  );
-                })}
-                <TableCell className='border border-gray-300 text-center p-1 font-bold'>
-                  {statistics.highestTotal}
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-                <TableCell className='border border-gray-300 text-center p-1'>
-                  -
-                </TableCell>
-              </TableRow>
-
-              {/* Class Size Row */}
-              <TableRow className='bg-blue-100'>
-                <TableCell className='border border-gray-300 p-1 font-bold text-center'>
-                  CLASS SIZE: {students.length}
+                <TableCell
+                  className='border border-gray-300 p-1 font-bold text-center'
+                  colSpan={3}
+                >
+                  {type === "grades" ? "LOWEST GRADES" : "LOWEST SCORES"}
                 </TableCell>
                 {subjects.map((subject) => (
                   <TableCell
-                    key={subject.code}
-                    className='border border-gray-300 text-center p-1'
+                    key={subject.id}
+                    className='border border-gray-300 text-center p-1 font-bold'
                   >
-                    -
+                    <span
+                      className={
+                        type === "grades"
+                          ? getGradeColor(
+                              getSubjectStatValue(subject.id, "lowest")
+                            )
+                          : ""
+                      }
+                    >
+                      {getSubjectStatValue(subject.id, "lowest")}
+                    </span>
+                  </TableCell>
+                ))}
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
+                </TableCell>
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
+                </TableCell>
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
+                </TableCell>
+                <TableCell className='border border-gray-300 text-center p-1'>
+                  -
+                </TableCell>
+              </TableRow>
+
+              {/* Highest Score/Grade Row */}
+              <TableRow className='bg-green-100'>
+                <TableCell
+                  className='border border-gray-300 p-1 font-bold text-center'
+                  colSpan={3}
+                >
+                  {type === "grades" ? "HIGHEST GRADES" : "HIGHEST SCORES"}
+                </TableCell>
+                {subjects.map((subject) => (
+                  <TableCell
+                    key={subject.id}
+                    className='border border-gray-300 text-center p-1 font-bold'
+                  >
+                    <span
+                      className={
+                        type === "grades"
+                          ? getGradeColor(
+                              getSubjectStatValue(subject.id, "highest")
+                            )
+                          : ""
+                      }
+                    >
+                      {getSubjectStatValue(subject.id, "highest")}
+                    </span>
                   </TableCell>
                 ))}
                 <TableCell className='border border-gray-300 text-center p-1'>
@@ -672,27 +476,23 @@ const ClassBroadsheetReport: React.FC<ClassBroadsheetReportProps> = ({
           </h3>
           <div className='border border-gray-300 border-t-0'>
             <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0'>
-              {keyToSubject.map((item, index) => (
+              {subjects.map((subject, index) => (
                 <div
-                  key={index}
-                  className='flex justify-between p-2 border-r border-b border-gray-200 text-xs'
+                  key={subject.id}
+                  className={`flex justify-between p-2 border-b border-gray-300 ${
+                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } ${
+                    index >= subjects.length - (subjects.length % 4 || 4)
+                      ? "border-b-0"
+                      : ""
+                  }`}
                 >
-                  <span className='font-medium'>{item.code}</span>
-                  <span className='ml-2'>{item.subject}</span>
+                  <span className='font-medium text-xs'>{subject.code}</span>
+                  <span className='text-xs'>{subject.name}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Print Button */}
-        <div className='mt-8 text-center no-print'>
-          <button
-            onClick={() => window.print()}
-            className='bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition-colors'
-          >
-            Print Broadsheet
-          </button>
         </div>
       </div>
     </div>

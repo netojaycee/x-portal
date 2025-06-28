@@ -26,6 +26,7 @@ import {
   useGetSessionClassesQuery,
   useGetClassSubjectsQuery,
 } from "@/redux/api";
+import { encodeScoreContext, type ScoreContext } from "@/lib/contextUtils";
 
 const ScoreFormSchema = z.object({
   scoreType: z.enum(["subject", "class"], {
@@ -116,18 +117,16 @@ export function ScoreForm({ onClose }: ScoreFormProps) {
   // Fetch subjects for selected class and class arm
   const { data: subjectsData, isLoading: subjectsLoading } =
     useGetClassSubjectsQuery(
-      
-        {
-          classId: selectedClassId,
-          classArmId: form.watch("classArmId"),
-        },
-        {
-          skip:
-            !selectedClassId || !form.watch("classArmId"),
-        }
+      {
+        classId: selectedClassId,
+        classArmId: form.watch("classArmId"),
+      },
+      {
+        skip: !selectedClassId || !form.watch("classArmId"),
+      }
     );
 
-    console.log(subjectsData, "subjects")
+  console.log(subjectsData, "subjects");
 
   // Get available terms
   const availableTerms = useMemo(() => {
@@ -194,19 +193,53 @@ export function ScoreForm({ onClose }: ScoreFormProps) {
   };
 
   const onSubmit = (values: ScoreFormValues) => {
-    // Build query parameters
+    // Get selected items data for context
+    const selectedSession = sessionsData?.data?.find(
+      (s: Session) => s.id === values.sessionId
+    );
+    const selectedTerm = availableTerms.find(
+      (t: Term) => t.id === values.termId
+    );
+    const selectedClass = availableClasses.find(
+      (c: ClassData) => c.id === values.classId
+    );
+    const selectedClassArm = availableArms.find(
+      (a: ClassArm) => a.id === values.classArmId
+    );
+    const selectedSubject = availableSubjects.find(
+      (s: any) => s.subject.id === values.subjectId
+    );
+
+    // Build context object with both IDs and names
+    const context: ScoreContext = {
+      subjectId: values.subjectId || "",
+      subjectName: selectedSubject?.subject.name || "",
+      sessionId: values.sessionId,
+      sessionName: selectedSession?.name || "",
+      classArmId: values.classArmId,
+      classArmName: selectedClassArm?.name || "",
+      classId: values.classId,
+      className: selectedClass?.name || "",
+      termId: values.termId,
+      termName: selectedTerm?.name || "",
+    };
+
+    // Encode context and build query parameters
+    const encodedContext = encodeScoreContext(context);
+
+    // Use individual parameters as fallback for backward compatibility
     const queryParams = new URLSearchParams({
-      scoreType: values.scoreType,
+      context: encodedContext,
+      // Fallback parameters
       sessionId: values.sessionId,
       termId: values.termId,
       classId: values.classId,
       classArmId: values.classArmId,
+      ...(values.scoreType === "subject" &&
+        values.subjectId && {
+          subjectId: values.subjectId,
+        }),
     });
-
-    // Add subject ID if score type is subject
-    if (values.scoreType === "subject" && values.subjectId) {
-      queryParams.append("subjectId", values.subjectId);
-    }
 
     // Navigate to score entry page
     const route =
@@ -450,7 +483,10 @@ export function ScoreForm({ onClose }: ScoreFormProps) {
                       </SelectItem>
                     ) : availableSubjects.length > 0 ? (
                       availableSubjects.map((subject: any) => (
-                        <SelectItem key={subject.subject.id} value={subject.subject.id}>
+                        <SelectItem
+                          key={subject.subject.id}
+                          value={subject.subject.id}
+                        >
                           {subject.subject.name} ({subject.subject.code})
                         </SelectItem>
                       ))
