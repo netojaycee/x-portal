@@ -4,25 +4,27 @@ import { StudentProfileCard } from "../../(components)/StudentProfileCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StudentBio from "../../(components)/StudentBio";
 import LoaderComponent from "@/components/local/LoaderComponent";
-import { useGetUserByIdQuery } from "@/redux/api";
+import { useGetStudentByIdQuery } from "@/redux/api";
+import { ResultListTabContent } from "../../../class/(components)/ResultListTabContent";
 
 export default function Main({ id }: { id: string }) {
-  const { data, isLoading } = useGetUserByIdQuery(id, { skip: !id });
+  const { data, isLoading } = useGetStudentByIdQuery(id, { skip: !id });
   if (isLoading) return <LoaderComponent />;
-  console.log(data);
+  // console.log(data);
   return (
     <div className='space-y-4'>
       <StudentProfileCard
         name={`${data?.firstname} ${data?.lastname}`}
         status={data?.isActive ? "Active" : "Inactive"}
-        className={data?.class}
-        arm={data?.classArm}
+        className={data?.currentClass?.name}
+        arm={data?.currentClassArm?.name}
         role={data?.subRole}
-        parent={`${data?.parent?.firstname} ${data?.parent?.lastname}`}
+        parent={`${data?.parentData?.firstname} ${data?.parentData?.lastname}`}
         avatarUrl={data?.avatar}
-        onEdit={() => alert("Edit Clicked")}
-        onDelete={() => alert("Delete Clicked")}
-        onUpload={() => alert("Upload Clicked")}
+        type='alumni'
+        // onEdit={() => alert("Edit Clicked")}
+        // onDelete={() => alert("Delete Clicked")}
+        // onUpload={() => alert("Upload Clicked")}
       />
 
       <div className=''>
@@ -68,7 +70,7 @@ export default function Main({ id }: { id: string }) {
             <div>Payment History</div>
           </TabsContent>
           <TabsContent value='result'>
-            <div>Result</div>
+            <ResultListTabContent studentId={id} />
           </TabsContent>
         </Tabs>
       </div>

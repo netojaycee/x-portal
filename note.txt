@@ -25,3 +25,15 @@ on subject LOAD ALL CLASSES AND CLASS ARMS IN SCHOOL AND THEN ASSIGN SUBJECT TO 
 on accept admission add student and promtoio aso populate student subject with subject from StudentSubjectAssignment per session 
 
 on scores page use queries to fetch students if for subject and to  fetch students and all subjects if for class, then use state to navigate throguh students, alsofetch marking scheme and use to contruct table and ids to submit score also submit max score per score field or just inou tmax score into result instead but validate to ensure sore is less or equal to max score frm marking scheme
+
+
+reusbable persit tab
+<Tabs value={activeTab} onValueChange={setActiveTab}>...</Tabs>
+
+import { usePersistentTab } from "@/hooks/usePersistentTab";
+
+const TAB_KEY = `class-arm-tabs-${sessionId}-${id}-${armId}`;
+const tabOptions = ["students", "subject", "result", "attendance", "teacher"];
+const [activeTab, setActiveTab] = usePersistentTab(TAB_KEY, tabOptions, tabOptions[0]);
+
+http://localhost:6600/class/44d529bd-b895-40f9-bc67-8914109b8879/e34c92aa-13ca-4594-bbad-76d9d6cb9357/412f2a52-ece9-41fd-9bc5-c65f401fa3b9

@@ -1,18 +1,23 @@
 "use client";
 import React, { useState } from "react";
 import CustomTable from "@/app/(dashboard)/components/CustomTable";
-import StatsCard from "@/app/(dashboard)/components/StatsCard";
 import { Plus } from "lucide-react";
 import { rowsPerPageOptions } from "@/lib/utils";
 import { ModalState, ModalType, User } from "@/lib/types";
 import { useDebounce } from "use-debounce";
 import { useRouter } from "next/navigation";
-import { useGetAllParentsQuery } from "@/redux/api";
+import { useGetStudentsQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 
-export default function ParentsTab() {
+export const StudentListTabContent: React.FC<any> = ({
+  sessionId,
+  classId,
+  classArmId,
+//   termId,
+//   subjects,
+}) => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(rowsPerPageOptions[0] || 10);
   const [search, setSearch] = useState("");
@@ -20,25 +25,24 @@ export default function ParentsTab() {
   const [debouncedSearchTerm] = useDebounce(search, 500);
   const router = useRouter();
 
-
-    const {
-      data,
-      isLoading: parentsLoading,
-      // error: studentsError,
-    } = useGetAllParentsQuery({ q: debouncedSearchTerm, page, limit });
-
-   console.log(data, "parentsData");
   // Pass them into your RTK hook
-  
+  const {
+    data: studentsData,
+    isLoading: studentsLoading,
+    // error: studentsError,
+  } = useGetStudentsQuery(
+    { q: debouncedSearchTerm, page, limit, sessionId, classId, classArmId },
+    { skip: !sessionId || !classId || !classArmId }
+  );
   // const [toggleActive] = useToggleSchoolActiveMutation();
 
-  if (parentsLoading) {
+  if (studentsLoading) {
     return <LoaderComponent />;
   }
-  // console.log(data && data);
-  const parentsData = data?.parents || [];
+  console.log(studentsData && studentsData);
+  //   const studentsData = studentsData?.users || [];
 
-  const openModal = (type: Exclude<ModalType, "">, row: User) =>
+  const openModal = (type: Exclude<ModalType, "">, row: any) =>
     setModal({ type, data: row });
 
   // unified handler
@@ -46,64 +50,54 @@ export default function ParentsTab() {
     if (!isOpen) setModal({ type: null });
   };
 
-  const getActionOptions = (parent: User) => {
+  const getActionOptions = (student: any) => {
     const otherOptions = [
       {
-        key: "parent",
+        key: "student",
         label: "View Profile",
         type: "custom" as const,
-        handler: () => handleViewParent(parent),
+        handler: () => handleViewStudent(student),
       },
       {
-        key: "parent",
+        key: "student",
         label: "Edit",
         type: "edit" as const,
-        handler: () => openModal("edit", parent),
+        handler: () => openModal("edit", student),
       },
       // {
-      //   key: "parent",
+      //   key: "student",
       //   label: "Assign Parent/Guardian",
       //   type: "custom" as const,
-      //   handler: () => openModal("permission", parent),
+      //   handler: () => openModal("permission", student),
       // },
     ];
 
     return [...otherOptions];
   };
 
-  const handleViewParent = (row: User) => {
-    router.push(`/students/parents/profile/${row.id}`);
+  const handleViewStudent = (row: User) => {
+    router.push(`/students/profile/${row.id}`);
   };
+
+  const studentsArray = studentsData?.data?.students || [];
+
   return (
-    <div className='space-y-4'>
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-        <StatsCard
-          title='Total Parents'
-          number={data?.totalParents || 0}
-          image='/student-group.png'
-          imagePosition='left'
-          // male='250'
-          // female='150'
-          // url='/details'
-        />
-      </div>
+    <div className='p-4'>
       <CustomTable
-        title='Parents List'
+        title='Students List'
         columns={[
           { key: "sn", label: "SN" },
           { key: "fullname", label: "Name" },
-          { key: "email", label: "Email Address" },
-          { key: "contact", label: "Contact" },
-          { key: "occupation", label: "Occupation" },
-          // { key: "createdDate", label: "Created Date" },
-          // {
-          //   key: "status",
-          //   label: "Status",
-          // },
+          { key: "gender", label: "Gender" },
+          { key: "parentGuardian", label: "Parent/Guardian" },
+          //   { key: "classArmName", label: "Arm" },
+          //   { key: "parentName", label: "Parent/Guardian" },
+          { key: "date", label: "Created Date" },
+          // { key: "status", label: "Status" },
           { key: "actions", label: "Actions" },
         ]}
-        data={parentsData} // Show only 5 rows as per Subscriber List
-        totalItems={data?.total || 0}
+        data={studentsArray} // Show only 5 rows as per Subscriber List
+        totalItems={studentsData?.data?.totalStudents || 0}
         currentPage={page}
         onPageChange={setPage}
         rowsPerPage={limit}
@@ -118,22 +112,23 @@ export default function ParentsTab() {
         }}
         filters={{ showSearch: true, showFilter: true }}
         showActionButton={true}
-        actionButtonText='Add New Parent/Guardian'
+        actionButtonText='Add New Student'
         actionButtonIcon={<Plus className='h-4 w-4' />}
         showRowsPerPage={true}
         pagination={true}
         showResultsInfo={true}
         getActionOptions={getActionOptions}
       />
+
       {modal.type === "edit" && (
         <CustomModal
           open={modal.type === "edit"}
           selectedRow={modal.data}
           onOpenChange={handleModalOpenChange}
           isEditMode={true}
-          type={ENUM_MODULES.PARENT}
+          type={ENUM_MODULES.STUDENT}
         />
       )}
     </div>
   );
-}
+};

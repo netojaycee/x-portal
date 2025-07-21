@@ -209,6 +209,10 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ? ENUM_MODULES.SCHOOL
                     : title === "Students List"
                     ? ENUM_MODULES.STUDENT
+                    : title === "Parents List"
+                    ? ENUM_MODULES.PARENT
+                    : title === "Staff List"
+                    ? ENUM_MODULES.STAFF
                     : title === "Subscription Plans"
                     ? ENUM_MODULES.SUBSCRIPTION
                     : title === "Users List"
@@ -305,11 +309,13 @@ const CustomTable: React.FC<CustomTableProps> = ({
                           : row[column.key] || "--"}
                       </span>
                     ) : column.key === "subRole" ? (
-                      row.subRole?.name || "--"
+                     row.subRole?.name || "--"
+                     ) : column.key === "teacher" ? (
+                      row?.assignments?.[0]?.classArms?.[0]?.teacher?.staffName || "--"
                     ) : column.key === "classArmName" ? (
-                      row.classArm.name || "--"
+                      row?.classArm?.name || row?.classArmName || "--"
                     ) : column.key === "className" ? (
-                      row.class.name || "--"
+                      row?.class?.name || row?.className || "--"
                     ) : column.key === "submittedBy" ? (
                       row.createdBy?.name || "--"
                     ) : column.key === "session" ? (
@@ -343,10 +349,23 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       />
                     ) : column.key === "subPlan" ? (
                       row.subscription?.name || "--"
+                    ) : column.key === "subject" ? (
+                      row.subject?.name || "--"
+                    ) : column.key === "teacher" ? (
+                      // Show teacher's firstname and lastname
+                      `${row.teacher?.firstname ?? ""} ${
+                        row.teacher?.lastname ?? ""
+                      }`.trim() || "--"
                     ) : column.key === "date" ? (
-                      row.timestamp || row.createdAt || row.admissionDate ? (
+                      row.timestamp ||
+                      row.createdAt ||
+                      row.createdDate ||
+                      row.admissionDate ? (
                         new Date(
-                          row.timestamp || row.createdAt || row.admissionDate
+                          row.timestamp ||
+                            row.createdAt ||
+                            row.createdDate ||
+                            row.admissionDate
                         )
                           .toISOString()
                           .slice(0, 10) // "YYYY-MM-DD"
@@ -602,7 +621,16 @@ const CustomTable: React.FC<CustomTableProps> = ({
           </div>
         )}
 
-      {modal === ENUM_MODULES.SCHOOL && (
+      {modal !== null && Object.values(ENUM_MODULES).includes(modal) && (
+        <CustomModal
+          open={!!modal}
+          onOpenChange={handleModalOpenChange}
+          isEditMode={false}
+          type={modal}
+        />
+      )}
+
+      {/* {modal === ENUM_MODULES.SCHOOL && (
         <CustomModal
           open={modal === ENUM_MODULES.SCHOOL}
           onOpenChange={handleModalOpenChange}
@@ -670,7 +698,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
           isEditMode={false}
           type={ENUM_MODULES.SUBJECT}
         />
-      )}
+      )} */}
     </div>
   );
 };

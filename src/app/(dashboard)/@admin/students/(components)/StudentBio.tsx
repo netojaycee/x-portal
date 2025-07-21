@@ -23,15 +23,15 @@ export default function StudentBio({ studentDetails }: StudentBioProps) {
   }
 
   // Extract parent data if available
-  const parentData = studentDetails.parent || {};
+  const parentData = studentDetails.parentData || {};
 
-  console.log(parentData);
+  // console.log(parentData);
 
   // Build an array of student details from the API data
   const bioDetails = formatStudentDetails(studentDetails);
 
   // Parent information
-  const parentDetails = formatParentDetails(parentData) ||  [];
+  const parentDetails = formatParentDetails(studentDetails.parentData) || [];
 
   return (
     <div className='space-y-6 mt-6'>

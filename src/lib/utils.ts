@@ -27,10 +27,10 @@ export function formatStudentDetails(studentDetails: any) {
     : "Not provided";
 
   const studentRegNo =
-    studentDetails.studentRegNo || "N/A";
+    studentDetails.regNo || "N/A";
 
-  const formattedAdmissionDate = studentDetails.admissionDate
-    ? formatDate(new Date(studentDetails.admissionDate), 'dd/MM/yyyy')
+  const formattedAdmissionDate = studentDetails.admission.admissionDate
+    ? formatDate(new Date(studentDetails.admission.admissionDate), 'dd/MM/yyyy')
     : "Not provided";
 
   return [
@@ -40,10 +40,10 @@ export function formatStudentDetails(studentDetails: any) {
     { label: "Registration No", value: studentRegNo },
     { label: "Email Address", value: studentDetails.email },
 
-    { label: "Class", value: studentDetails.className || studentDetails.class },
+    { label: "Class", value: studentDetails.currentClass?.name },
     {
       label: "Arm",
-      value: studentDetails.classArmName || studentDetails.classArm,
+      value: studentDetails.currentClassArm?.name,
     },
     { label: "Admission Date", value: formattedAdmissionDate },
     { label: "Date of Birth", value: formattedDOB },
@@ -52,7 +52,7 @@ export function formatStudentDetails(studentDetails: any) {
       value: studentDetails.gender === "male" ? "Male" : "Female",
     },
 
-    { label: "Phone", value: studentDetails.phone || studentDetails.contact },
+    { label: "Contact", value: studentDetails.contact || studentDetails.contact },
     { label: "Religion", value: studentDetails.religion },
     { label: "Nationality", value: studentDetails.nationality },
     { label: "State of Origin", value: studentDetails.stateOfOrigin },
@@ -74,6 +74,22 @@ export function formatStudentDetails(studentDetails: any) {
   ];
 }
 
+
+export function formatStaffDetails(staffDetails: any) {
+  if (!staffDetails) return [];
+  return [
+    { label: "First Name", value: staffDetails.firstname },
+    { label: "Last Name", value: staffDetails.lastname },
+    { label: "Other Name", value: staffDetails.othername || "N/A" },
+    { label: "Staff Reg No", value: staffDetails.staffRegNo || "N/A" },
+    { label: "Email", value: staffDetails.email },
+    { label: "Contact", value: staffDetails.contact },
+    { label: "Qualifications", value: Array.isArray(staffDetails.qualifications) ? staffDetails.qualifications.join(", ") : staffDetails.qualifications },
+    { label: "Gender", value: staffDetails.gender === "male" ? "Male" : "Female" },
+    { label: "Username", value: staffDetails.username },
+    { label: "Status", value: staffDetails.isActive ? "Active" : "Inactive", className: staffDetails.isActive ? "text-green-600" : "text-red-600" },
+  ];
+}
 
 
 // Parent information shape for the Parent/Guardian Info section

@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import {
-  useGetSessionClassStudentsQuery,
+  useGetStudentsQuery,
   useGetClassMarkingSchemeQuery,
   useGetStudentScoresQuery,
   useSubmitStudentScoresMutation,
@@ -184,7 +184,7 @@ export default function ClassScoresPage() {
     data: studentsData,
     isLoading: studentsLoading,
     error: studentsError,
-  } = useGetSessionClassStudentsQuery(
+  } = useGetStudentsQuery(
     { sessionId, classId, classArmId },
     { skip: !hasRequiredParams }
   );

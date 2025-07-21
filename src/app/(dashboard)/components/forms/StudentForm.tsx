@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,33 +25,37 @@ import {
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import {
-  useCreateUserMutation,
-  useUpdateUserMutation,
+  useCreateStudentMutation,
+  useUpdateStudentMutation,
   useGetClassClassArmsBySessionIdQuery,
   useGetSessionsQuery,
+  useGetAllParentsQuery,
 } from "@/redux/api";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
 // Define the form schema
 const studentSchema = z.object({
-  firstname: z
-    .string()
-    .min(1, "First name is required")
-    .max(100, "First name must be less than 100 characters"),
-  lastname: z
-    .string()
-    .min(1, "Last name is required")
-    .max(100, "Last name must be less than 100 characters"),
-  gender: z.enum(["male", "female"], {
-    required_error: "Gender is required",
-  }),
+  firstname: z.string().min(1, "First name is required").max(100),
+  lastname: z.string().min(1, "Last name is required").max(100),
+  othername: z.string().optional(),
+  email: z.string().email("Invalid email address"),
+  contact: z.string().optional(),
+  gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
+  // password: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  religion: z.string().optional(),
+  nationality: z.string().optional(),
+  stateOfOrigin: z.string().optional(),
+  lga: z.string().optional(),
+  parentId: z.string().optional(),
   classId: z.string().min(1, "Class is required"),
   classArmId: z.string().min(1, "Arm is required"),
+  studentRegNo: z.string().optional(),
+  // schoolId: z.string().optional(),
+  address: z.string().optional(),
   sessionId: z.string().optional(),
-  // status: z.enum(["Active", "Inactive"], {
-  //   required_error: "Status is required",
-  // }),
+  avatar: z.any().optional(),
 });
 
 type StudentFormData = z.infer<typeof studentSchema>;
@@ -59,7 +64,8 @@ interface StudentFormProps {
   student?: StudentFormData & {
     id: string;
     currentSessionId?: string;
-  }; // For edit mode
+    imageUrl?: string;
+  };
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -69,11 +75,21 @@ export default function StudentForm({
   isEditMode = false,
   onSuccess,
 }: StudentFormProps) {
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    student?.avatar || null
+  );
+  const [imageBase64, setImageBase64] = useState<string>("");
   const [availableArms, setAvailableArms] = useState<
     { id: string; name: string }[]
   >([]);
   const userData = useSelector((state: RootState) => state.user.user);
-  console.log(userData)
+  // Parent dropdown search state
+  const [parentSearch, setParentSearch] = useState("");
+  // Fetch all parents for dropdown
+  const { data: parentsData, isLoading: isLoadingParents } =
+    useGetAllParentsQuery({});
+
+  console.log("Parents data:", parentsData);
 
   // Get current session ID - either from student or from active session
   const { data: sessions } = useGetSessionsQuery(
@@ -82,9 +98,7 @@ export default function StudentForm({
   );
 
   console.log("Sessions data:", sessions);
-  const currentSession = sessions?.data?.find(
-    (session: any) => session.status === "Active"
-  );
+  const currentSession = sessions?.data?.find((session: any) => session.status);
   const sessionId =
     userData?.currentSessionId ||
     student?.currentSessionId ||
@@ -97,24 +111,25 @@ export default function StudentForm({
     });
 
   const [
-    addUser,
+    addStudent,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
+      // data: studentDataNew,
     },
-  ] = useCreateUserMutation();
+  ] = useCreateStudentMutation();
 
   const [
-    updateUser,
+    updateStudent,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateUserMutation();
+  ] = useUpdateStudentMutation();
 
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
@@ -140,14 +155,29 @@ export default function StudentForm({
     defaultValues: {
       firstname: student?.firstname || "",
       lastname: student?.lastname || "",
+      othername: student?.othername || "",
+      email: student?.email || "",
+      contact: student?.contact || "",
       gender: student?.gender || undefined,
+      // password: "",
+      dateOfBirth: student?.dateOfBirth
+        ? student.dateOfBirth.split("T")[0]
+        : "",
+      religion: student?.religion || "",
+      nationality: student?.nationality || "",
+      stateOfOrigin: student?.stateOfOrigin || "",
+      lga: student?.lga || "",
+      parentId: student?.parentId || "",
       classId: student?.classId || "",
       classArmId: student?.classArmId || "",
+      studentRegNo: student?.studentRegNo || "",
+      // schoolId: userData?.schoolId || student?.schoolId || "",
+      address: student?.address || "",
       sessionId:
         student?.currentSessionId ||
         (currentSession && currentSession.id) ||
         undefined,
-      // status: student?.status || undefined,
+      avatar: undefined,
     },
   });
 
@@ -166,23 +196,39 @@ export default function StudentForm({
 
   const onSubmit = async (values: StudentFormData) => {
     try {
-      // Add session ID to the form data
-      const formData = {
+      // Convert avatar file to base64 if present
+      let avatarBase64Str = imageBase64;
+      if (values.avatar && values.avatar instanceof File) {
+        avatarBase64Str = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(values.avatar);
+        });
+      }
+      const payload = {
         ...values,
+        avatarBase64: avatarBase64Str,
         sessionId: sessionId,
-        subRoleFlag: "student",
+        // subRoleFlag: "student",
       };
 
-      console.log(formData);
+      console.log(student, isEditMode, "hhh");
+
+      console.log("Submitting student data:", payload);
       if (isEditMode && student?.id) {
-        await updateUser({ id: student.id, input: formData }).unwrap();
+        await updateStudent({ id: student.id, ...payload }).unwrap();
       } else {
-        await addUser(formData).unwrap();
+        await addStudent(payload).unwrap();
       }
     } catch (error) {
       console.error(`${isEditMode ? "Update" : "Add"} student error:`, error);
     }
   };
+
+  console.log(student, "data");
 
   useEffect(() => {
     if (isSuccess) {
@@ -193,6 +239,7 @@ export default function StudentForm({
       );
       form.reset();
       if (onSuccess) onSuccess();
+      // console.log("Student form reset", studentDataNew);
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
@@ -228,10 +275,13 @@ export default function StudentForm({
 
   return (
     <div className='w-full max-w-md'>
-      {/* Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-          {/* Full Name Field */}
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className='space-y-4'
+          encType='multipart/form-data'
+        >
+          {/* Name Fields */}
           <div className='flex items-center w-full gap-5'>
             <FormField
               control={form.control}
@@ -250,7 +300,6 @@ export default function StudentForm({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name='lastname'
@@ -268,9 +317,290 @@ export default function StudentForm({
                 </FormItem>
               )}
             />
-
-            {/* Gender Field */}
+            <FormField
+              control={form.control}
+              name='othername'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>Other Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Chinedu'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
+          {/* Email, Contact, Password */}
+          <FormField
+            control={form.control}
+            name='email'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Email</FormLabel>
+                <FormControl>
+                  <Input
+                    type='email'
+                    placeholder='e.g., student@email.com'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name='contact'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Contact</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='e.g., 08012345678'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {/* <FormField
+            control={form.control}
+            name='password'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type='password'
+                    placeholder='Set password (optional)'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          /> */}
+          {/* Date of Birth, Religion, Nationality, State, LGA */}
+          <div className='flex items-center w-full gap-5'>
+            <FormField
+              control={form.control}
+              name='dateOfBirth'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='date'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='religion'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>Religion</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Christianity'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className='flex items-center w-full gap-5'>
+            <FormField
+              control={form.control}
+              name='nationality'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>Nationality</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Nigerian'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='stateOfOrigin'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>
+                    State of Origin
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Lagos'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='lga'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>LGA</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., Ikeja'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          {/* Parent, Student Reg No, School, Address */}
+          <div className='flex items-center w-full gap-5'>
+            <FormField
+              control={form.control}
+              name='parentId'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>
+                    Parent (optional)
+                  </FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value || "none"}
+                  >
+                    <FormControl className='w-full'>
+                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
+                        <SelectValue placeholder='Select parent (optional)' />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {/* Search input for parent dropdown */}
+                      <div className='px-2 py-1'>
+                        <Input
+                          type='text'
+                          placeholder='Search parent...'
+                          value={parentSearch}
+                          onChange={(e) => setParentSearch(e.target.value)}
+                          className='border-gray-300 focus:border-primary focus:ring-primary/90 mb-2'
+                        />
+                      </div>
+                      <SelectItem value='none'>None</SelectItem>
+                      {isLoadingParents ? (
+                        <SelectItem value='loading' disabled>
+                          Loading parents...
+                        </SelectItem>
+                      ) : parentsData?.parents?.length ? (
+                        parentsData.parents
+                          .filter((parent: any) => {
+                            const search = parentSearch.trim().toLowerCase();
+                            if (!search) return true;
+                            return (
+                              parent.user.firstname
+                                ?.toLowerCase()
+                                .includes(search) ||
+                              parent.user.lastname
+                                ?.toLowerCase()
+                                .includes(search) ||
+                              parent.user.email?.toLowerCase().includes(search)
+                            );
+                          })
+                          .map((parent: any) => (
+                            <SelectItem key={parent.id} value={parent.id}>
+                              {parent.user.firstname} {parent.user.lastname}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <SelectItem value='no-parents' disabled>
+                          No parents found
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='studentRegNo'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>
+                    Student Reg No
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='e.g., STU12345'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* <FormField
+              control={form.control}
+              name='schoolId'
+              render={({ field }) => (
+                <FormItem className='w-full'>
+                  <FormLabel className='text-gray-700'>School ID</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='School ID'
+                      {...field}
+                      className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            /> */}
+          </div>
+          <FormField
+            control={form.control}
+            name='address'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Address</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='e.g., 123 Main St, Lagos'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary/90'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name='gender'
@@ -296,129 +626,132 @@ export default function StudentForm({
             )}
           />
           {/* Class Field */}
-          <div className='flex items-center w-full gap-5'>
-            <FormField
-              control={form.control}
-              name='classId'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Class</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleClassChange(value);
+          {!isEditMode && (
+            <div className='flex items-center w-full gap-5'>
+              <FormField
+                control={form.control}
+                name='classId'
+                render={({ field }) => (
+                  <FormItem className='w-full'>
+                    <FormLabel className='text-gray-700'>Class</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleClassChange(value);
+                      }}
+                      defaultValue={field.value}
+                      disabled={classDataLoading}
+                    >
+                      <FormControl className='w-full'>
+                        <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
+                          <SelectValue placeholder='Select class' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {classDataLoading ? (
+                          <SelectItem value='loading' disabled>
+                            Loading classes...
+                          </SelectItem>
+                        ) : classData?.data?.classes?.length ? (
+                          classData.data.classes.map((cls: any) => (
+                            <SelectItem key={cls.id} value={cls.id}>
+                              {cls.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value='empty' disabled>
+                            No classes available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='classArmId'
+                render={({ field }) => (
+                  <FormItem className='w-full'>
+                    <FormLabel className='text-gray-700'>Class Arm</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={!form.getValues("classId") || classDataLoading}
+                    >
+                      <FormControl className='w-full'>
+                        <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
+                          <SelectValue placeholder='Select arm' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {!form.getValues("classId") ? (
+                          <SelectItem value='select-class-first' disabled>
+                            Select a class first
+                          </SelectItem>
+                        ) : availableArms.length > 0 ? (
+                          availableArms.map((arm) => (
+                            <SelectItem key={arm.id} value={arm.id}>
+                              {arm.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value='no-arms' disabled>
+                            No class arms available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
+          {/* Image Upload Field */}
+          <FormField
+            control={form.control}
+            name='avatar'
+            render={({ field }) => (
+              <FormItem className='w-full'>
+                <FormLabel className='text-gray-700'>Student Image</FormLabel>
+                <FormControl>
+                  <Input
+                    type='file'
+                    accept='image/*'
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      field.onChange(file);
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result as string);
+                          setImageBase64(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      } else {
+                        setImagePreview(null);
+                        setImageBase64("");
+                      }
                     }}
-                    defaultValue={field.value}
-                    disabled={classDataLoading}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
-                        <SelectValue placeholder='Select class' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {classDataLoading ? (
-                        <SelectItem value='loading' disabled>
-                          Loading classes...
-                        </SelectItem>
-                      ) : classData?.data?.classes?.length ? (
-                        classData.data.classes.map((cls: any) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value='empty' disabled>
-                          No classes available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Arm Field */}
-            <FormField
-              control={form.control}
-              name='classArmId'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Class Arm</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={!form.getValues("classId") || classDataLoading}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
-                        <SelectValue placeholder='Select arm' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {!form.getValues("classId") ? (
-                        <SelectItem value='select-class-first' disabled>
-                          Select a class first
-                        </SelectItem>
-                      ) : availableArms.length > 0 ? (
-                        availableArms.map((arm) => (
-                          <SelectItem key={arm.id} value={arm.id}>
-                            {arm.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value='no-arms' disabled>
-                          No class arms available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {/* Status Field */}
-          {/* <div className='flex items-center w-full gap-5'>
-            <FormField
-              control={form.control}
-              name='status'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Status</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary/90'>
-                        <SelectValue placeholder='Select status' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem
-                        value='Active'
-                        className='bg-green-100 text-green-800'
-                      >
-                        Active
-                      </SelectItem>
-                      <SelectItem
-                        value='Inactive'
-                        className='bg-red-100 text-red-800'
-                      >
-                        Inactive
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div> */}
-
-          {/* Submit Button */}
+                  />
+                </FormControl>
+                {imagePreview && (
+                  <div className='mt-2'>
+                    <Image
+                      src={imagePreview}
+                      alt='Student Preview'
+                      width={80}
+                      height={80}
+                      className='rounded-md border'
+                    />
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <Button
             type='submit'
             disabled={isLoading}

@@ -102,11 +102,11 @@ export default function LoginForm() {
               name='email'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='text-gray-700'>Email address</FormLabel>
+                  <FormLabel className='text-gray-700'>Email address/Username</FormLabel>
                   <div className='relative'>
                     <FormControl>
                       <Input
-                        placeholder='example@gmail.com'
+                        placeholder='example@gmail.com/user123'
                         {...field}
                         className='pl-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500'
                       />

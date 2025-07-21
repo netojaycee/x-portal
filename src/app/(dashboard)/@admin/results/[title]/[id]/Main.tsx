@@ -5,6 +5,7 @@ import LoaderComponent from "@/components/local/LoaderComponent";
 import ReportCard from "../../(components)/ReportCard";
 import { useGetResultByIdQuery } from "@/redux/api";
 import { Button } from "@/components/ui/button";
+import { useSearchParams } from "next/navigation";
 
 interface ResultDetailsProps {
   id: string;
@@ -152,7 +153,9 @@ interface ResultBatchData {
 }
 
 export const Main: React.FC<ResultDetailsProps> = ({ id, title }) => {
-  const { data, isLoading, error } = useGetResultByIdQuery(id);
+  const searchParams = useSearchParams();
+  const studentId = searchParams.get("sId");
+  const { data, isLoading, error } = useGetResultByIdQuery({id, studentId});
 
   console.log(data && data, title);
 

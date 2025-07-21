@@ -3,16 +3,23 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StudentsTab from "./(components)/StudentsTab";
 import ParentsTab from "./(components)/ParentsTab";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
+import ClassTab from "./(components)/ClassTab";
+import { usePersistentTab } from "@/hooks/usePersistentTab";
+import AlumniTab from "./(components)/AlumniTab";
 
 export default function Students() {
-  const userData = useSelector((state: RootState) => state.user.user);
-
+  // const userData = useSelector((state: RootState) => state.user.user);
+  const TAB_KEY = `students-page-tabs`;
+  const tabOptions = ["classes", "students", "parents", "alumni"];
+  const [activeTab, setActiveTab] = usePersistentTab(
+    TAB_KEY,
+    tabOptions,
+    tabOptions[0]
+  );
 
   return (
     <div className=''>
-      <Tabs defaultValue='classes' className=''>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className='w-full relative'>
           <div className='border-b-2 absolute bottom-0 w-full'></div>
 
@@ -45,15 +52,18 @@ export default function Students() {
           </TabsList>
         </div>
         <TabsContent value='classes'>
-          Make changes to your account here.
+          <ClassTab />
         </TabsContent>
         <TabsContent value='students'>
-          <StudentsTab schoolId={userData?.schoolId || null} />
+          <StudentsTab />
         </TabsContent>
         <TabsContent value='parents'>
-          <ParentsTab schoolId={userData?.schoolId || null} />
+          <ParentsTab />
         </TabsContent>
-        <TabsContent value='alumni'>Alumni</TabsContent>
+        <TabsContent value='alumni'>
+          {" "}
+          <AlumniTab />
+        </TabsContent>
       </Tabs>
     </div>
   );

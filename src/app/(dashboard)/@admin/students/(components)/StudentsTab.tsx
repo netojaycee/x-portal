@@ -7,12 +7,12 @@ import { rowsPerPageOptions } from "@/lib/utils";
 import { ModalState, ModalType, User } from "@/lib/types";
 import { useDebounce } from "use-debounce";
 import { useRouter } from "next/navigation";
-import { useGetUsersQuery } from "@/redux/api";
+import { useGetStudentsQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 
-export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
+export default function StudentsTab() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(rowsPerPageOptions[0] || 10);
   const [search, setSearch] = useState("");
@@ -21,23 +21,20 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
   const router = useRouter();
 
   // Pass them into your RTK hook
-  const { data, isLoading } = useGetUsersQuery(
-    {
-      page,
-      limit,
-      q: debouncedSearchTerm,
-      subRoleFlag: "student",
-      schoolId: schoolId || null,
-    },
-    { skip: !schoolId }
-  );
-  // const [toggleActive] = useToggleSchoolActiveMutation();
+  const {
+    data,
+    isLoading: studentsLoading,
+    // error: studentsError,
+  } = useGetStudentsQuery({ q: debouncedSearchTerm, page, limit, gender: true });
 
-  if (isLoading) {
+  if (studentsLoading) {
     return <LoaderComponent />;
   }
-  console.log(data && data);
-  const studentsData = data?.users || [];
+  console.log(data && data?.data, "kkk");
+  const studentsData = data?.data?.students || [];
+  const totalItems = data?.data?.totalStudents || studentsData.length;
+  const totalFemales = data?.data?.totalFemales || 0;
+  const totalMales = data?.data?.totalMales || 0;
 
   const openModal = (type: Exclude<ModalType, "">, row: User) =>
     setModal({ type, data: row });
@@ -80,11 +77,11 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         <StatsCard
           title='Total Students'
-          number='400'
+          number={totalItems || 0}
           image='/student-group.png'
           imagePosition='left'
-          male='250'
-          female='150'
+          male={totalMales || 0}
+          female={totalFemales || 0}
           // url='/details'
         />
       </div>
@@ -97,13 +94,13 @@ export default function StudentsTab({ schoolId }: { schoolId: string | null }) {
           { key: "gender", label: "Gender" },
           { key: "className", label: "Class" },
           { key: "classArmName", label: "Arm" },
-          { key: "parentName", label: "Parent/Guardian" },
-          { key: "date", label: "Created Date" },
+          { key: "parentGuardian", label: "Parent/Guardian" },
+          // { key: "date", label: "Created Date" },
           // { key: "status", label: "Status" },
           { key: "actions", label: "Actions" },
         ]}
         data={studentsData} // Show only 5 rows as per Subscriber List
-        totalItems={data?.total || 0}
+        totalItems={totalItems || 0}
         currentPage={page}
         onPageChange={setPage}
         rowsPerPage={limit}

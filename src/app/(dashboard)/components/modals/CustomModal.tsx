@@ -23,6 +23,8 @@ import AssignSubjectForm from "../../@admin/configuration/(components)/AssignSub
 import CreateClassCategoryForm from "../../@admin/configuration/(components)/CreateClassCategoryForm";
 import {EnrollmentForm} from "../../@admin/admissions/(components)/EnrollmentForm";
 import RejectionForm from "../../@admin/admissions/(components)/RejectionForm";
+import ParentForm from "../forms/ParentForm";
+import StaffForm from "../forms/StaffForm";
 // import { ModalType } from "@/lib/types";
 
 interface CustomModalProps {
@@ -69,9 +71,8 @@ export function CustomModal({
                 return "Rejection Reason";
               }
               if (
-                (Object.values(ENUM_MODULES).includes(type) &&
-                  status === "confirmation")
-                
+                Object.values(ENUM_MODULES).includes(type) &&
+                status === "confirmation"
               ) {
                 return "Status Confirmation";
               }
@@ -86,6 +87,16 @@ export function CustomModal({
               }
               if (type === ENUM_MODULES.STUDENT && !isEditMode) {
                 return "Add Student";
+              }
+              if (type === ENUM_MODULES.PARENT && isEditMode) {
+                return "Edit Parent";
+              }
+              if (type === ENUM_MODULES.PARENT && !isEditMode) {
+                return "Add Parent";
+              }
+
+              if (type === ENUM_MODULES.PARENT && !isEditMode) {
+                return "Add Parent";
               }
               if (type === ENUM_MODULES.SUBSCRIPTION && isEditMode) {
                 return "Edit Subscription";
@@ -210,10 +221,20 @@ export function CustomModal({
                 return "Enter details to create a new school.";
               }
               if (type === ENUM_MODULES.STUDENT && isEditMode) {
-                return `Update details for ${selectedRow?.firstname + " " + selectedRow?.lastname || "--"}.`;
+                return `Update details for ${
+                  selectedRow?.firstname + " " + selectedRow?.lastname || "--"
+                }.`;
               }
               if (type === ENUM_MODULES.STUDENT && !isEditMode) {
                 return "Enter details to create a new student.";
+              }
+              if (type === ENUM_MODULES.PARENT && isEditMode) {
+                return `Update details for ${
+                  selectedRow?.firstname + " " + selectedRow?.lastname || "--"
+                }.`;
+              }
+              if (type === ENUM_MODULES.PARENT && !isEditMode) {
+                return "Enter details to create a new parent.";
               }
               if (type === ENUM_MODULES.SUBSCRIPTION && isEditMode) {
                 return `Update details for ${selectedRow?.package || "--"}.`;
@@ -292,7 +313,7 @@ export function CustomModal({
               if (type === ENUM_MODULES.ADMISSION && !isEditMode) {
                 return "Enter details to create a new student.";
               }
-              if(description) {
+              if (description) {
                 return description;
               }
               return null;
@@ -324,6 +345,21 @@ export function CustomModal({
             />
           )}
 
+          {type === ENUM_MODULES.PARENT && !status && (
+            <ParentForm
+              parent={selectedRow}
+              isEditMode={isEditMode}
+              onSuccess={handleClose}
+            />
+          )}
+
+          {type === ENUM_MODULES.STAFF && !status && (
+            <StaffForm
+              staff={selectedRow}
+              isEditMode={isEditMode}
+              onSuccess={handleClose}
+            />
+          )}
           {type === ENUM_MODULES.SUBROLE && !status && (
             <SubroleForm
               subrole={selectedRow}
@@ -382,10 +418,7 @@ export function CustomModal({
 
           {/* Special handling for admission approval/rejection */}
           {type === ENUM_MODULES.ADMISSION && status === "approve" && (
-            <EnrollmentForm
-              admission={selectedRow}
-              onSuccess={handleClose}
-            />
+            <EnrollmentForm admission={selectedRow} onSuccess={handleClose} />
           )}
 
           {type === ENUM_MODULES.ADMISSION && status === "reject" && (
@@ -397,8 +430,7 @@ export function CustomModal({
 
           {/* Use ConfirmationForm for other modules and actions */}
           {Object.values(ENUM_MODULES).includes(type) &&
-            (status === "confirmation" ||
-              status === "delete") && (
+            (status === "confirmation" || status === "delete") && (
               <ConfirmationForm
                 data={selectedRow}
                 onSuccess={handleClose}
@@ -417,10 +449,7 @@ export function CustomModal({
             <AssignArmsForm session={selectedRow} onSuccess={handleClose} />
           )}
           {type === ENUM_MODULES.SUBJECT && status === "custom" && (
-            <AssignSubjectForm
-              subject={selectedRow}
-              onSuccess={handleClose}
-            />
+            <AssignSubjectForm subject={selectedRow} onSuccess={handleClose} />
           )}
 
           {children}
