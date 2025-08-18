@@ -55,6 +55,20 @@ interface TableColumn {
 interface FilterConfig {
   showSearch?: boolean;
   showFilter?: boolean;
+  showAdvancedFilters?: boolean;
+  showSessionFilter?: boolean;
+  showTermFilter?: boolean;
+  showClassFilter?: boolean;
+  showClassArmFilter?: boolean;
+  showStatusFilter?: boolean;
+}
+
+interface AdvancedFilterValues {
+  sessionId?: string;
+  termId?: string;
+  classId?: string;
+  classArmId?: string;
+  status?: string;
 }
 
 interface ActionOption {
@@ -75,6 +89,7 @@ interface CustomTableProps {
   showActionButton?: boolean;
   actionButtonText?: string;
   actionButtonIcon?: React.ReactNode;
+  onActionButtonClick?: () => void;
   title?: string;
   actionOptions?: ActionOption[];
   currentPage?: number;
@@ -86,6 +101,14 @@ interface CustomTableProps {
   totalItems?: number;
   getActionOptions?: (row: any) => ActionOption[];
   isSearching?: boolean;
+  // Advanced filter props
+  advancedFilterValues?: AdvancedFilterValues;
+  onAdvancedFilterChange?: (filters: AdvancedFilterValues) => void;
+  sessions?: Array<{ id: string; name: string }>;
+  terms?: Array<{ id: string; name: string }>;
+  classes?: Array<{ id: string; name: string }>;
+  classArms?: Array<{ id: string; name: string }>;
+  statusOptions?: Array<{ value: string; label: string }>;
 }
 
 const CustomTable: React.FC<CustomTableProps> = ({
@@ -99,6 +122,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
   showActionButton = false,
   actionButtonText = "Action",
   actionButtonIcon = <Filter className='h-4 w-4' />,
+  onActionButtonClick,
   title,
   actionOptions = [],
   currentPage,
@@ -110,6 +134,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
   totalItems,
   getActionOptions,
   isSearching,
+  // Advanced filter props
+  advancedFilterValues,
+  onAdvancedFilterChange,
+  sessions,
+  terms,
+  classes,
+  classArms,
+  statusOptions,
 }) => {
   // State for filters, sorting, and pagination
 
@@ -201,33 +233,166 @@ const CustomTable: React.FC<CustomTableProps> = ({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+
+          {/* Advanced Filters */}
+          {filters.showAdvancedFilters && (
+            <>
+              {filters.showSessionFilter && sessions && (
+                <Select
+                  value={advancedFilterValues?.sessionId || ""}
+                  onValueChange={(value) =>
+                    onAdvancedFilterChange?.({
+                      ...advancedFilterValues,
+                      sessionId: value === "all" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className='w-[140px]'>
+                    <SelectValue placeholder='Session' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All Sessions</SelectItem>
+                    {sessions.map((session) => (
+                      <SelectItem key={session.id} value={session.id}>
+                        {session.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {filters.showTermFilter && terms && (
+                <Select
+                  value={advancedFilterValues?.termId || ""}
+                  onValueChange={(value) =>
+                    onAdvancedFilterChange?.({
+                      ...advancedFilterValues,
+                      termId: value === "all" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className='w-[120px]'>
+                    <SelectValue placeholder='Term' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All Terms</SelectItem>
+                    {terms.map((term) => (
+                      <SelectItem key={term.id} value={term.id}>
+                        {term.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {filters.showClassFilter && classes && (
+                <Select
+                  value={advancedFilterValues?.classId || ""}
+                  onValueChange={(value) =>
+                    onAdvancedFilterChange?.({
+                      ...advancedFilterValues,
+                      classId: value === "all" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className='w-[120px]'>
+                    <SelectValue placeholder='Class' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All Classes</SelectItem>
+                    {classes.map((classItem) => (
+                      <SelectItem key={classItem.id} value={classItem.id}>
+                        {classItem.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {filters.showClassArmFilter && classArms && (
+                <Select
+                  value={advancedFilterValues?.classArmId || ""}
+                  onValueChange={(value) =>
+                    onAdvancedFilterChange?.({
+                      ...advancedFilterValues,
+                      classArmId: value === "all" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className='w-[120px]'>
+                    <SelectValue placeholder='Arm' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All Arms</SelectItem>
+                    {classArms.map((arm) => (
+                      <SelectItem key={arm.id} value={arm.id}>
+                        {arm.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {filters.showStatusFilter && statusOptions && (
+                <Select
+                  value={advancedFilterValues?.status || ""}
+                  onValueChange={(value) =>
+                    onAdvancedFilterChange?.({
+                      ...advancedFilterValues,
+                      status: value === "all" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className='w-[120px]'>
+                    <SelectValue placeholder='Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='all'>All Status</SelectItem>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
+          )}
           {showActionButton && (
             <Button
-              onClick={() =>
-                openModal(
-                  title === "Schools List"
-                    ? ENUM_MODULES.SCHOOL
-                    : title === "Students List"
-                    ? ENUM_MODULES.STUDENT
-                    : title === "Parents List"
-                    ? ENUM_MODULES.PARENT
-                    : title === "Staff List"
-                    ? ENUM_MODULES.STAFF
-                    : title === "Subscription Plans"
-                    ? ENUM_MODULES.SUBSCRIPTION
-                    : title === "Users List"
-                    ? ENUM_MODULES.USER
-                    : title === "Class List"
-                    ? ENUM_MODULES.CLASS
-                    : title === "Class Category List"
-                    ? ENUM_MODULES.CLASS_CATEGORY
-                    : title === "ClassArm List"
-                    ? ENUM_MODULES.CLASS_ARM
-                    : title === "Subject List"
-                    ? ENUM_MODULES.SUBJECT
-                    : null
-                )
-              }
+              onClick={() => {
+                if (onActionButtonClick) {
+                  onActionButtonClick();
+                } else {
+                  openModal(
+                    title === "Schools List"
+                      ? ENUM_MODULES.SCHOOL
+                      : title === "Students List"
+                      ? ENUM_MODULES.STUDENT
+                      : title === "Parents List"
+                      ? ENUM_MODULES.PARENT
+                      : title === "Staff List"
+                      ? ENUM_MODULES.STAFF
+                      : title === "Subscription Plans"
+                      ? ENUM_MODULES.SUBSCRIPTION
+                      : title === "Users List"
+                      ? ENUM_MODULES.USER
+                      : title === "Class List"
+                      ? ENUM_MODULES.CLASS
+                      : title === "Class Category List"
+                      ? ENUM_MODULES.CLASS_CATEGORY
+                      : title === "ClassArm List"
+                      ? ENUM_MODULES.CLASS_ARM
+                      : title === "Subject List"
+                      ? ENUM_MODULES.SUBJECT
+                      : title === "Invoice List"
+                      ? ENUM_MODULES.INVOICE
+                      : title === "Discount List"
+                      ? ENUM_MODULES.DISCOUNT
+                      : null
+                  );
+                }
+              }}
               className='rounded-md flex items-center gap-2 bg-primary text-white'
             >
               {actionButtonIcon}
@@ -295,6 +460,12 @@ const CustomTable: React.FC<CustomTableProps> = ({
                             ? row[column.key]
                               ? "active"
                               : "inactive"
+                            : column.key === "status"
+                            ? row[column.key] === "submitted"
+                              ? "active"
+                              : row[column.key] === "paid"
+                              ? "active"
+                              : "inactive"
                             : row[column.key]
                         )}`}
                       >
@@ -306,12 +477,19 @@ const CustomTable: React.FC<CustomTableProps> = ({
                           ? row[column.key]
                             ? "Approved"
                             : "Submitted"
+                          : column.key === "status"
+                          ? row[column.key] === "submitted"
+                            ? "Submitted"
+                            : row[column.key] === "paid"
+                            ? "Paid"
+                            : row[column.key] || "--"
                           : row[column.key] || "--"}
                       </span>
                     ) : column.key === "subRole" ? (
-                     row.subRole?.name || "--"
-                     ) : column.key === "teacher" ? (
-                      row?.assignments?.[0]?.classArms?.[0]?.teacher?.staffName || "--"
+                      row.subRole?.name || "--"
+                    ) : column.key === "teacher" ? (
+                      row?.assignments?.[0]?.classArms?.[0]?.teacher
+                        ?.staffName || "--"
                     ) : column.key === "classArmName" ? (
                       row?.classArm?.name || row?.classArmName || "--"
                     ) : column.key === "className" ? (
@@ -321,7 +499,64 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ) : column.key === "session" ? (
                       row.session?.name || "--"
                     ) : column.key === "term" ? (
-                      row.termDefinition?.name || "--"
+                      row.termDefinition?.name || row.term?.name || "--"
+                    ) : column.key === "reference" ? (
+                      row.reference || row.invoice?.reference || "--"
+                    ) : column.key === "title" ? (
+                      row.title || "--"
+                    ) : column.key === "description" ? (
+                      <div
+                        className='max-w-xs truncate'
+                        title={row.description}
+                      >
+                        {row.description || "--"}
+                      </div>
+                    ) : column.key === "amount" ? (
+                      row.amount ? (
+                        `₦${row.amount.toLocaleString()}`
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "invoiceType" ? (
+                      row.classId || row.classArmId ? (
+                        "Class/Class Arm"
+                      ) : (
+                        "General"
+                      )
+                    ) : column.key === "issuedDate" ? (
+                      row.issuedDate ? (
+                        new Date(row.issuedDate).toISOString().slice(0, 10)
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "createdByUser" ? (
+                      row.createdByUser ? (
+                        `${row.createdByUser.firstname || ""} ${
+                          row.createdByUser.lastname || ""
+                        }`.trim() || "--"
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "discountAmount" ? (
+                      row.amount ? (
+                        `₦${row.amount.toLocaleString()}`
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "originalAmount" ? (
+                      row.invoice?.amount ? (
+                        `₦${row.invoice.amount.toLocaleString()}`
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "newAmount" ? (
+                      row.invoice?.amount && row.amount ? (
+                        `₦${(row.invoice.amount - row.amount).toLocaleString()}`
+                      ) : (
+                        "--"
+                      )
+                    ) : column.key === "invoiceTitle" ? (
+                      row.invoice?.title || "--"
                     ) : column.key === "resultScope" ? (
                       row.resultScope === "EXAM" ? (
                         "Terminal"
@@ -420,9 +655,13 @@ const CustomTable: React.FC<CustomTableProps> = ({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : column.key === "dueDate" ? (
+                      // For discount due dates
+                      row.dueDate ? (
+                        new Date(row.dueDate).toISOString().slice(0, 10)
+                      ) : // For subscription due dates
                       row.SchoolSubscription &&
-                      Array.isArray(row.SchoolSubscription) &&
-                      row.SchoolSubscription[0]?.endDate ? (
+                        Array.isArray(row.SchoolSubscription) &&
+                        row.SchoolSubscription[0]?.endDate ? (
                         new Date(row.SchoolSubscription[0].endDate)
                           .toISOString()
                           .slice(0, 10)
@@ -704,3 +943,4 @@ const CustomTable: React.FC<CustomTableProps> = ({
 };
 
 export default CustomTable;
+export type { AdvancedFilterValues, ActionOption };

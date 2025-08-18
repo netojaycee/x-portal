@@ -58,7 +58,7 @@ export type ModalType =
     | "reject"
     | null
     | undefined;
-    
+
 export interface ModalState {
     type: ModalType;
     data?: any;
@@ -202,4 +202,208 @@ export interface Permission {
     id: string;
     name: string;
     description?: string;
+}
+
+// Subscription and Payment Types
+export interface SubscriptionPackage {
+    id: string;
+    name: string;
+    description?: string;
+    amount: number; // Changed from price to amount to match backend
+    duration: number; // Duration in months
+    studentLimit?: number;
+    features: {
+        studentLimit?: number;
+        teachers?: number;
+        subjects?: number;
+        storage?: string;
+        support?: string;
+        cbt?: boolean;
+        feeManagement?: boolean;
+        bulkSMS?: boolean;
+        attendance?: boolean;
+        results?: boolean;
+        parentPortal?: boolean;
+        apiAccess?: boolean;
+        [key: string]: any; // Allow additional features
+    };
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+
+    // Frontend compatibility fields
+    price?: number; // Computed from amount for backward compatibility
+    validity?: number; // Computed from duration for backward compatibility
+    isPopular?: boolean; // Can be set in frontend logic
+}
+
+export interface CurrentSubscription {
+    id: string;
+    packageId: string;
+    packageName: string;
+    schoolId: string;
+    startDate: string;
+    expiresAt: string;
+    isActive: boolean;
+    isExpired: boolean;
+    daysRemaining: number;
+    canExtend: boolean;
+    package?: SubscriptionPackage;
+    paymentReference?: string;
+    paymentMethod?: string;
+}
+
+export interface SubscriptionPackagesResponse {
+    success: boolean;
+    data: SubscriptionPackage[];
+    pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
+}
+
+export interface CreatePaymentInput {
+    packageId: string;
+    isExtension?: boolean;
+}
+
+export interface SubscribeSchoolInput {
+    packageId: string;
+    email: string;
+    paymentMethod?: string;
+    metadata?: {
+        schoolName?: string;
+        adminName?: string;
+        [key: string]: any;
+    };
+}
+
+export interface ExtendSubscriptionInput {
+    packageId: string;
+    email: string;
+    additionalMonths?: number;
+    metadata?: {
+        reason?: string;
+        [key: string]: any;
+    };
+}
+
+export interface PaymentResponse {
+    success: boolean;
+    authorizationUrl?: string;
+    authorization_url?: string; // Backend might use snake_case
+    reference: string;
+    message?: string;
+}
+
+export interface PaymentVerificationResponse {
+    success: boolean;
+    status: string;
+    data: {
+        reference: string;
+        amount: number;
+        packageName: string;
+        paidAt: string;
+        subscriptionDetails: {
+            startDate: string;
+            expiresAt: string;
+            isActive: boolean;
+        };
+    };
+}
+
+export interface SubscriptionsResponse {
+    packages: SubscriptionPackage[];
+    currentSubscription: CurrentSubscription | null;
+}
+
+// New SchoolPlan interface matching the updated API
+export interface SchoolPlan {
+    schoolInfo: {
+        id: string;
+        name: string;
+        slug: string;
+        subscriptionStatus: boolean;
+        subscriptionExpiresAt: string;
+        isExpired: boolean;
+        daysUntilExpiry: number;
+    };
+    currentPlan: {
+        id: string;
+        name: string;
+        amount: number;
+        duration: number;
+        studentLimit: number;
+        features: {
+            cbt?: boolean;
+            feeManagement?: boolean;
+            bulkSMS?: boolean;
+            attendance?: boolean;
+            results?: boolean;
+            parentPortal?: boolean;
+            apiAccess?: boolean;
+            [key: string]: boolean | undefined;
+        };
+        isActive: boolean;
+    };
+    usage: {
+        currentStudents: number;
+        studentLimit: number;
+        usagePercentage: number;
+    };
+    paymentHistory: Array<{
+        id: string;
+        amount: number;
+        paymentDate: string;
+        paymentStatus: string;
+        reference: string;
+        subscription: {
+            name: string;
+            duration: number;
+        };
+    }>;
+    status: {
+        canAddStudents: boolean;
+        needsUpgrade: boolean;
+        isActive: boolean;
+    };
+}
+
+// Package creation interface for SuperAdmin
+export interface CreateSubscriptionPackageInput {
+    name: string;
+    description?: string;
+    amount: number;
+    duration: number;
+    studentLimit: number;
+    features: Record<string, boolean>;
+    isActive?: boolean;
+}
+
+// Package update interface for SuperAdmin
+export interface UpdateSubscriptionPackageInput {
+    id: string;
+    data: Partial<CreateSubscriptionPackageInput>;
+}
+
+// Subscription analytics interface for SuperAdmin
+export interface SubscriptionAnalytics {
+    month: string;
+    subscriptions: number;
+    revenue: number;
+}
+
+// Offline assignment interface for SuperAdmin
+export interface AssignSubscriptionInput {
+    schoolId: string;
+    packageId: string;
+    paymentMethod: string;
+    paymentReference: string;
+    metadata?: {
+        paymentMode?: string;
+        verifiedBy?: string;
+        [key: string]: any;
+    };
 }

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock } from "lucide-react";
 import {
-  useCreatePaymentMutation,
+  useCreateSubscriptionPaymentMutation,
   // useVerifyPaymentMutation,
 } from "@/redux/api";
 
@@ -57,7 +57,7 @@ export default function CustomCheckout({
   onCancel,
 }: CustomCheckoutProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [createPayment] = useCreatePaymentMutation();
+  const [createSubscriptionPayment] = useCreateSubscriptionPaymentMutation();
   // const [verifyPayment] = useVerifyPaymentMutation();
 
   const form = useForm<CheckoutFormValues>({
@@ -80,23 +80,23 @@ export default function CustomCheckout({
     }
   };
 
-  const onSubmit = async (data: CheckoutFormValues) => {
+  const onSubmit = async () => {
     try {
       setIsProcessing(true);
 
       // Create payment request with custom checkout flow
-      const paymentResult = await createPayment({
+      const paymentResult = await createSubscriptionPayment({
         packageId,
-        email: data.email,
-        customCheckout: true, // Flag to indicate we're using custom checkout
-        paymentMethod: "card",
-        cardDetails: {
-          number: data.cardNumber.replace(/\s/g, ""),
-          expiryMonth: data.expiryDate.split("/")[0],
-          expiryYear: `20${data.expiryDate.split("/")[1]}`,
-          cvv: data.cvv,
-          name: data.cardHolderName,
-        },
+        // email: data.email,
+        // customCheckout: true, // Flag to indicate we're using custom checkout
+        // paymentMethod: "card",
+        // cardDetails: {
+        //   number: data.cardNumber.replace(/\s/g, ""),
+        //   expiryMonth: data.expiryDate.split("/")[0],
+        //   expiryYear: `20${data.expiryDate.split("/")[1]}`,
+        //   cvv: data.cvv,
+        //   name: data.cardHolderName,
+        // },
       }).unwrap();
 
       // Backend will handle the actual payment processing with Paystack SDK

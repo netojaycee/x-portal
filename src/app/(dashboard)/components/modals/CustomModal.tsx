@@ -21,10 +21,11 @@ import CreateClassArmArmForm from "../../@admin/configuration/(components)/Creat
 import SubjectForm from "../../@admin/configuration/(components)/SubjectForm";
 import AssignSubjectForm from "../../@admin/configuration/(components)/AssignSubject";
 import CreateClassCategoryForm from "../../@admin/configuration/(components)/CreateClassCategoryForm";
-import {EnrollmentForm} from "../../@admin/admissions/(components)/EnrollmentForm";
+import { EnrollmentForm } from "../../@admin/admissions/(components)/EnrollmentForm";
 import RejectionForm from "../../@admin/admissions/(components)/RejectionForm";
 import ParentForm from "../forms/ParentForm";
 import StaffForm from "../forms/StaffForm";
+import InvoiceForm from "../../@admin/fees/(components)/InvoiceForm";
 // import { ModalType } from "@/lib/types";
 
 interface CustomModalProps {
@@ -79,8 +80,12 @@ export function CustomModal({
               if (type === ENUM_MODULES.SCHOOL && isEditMode) {
                 return "Edit School";
               }
+
               if (type === ENUM_MODULES.SCHOOL && !isEditMode) {
                 return "Add School";
+              }
+              if (type === ENUM_MODULES.INVOICE && isEditMode) {
+                return "Edit Invoice";
               }
               if (type === ENUM_MODULES.STUDENT && isEditMode) {
                 return "Edit Student";
@@ -219,6 +224,9 @@ export function CustomModal({
               }
               if (type === ENUM_MODULES.SCHOOL && !isEditMode) {
                 return "Enter details to create a new school.";
+              }
+              if (type === ENUM_MODULES.INVOICE && !isEditMode) {
+                return "Enter details to create a new invoice.";
               }
               if (type === ENUM_MODULES.STUDENT && isEditMode) {
                 return `Update details for ${
@@ -413,6 +421,15 @@ export function CustomModal({
               subject={selectedRow}
               isEditMode={isEditMode}
               onSuccess={handleClose}
+            />
+          )}
+
+          {type === ENUM_MODULES.INVOICE && !status && (
+            <InvoiceForm
+              initialData={selectedRow}
+              isEditMode={isEditMode}
+              onSuccess={handleClose}
+              onClose={handleClose}
             />
           )}
 

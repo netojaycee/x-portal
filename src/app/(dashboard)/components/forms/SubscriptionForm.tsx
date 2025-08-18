@@ -14,49 +14,73 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, ArrowRight } from "lucide-react";
 import {
-  useCreateSubscriptionMutation,
-  useUpdateSubscriptionMutation,
+  useCreateSubscriptionPackageMutation,
+  useUpdateSubscriptionPackageMutation,
 } from "@/redux/api";
 
 // Define the form schema
 const subscriptionSchema = z.object({
-  package: z
+  name: z
     .string()
     .min(1, "Package name is required")
     .max(100, "Package name must be less than 100 characters"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(500, "Description must be less than 500 characters"),
+  amount: z
+    .number()
+    .min(0, "Amount must be positive")
+    .max(1000000, "Amount cannot exceed 1,000,000"),
   duration: z
     .number()
     .int()
     .positive("Duration must be a positive integer")
     .max(120, "Duration cannot exceed 120 months"),
-  studentLimit: z.enum(["50", "100", "200", "Unlimited"], {
-    required_error: "Student limit is required",
-  }),
-  // status: z.enum(["Active", "Inactive"], {
-  //   required_error: "Status is required",
-  // }),
+  studentLimit: z
+    .number()
+    .int()
+    .positive("Student limit must be a positive integer")
+    .max(10000, "Student limit cannot exceed 10,000"),
+  features: z
+    .object({
+      cbt: z.boolean().default(false),
+      feeManagement: z.boolean().default(false),
+      bulkSMS: z.boolean().default(false),
+      attendance: z.boolean().default(true),
+      results: z.boolean().default(true),
+      parentPortal: z.boolean().default(false),
+      apiAccess: z.boolean().default(false),
+    })
+    .optional(),
 });
 
-interface Subscription {
+interface SubscriptionPackage {
+  id: string;
   name: string;
+  description?: string;
+  amount: number;
   duration: number;
   studentLimit: number;
+  features?: {
+    cbt?: boolean;
+    feeManagement?: boolean;
+    bulkSMS?: boolean;
+    attendance?: boolean;
+    results?: boolean;
+    parentPortal?: boolean;
+    apiAccess?: boolean;
+  };
+  isActive?: boolean;
 }
 
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
 
 interface SubscriptionFormProps {
-  subscription?: Subscription & { id: string }; // For edit mode
+  subscription?: SubscriptionPackage; // For edit mode
   isEditMode?: boolean;
   onSuccess: () => void;
 }
@@ -67,24 +91,24 @@ export default function SubscriptionForm({
   onSuccess,
 }: SubscriptionFormProps) {
   const [
-    createSubscription,
+    createSubscriptionPackage,
     {
       isLoading: isLoadingAdd,
       isSuccess: isSuccessAdd,
       isError: isErrorAdd,
       error: errorAdd,
     },
-  ] = useCreateSubscriptionMutation();
+  ] = useCreateSubscriptionPackageMutation();
 
   const [
-    updateSubscription,
+    updateSubscriptionPackage,
     {
       isLoading: isLoadingUpdate,
       isSuccess: isSuccessUpdate,
       isError: isErrorUpdate,
       error: errorUpdate,
     },
-  ] = useUpdateSubscriptionMutation();
+  ] = useUpdateSubscriptionPackageMutation();
 
   const isLoading = isEditMode ? isLoadingUpdate : isLoadingAdd;
   const isSuccess = isEditMode ? isSuccessUpdate : isSuccessAdd;
@@ -94,43 +118,55 @@ export default function SubscriptionForm({
   const form = useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      package: subscription?.name || "",
-      duration: subscription?.duration || 0,
-      studentLimit:
-        Number(subscription?.studentLimit) === 100000
-          ? "Unlimited"
-          : subscription?.studentLimit === 50
-          ? "50"
-          : subscription?.studentLimit === 100
-          ? "100"
-          : subscription?.studentLimit === 200
-          ? "200"
-          : undefined,
-      // status: subscription?.status || undefined,
+      name: subscription?.name || "",
+      description: subscription?.description || "",
+      amount: subscription?.amount || 0,
+      duration: subscription?.duration || 1,
+      studentLimit: subscription?.studentLimit || 50,
+      features: subscription?.features || {
+        cbt: false,
+        feeManagement: false,
+        bulkSMS: false,
+        attendance: true,
+        results: true,
+        parentPortal: false,
+        apiAccess: false,
+      },
     },
   });
 
   const onSubmit = async (values: SubscriptionFormData) => {
     try {
-      const { package: packageName, studentLimit, ...rest } = values;
-      const credentials = {
-        ...rest,
-        studentLimit:
-          studentLimit === "Unlimited" ? 100000 : Number(studentLimit),
-        name: packageName.trim().toLowerCase(),
+      const payload = {
+        name: values.name.trim(),
+        description: values.description.trim(),
+        amount: values.amount,
+        duration: values.duration,
+        studentLimit: values.studentLimit,
+        features: values.features || {
+          cbt: false,
+          feeManagement: false,
+          bulkSMS: false,
+          attendance: true,
+          results: true,
+          parentPortal: false,
+          apiAccess: false,
+        },
       };
-      console.log(credentials);
+
+      console.log("Payload:", payload);
+
       if (isEditMode && subscription?.id) {
-        await updateSubscription({
+        await updateSubscriptionPackage({
           id: subscription.id,
-          ...credentials,
+          data: payload,
         }).unwrap();
       } else {
-        await createSubscription(credentials).unwrap();
+        await createSubscriptionPackage(payload).unwrap();
       }
     } catch (error) {
       console.error(
-        `${isEditMode ? "Update" : "Add"} subscription error:`,
+        `${isEditMode ? "Update" : "Create"} subscription package error:`,
         error
       );
     }
@@ -140,15 +176,16 @@ export default function SubscriptionForm({
     if (isSuccess) {
       toast.success(
         isEditMode
-          ? "Subscription updated successfully"
-          : "Subscription created successfully"
+          ? "Subscription package updated successfully"
+          : "Subscription package created successfully"
       );
       form.reset();
       if (onSuccess) onSuccess();
     } else if (isError && error) {
       const errorMessage =
         "data" in error && typeof error.data === "object" && error.data
-          ? (error.data as { error?: string })?.error
+          ? (error.data as { message?: string })?.message ||
+            (error.data as { error?: string })?.error
           : "An error occurred";
       toast.error(errorMessage);
     }
@@ -172,17 +209,57 @@ export default function SubscriptionForm({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
           {/* Package Name Field */}
+          <FormField
+            control={form.control}
+            name='name'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='text-gray-700'>Package Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='e.g., Premium Plan'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Description Field */}
+          <FormField
+            control={form.control}
+            name='description'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='text-gray-700'>Description</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='e.g., Full-featured package for large schools'
+                    {...field}
+                    className='border-gray-300 focus:border-primary focus:ring-primary'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Amount and Duration Fields */}
           <div className='flex items-center w-full gap-5'>
             <FormField
               control={form.control}
-              name='package'
+              name='amount'
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className='text-gray-700'>Package Name</FormLabel>
+                <FormItem className='flex-1'>
+                  <FormLabel className='text-gray-700'>Amount (₦)</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder='e.g., Premium Plan'
+                      type='number'
+                      placeholder='e.g., 35000'
                       {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                       className='border-gray-300 focus:border-primary focus:ring-primary'
                     />
                   </FormControl>
@@ -191,12 +268,11 @@ export default function SubscriptionForm({
               )}
             />
 
-            {/* Duration Field */}
             <FormField
               control={form.control}
               name='duration'
               render={({ field }) => (
-                <FormItem>
+                <FormItem className='flex-1'>
                   <FormLabel className='text-gray-700'>
                     Duration (Months)
                   </FormLabel>
@@ -205,7 +281,7 @@ export default function SubscriptionForm({
                       type='number'
                       placeholder='e.g., 12'
                       {...field}
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                       className='border-gray-300 focus:border-primary focus:ring-primary'
                     />
                   </FormControl>
@@ -213,71 +289,173 @@ export default function SubscriptionForm({
                 </FormItem>
               )}
             />
-          </div>{" "}
-          <div className='flex items-center w-full gap-5'>
-            {/* Student Limit Field */}
-            <FormField
-              control={form.control}
-              name='studentLimit'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Student Limit</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary'>
-                        <SelectValue placeholder='Select student limit' />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='50'>50</SelectItem>
-                      <SelectItem value='100'>100</SelectItem>
-                      <SelectItem value='200'>200</SelectItem>
-                      <SelectItem value='Unlimited'>Unlimited</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
 
-            {/* Status Field */}
-            {/* <FormField
-              control={form.control}
-              name='status'
-              render={({ field }) => (
-                <FormItem className='w-full'>
-                  <FormLabel className='text-gray-700'>Status</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl className='w-full'>
-                      <SelectTrigger className='border-gray-300 focus:border-primary focus:ring-primary'>
-                        <SelectValue placeholder='Select status' />
-                      </SelectTrigger>
+          {/* Student Limit Field */}
+          <FormField
+            control={form.control}
+            name='studentLimit'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className='text-gray-700'>Student Limit</FormLabel>
+                <FormControl>
+                  <Input
+                    type='number'
+                    placeholder='e.g., 1000'
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    className='border-gray-300 focus:border-primary focus:ring-primary'
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Features Section */}
+          <div className='space-y-3'>
+            <FormLabel className='text-gray-700 text-base'>Features</FormLabel>
+            <div className='grid grid-cols-2 gap-4'>
+              <FormField
+                control={form.control}
+                name='features.cbt'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem
-                        value='Active'
-                        className='bg-green-100 text-green-800'
-                      >
-                        Active
-                      </SelectItem>
-                      <SelectItem
-                        value='Inactive'
-                        className='bg-red-100 text-red-800'
-                      >
-                        Inactive
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            /> */}
+                    <FormLabel className='text-sm font-normal'>
+                      Computer Based Tests (CBT)
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.feeManagement'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      Fee Management
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.bulkSMS'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      Bulk SMS
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.attendance'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      Attendance Management
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.results'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      Results Management
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.parentPortal'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      Parent Portal
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='features.apiAccess'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
+                    <FormControl>
+                      <input
+                        type='checkbox'
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className='rounded border-gray-300'
+                      />
+                    </FormControl>
+                    <FormLabel className='text-sm font-normal'>
+                      API Access
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
           {/* Submit Button */}
           <Button

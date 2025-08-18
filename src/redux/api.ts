@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
 // import { clearUserInfo, setUserInfo } from "./slices/userSlice";
+// import { AuthResponse, GetUsersQuery, GetUsersResponse, Permission, Subrole, UpdateUserInput, User, SubscriptionPackage, CurrentSubscription, CreatePaymentInput, PaymentResponse, PaymentVerificationResponse, SubscriptionsResponse } from "@/lib/types";
 import { AuthResponse, GetUsersQuery, GetUsersResponse, Permission, Subrole, UpdateUserInput, User } from "@/lib/types";
 import { LoginCredentials, loginSchema, RegisterCredentials, registerSchema } from "@/lib/schema";
 import { setUser } from "./slices/userSlice";
@@ -72,6 +73,11 @@ export const api = createApi({
         "AttendanceRecords",
         "Staff",
         "Parents",
+        "Invoices",
+        "Discounts",
+        "InvoiceId",
+        "InvoiceCode",
+        "Events"
     ],
     endpoints: (builder) => ({
         // Register Endpoint
@@ -405,30 +411,30 @@ export const api = createApi({
             invalidatesTags: ['Schools'], // Refresh school list after assignment
         }),
 
-        createSubscription: builder.mutation({
-            query: (subscription) => ({
-                url: "/subscription/create",
-                method: "POST",
-                body: subscription,
-            }),
-            invalidatesTags: ["Subscriptions"],
-        }),
-        updateSubscription: builder.mutation({
-            query: ({ sn, ...updates }) => ({
-                url: `/subscriptions/${sn}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["Subscriptions"],
-        }),
+        // createSubscription: builder.mutation({
+        //     query: (subscription) => ({
+        //         url: "/subscription/create",
+        //         method: "POST",
+        //         body: subscription,
+        //     }),
+        //     invalidatesTags: ["Subscriptions"],
+        // }),
+        // updateSubscription: builder.mutation({
+        //     query: ({ sn, ...updates }) => ({
+        //         url: `/subscriptions/${sn}`,
+        //         method: "PATCH",
+        //         body: updates,
+        //     }),
+        //     invalidatesTags: ["Subscriptions"],
+        // }),
 
-        getSubscriptions: builder.query({
-            query: ({ page = 1, limit = 10 }) => ({
-                url: "/subscription/fetch",
-                params: { page, limit },
-            }),
-            providesTags: ["Subscriptions"],
-        }),
+        // getSubscriptions: builder.query({
+        //     query: ({ page = 1, limit = 10 }) => ({
+        //         url: "/subscription/fetch",
+        //         params: { page, limit },
+        //     }),
+        //     providesTags: ["Subscriptions"],
+        // }),
 
         updateSchoolConfiguration: builder.mutation({
             query: (updates) => ({
@@ -641,7 +647,7 @@ export const api = createApi({
             }),
             invalidatesTags: ["Subjects"],
         }),
-        
+
 
         manageAdmission: builder.mutation({
             query: (credentials) => ({
@@ -972,9 +978,141 @@ export const api = createApi({
         }),
 
         // Payment/Subscription Endpoints
-        getSubscriptionPackages: builder.query({
+        getSubscriptionPackages: builder.query<any, {
+            search?: string;
+            isActive?: boolean;
+            page?: number;
+            limit?: number;
+        }>({
+            query: ({ search, isActive, page = 1, limit = 10 } = {}) => {
+                const params = new URLSearchParams();
+                if (search) params.append('search', search);
+                if (isActive !== undefined) params.append('isActive', isActive.toString());
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                return {
+                    url: `/subscription/packages?${params.toString()}`,
+                };
+            },
+            providesTags: ["Subscriptions"],
+        }),
+
+        getSubscriptionPackageById: builder.query<any, string>({
+            query: (id) => ({
+                url: `/subscription/packages/${id}`,
+            }),
+            providesTags: (result) => result ? [{ type: 'Subscriptions', id: result.id }] : ['Subscriptions'],
+        }),
+
+        // Create subscription package (SuperAdmin only)
+        createSubscriptionPackage: builder.mutation<any, {
+            name: string;
+            description?: string;
+            amount: number;
+            duration: number;
+            studentLimit: number;
+            features: Record<string, boolean>;
+            isActive?: boolean;
+        }>({
+            query: (data) => ({
+                url: `/subscription/packages`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Subscriptions"],
+        }),
+
+        // Update subscription package (SuperAdmin only)
+        updateSubscriptionPackage: builder.mutation<any, {
+            id: string;
+            data: Partial<{
+                name: string;
+                description: string;
+                amount: number;
+                duration: number;
+                studentLimit: number;
+                features: Record<string, boolean>;
+                isActive: boolean;
+            }>;
+        }>({
+            query: ({ id, data }) => ({
+                url: `/subscription/packages/${id}`,
+                method: "PATCH",
+                body: data,
+            }),
+            invalidatesTags: ["Subscriptions"],
+        }),
+
+        // Delete subscription package (SuperAdmin only)
+        deleteSubscriptionPackage: builder.mutation<any, string>({
+            query: (id) => ({
+                url: `/subscription/packages/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Subscriptions"],
+        }),
+
+        // Subscribe school to package (online payment)
+        subscribeSchool: builder.mutation<any, {
+            packageId: string;
+            email: string;
+            paymentMethod?: string;
+            metadata?: {
+                schoolName?: string;
+                adminName?: string;
+                [key: string]: any;
+            };
+        }>({
+            query: (data) => ({
+                url: `/subscription/subscribe`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Payments", "Subscriptions"],
+        }),
+
+        // Extend school subscription (rollover logic)
+        extendSubscription: builder.mutation<any, {
+            packageId: string;
+            email: string;
+            additionalMonths?: number;
+            metadata?: {
+                reason?: string;
+                [key: string]: any;
+            };
+        }>({
+            query: (data) => ({
+                url: `/subscription/extend`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Payments", "Subscriptions"],
+        }),
+
+        // Assign subscription to school (offline payment, SuperAdmin only)
+        assignSubscriptionToSchool: builder.mutation<any, {
+            schoolId: string;
+            packageId: string;
+            paymentMethod: string;
+            paymentReference: string;
+            metadata?: {
+                paymentMode?: string;
+                verifiedBy?: string;
+                [key: string]: any;
+            };
+        }>({
+            query: (data) => ({
+                url: `/subscription/assign`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Payments", "Subscriptions", "Schools"],
+        }),
+
+        // Get subscription analytics (SuperAdmin)
+        getSubscriptionAnalytics: builder.query<any, void>({
             query: () => ({
-                url: `/subscriptions/packages`,
+                url: `/subscription/analytics`,
             }),
             providesTags: ["Subscriptions"],
         }),
@@ -989,14 +1127,210 @@ export const api = createApi({
 
         verifyPayment: builder.mutation({
             query: ({ reference }) => ({
-                url: `/payments/verify/${reference}`,
-                method: "GET",
+                url: `/subscription/payments/verify/${reference}`,
+                method: "POST",
             }),
         }),
 
-        getCurrentSubscription: builder.query({
+        // Get payment logs with filters
+        getPaymentLogs: builder.query<any, {
+            page?: number;
+            limit?: number;
+            q?: string;
+            sessionId?: string;
+            termId?: string;
+            classId?: string;
+            classArmId?: string;
+            status?: string;
+        }>({
+            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                if (sessionId) params.append('sessionId', sessionId);
+                if (termId) params.append('termId', termId);
+                if (classId) params.append('classId', classId);
+                if (classArmId) params.append('classArmId', classArmId);
+                if (status) params.append('status', status);
+                return {
+                    url: `/payments/logs?${params.toString()}`,
+                };
+            },
+            providesTags: ['Payments'],
+        }),
+
+        // Get student payment summary with filters
+        getStudentPaymentSummary: builder.query<any, {
+            page?: number;
+            limit?: number;
+            q?: string;
+            sessionId?: string;
+            termId?: string;
+            classId?: string;
+            classArmId?: string;
+        }>({
+            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                if (sessionId) params.append('sessionId', sessionId);
+                if (termId) params.append('termId', termId);
+                if (classId) params.append('classId', classId);
+                if (classArmId) params.append('classArmId', classArmId);
+                return {
+                    url: `/payments/student-summary?${params.toString()}`,
+                };
+            },
+            providesTags: ['Payments'],
+        }),
+
+        // Get offline payments with filters
+        getOfflinePayments: builder.query<any, {
+            page?: number;
+            limit?: number;
+            q?: string;
+            sessionId?: string;
+            termId?: string;
+            classId?: string;
+            classArmId?: string;
+            status?: string;
+        }>({
+            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                if (sessionId) params.append('sessionId', sessionId);
+                if (termId) params.append('termId', termId);
+                if (classId) params.append('classId', classId);
+                if (classArmId) params.append('classArmId', classArmId);
+                if (status) params.append('status', status);
+                return {
+                    url: `/payments/offline?${params.toString()}`,
+                };
+            },
+            providesTags: ['Payments'],
+        }),
+
+        // Get offline payment by ID
+        getOfflinePaymentById: builder.query<any, string>({
+            query: (id) => ({
+                url: `/payments/offline/${id}`,
+                method: 'GET',
+            }),
+            providesTags: ['Payments'],
+        }),
+
+
+
+        // Create offline payment
+        createOfflinePayment: builder.mutation<any, any>({
+            query: (data) => ({
+                url: '/payments/offline',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Payments', 'Invoices'],
+        }),
+
+        // Approve offline payment
+        approveOfflinePayment: builder.mutation<any, string>({
+            query: (id) => ({
+                url: `/payments/offline/${id}/approve`,
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['Payments', 'Invoices'],
+        }),
+
+        // Reject offline payment
+        rejectOfflinePayment: builder.mutation<any, { id: string; reason: string }>({
+            query: ({ id, reason }) => ({
+                url: `/payments/offline/${id}/reject`,
+                method: 'PATCH',
+                body: { reason },
+            }),
+            invalidatesTags: ['Payments', 'Invoices'],
+        }),
+
+        // Event Management Endpoints
+        getEvents: builder.query<any, {
+            page?: number;
+            limit?: number;
+            q?: string;
+            month?: string;
+            year?: string;
+        }>({
+            query: ({ page = 1, limit = 10, q = '', month, year } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                if (month) params.append('month', month);
+                if (year) params.append('year', year);
+                return {
+                    url: `/events?${params.toString()}`,
+                };
+            },
+            providesTags: ['Events'],
+        }),
+
+        getEventById: builder.query<any, string>({
+            query: (id) => ({
+                url: `/events/${id}`,
+                method: 'GET',
+            }),
+            providesTags: ['Events'],
+        }),
+
+        createEvent: builder.mutation<any, any>({
+            query: (data) => ({
+                url: '/events',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Events'],
+        }),
+
+        updateEvent: builder.mutation<any, { id: string; data: any }>({
+            query: ({ id, data }) => ({
+                url: `/events/${id}`,
+                method: 'PUT',
+                body: data,
+            }),
+            invalidatesTags: ['Events'],
+        }),
+
+        deleteEvent: builder.mutation<any, string>({
+            query: (id) => ({
+                url: `/events/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Events'],
+        }),
+
+        getCurrentSubscription: builder.query<any, void>({
             query: () => ({
-                url: `/subscriptions/current`,
+                url: `/subscription/current`,
+            }),
+            providesTags: ["Subscriptions"],
+        }),
+
+        // Create subscription payment (Legacy - keeping for compatibility)
+        createSubscriptionPayment: builder.mutation<any, { packageId: string; isExtension?: boolean }>({
+            query: (data) => ({
+                url: `/subscription/payments/create`,
+                method: "POST",
+                body: data,
+            }),
+            invalidatesTags: ["Payments", "Subscriptions"],
+        }),
+
+        // Get school plan details
+        getSchoolPlan: builder.query<any, void>({
+            query: () => ({
+                url: `/subscription/school-plan`,
             }),
             providesTags: ["Subscriptions"],
         }),
@@ -1396,6 +1730,111 @@ export const api = createApi({
             },
             invalidatesTags: ['Parents', 'Students'],
         }),
+        createInvoice: builder.mutation({
+            query: (body) => ({
+                url: '/invoice/generate',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Invoices'],
+        }),
+        updateInvoice: builder.mutation({
+            query: ({ id, ...body }) => ({
+                url: `/invoice/${id}`,
+                method: 'PATCH',
+                body,
+            }),
+            invalidatesTags: ['Invoices'],
+        }),
+
+        deleteInvoice: builder.mutation({
+            query: (id) => ({
+                url: `/invoice/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Invoices'],
+        }),
+
+        getInvoiceById: builder.query({
+            query: (id) => ({
+                url: `/invoice/${id}`,
+            }),
+            providesTags: ["InvoiceId"],
+        }),
+
+        getInvoices: builder.query({
+            query: ({ page = 1, limit = 10, q = '' }) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                return {
+                    url: `/invoice/list?${params.toString()}`,
+                };
+            }
+            ,
+            providesTags: ['Invoices'],
+        }),
+        getInvoiceByCode: builder.query({
+            query: ({ reference }) => {
+                // Encode the reference to make it safe for URLs
+                const encodedReference = encodeURIComponent(reference);
+                return {
+                    url: `/invoice/reference/${encodedReference}`,
+                };
+            },
+            providesTags: ['InvoiceCode'],
+        }),
+
+        // Discount CRUD operations
+        createDiscount: builder.mutation({
+            query: (newDiscount) => ({
+                url: '/discount',
+                method: 'POST',
+                body: newDiscount,
+            }),
+            invalidatesTags: ['Discounts'],
+        }),
+
+        updateDiscount: builder.mutation({
+            query: ({ id, ...updatedDiscount }) => ({
+                url: `/discount/${id}`,
+                method: 'PUT',
+                body: updatedDiscount,
+            }),
+            invalidatesTags: ['Discounts'],
+        }),
+
+        deleteDiscount: builder.mutation({
+            query: (id) => ({
+                url: `/discount/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Discounts'],
+        }),
+
+        getDiscounts: builder.query<any, { page?: number; limit?: number; q?: string; sessionId?: string; termId?: string }>({
+            query: ({ page = 1, limit = 10, q = '', sessionId, termId } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('q', q.toLowerCase());
+                if (sessionId) params.append('sessionId', sessionId);
+                if (termId) params.append('termId', termId);
+                return {
+                    url: `/discount/list?${params.toString()}`,
+                };
+            },
+            providesTags: ['Discounts'],
+        }),
+
+        getDiscountById: builder.query({
+            query: (id) => ({
+                url: `/discount/${id}`,
+            }),
+            providesTags: ['Discounts'],
+        }),
+
     }),
 });
 
@@ -1427,9 +1866,9 @@ export const {
     useUpdateRolePermissionsMutation,
     useGetLogsQuery,
     useAssignSubscriptionMutation,
-    useGetSubscriptionsQuery,
-    useCreateSubscriptionMutation,
-    useUpdateSubscriptionMutation,
+    // useGetSubscriptionsQuery,
+    useCreateSubscriptionPackageMutation,
+    useUpdateSubscriptionPackageMutation,
     useUpdateSchoolConfigurationMutation,
     useGetSchoolConfigurationQuery,
     useUpdateSchoolStaffMutation,
@@ -1498,9 +1937,18 @@ export const {
 
     // Payment/Subscription hooks
     useGetSubscriptionPackagesQuery,
+    useGetSubscriptionPackageByIdQuery,
+    useSubscribeSchoolMutation,
+    useExtendSubscriptionMutation,
+    useGetSubscriptionAnalyticsQuery,
     useCreatePaymentMutation,
     useVerifyPaymentMutation,
+    useGetPaymentLogsQuery,
+    useGetStudentPaymentSummaryQuery,
+    useGetOfflinePaymentsQuery,
     useGetCurrentSubscriptionQuery,
+    useCreateSubscriptionPaymentMutation,
+    useGetSchoolPlanQuery,
     useGetTermsQuery, useGetSessionTermsQuery,
     useGetSessionClassesQuery,
     useGetClassSubjectsQuery,
@@ -1542,6 +1990,32 @@ export const {
     useDeleteStudentMutation,
     useLinkParentStudentMutation,
     useAssignTeacherToSubjectMutation,
+
+    useCreateInvoiceMutation,
+    useUpdateInvoiceMutation,
+    useDeleteInvoiceMutation,
+    useGetInvoiceByCodeQuery,
+    useGetInvoiceByIdQuery,
+    useGetInvoicesQuery,
+
+    useCreateDiscountMutation,
+    useUpdateDiscountMutation,
+    useDeleteDiscountMutation,
+    useGetDiscountsQuery,
+    useGetDiscountByIdQuery,
+
+    // Offline payment hooks
+    useGetOfflinePaymentByIdQuery,
+    useCreateOfflinePaymentMutation,
+    useApproveOfflinePaymentMutation,
+    useRejectOfflinePaymentMutation,
+
+    // Event management hooks
+    useGetEventsQuery,
+    useGetEventByIdQuery,
+    useCreateEventMutation,
+    useUpdateEventMutation,
+    useDeleteEventMutation,
 } = api;
 
 export type AppApi = typeof api;

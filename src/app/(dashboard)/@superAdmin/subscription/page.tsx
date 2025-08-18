@@ -4,7 +4,7 @@ import CustomTable from "@/app/(dashboard)/components/CustomTable";
 import { Plus } from "lucide-react";
 import { rowsPerPageOptions } from "@/lib/utils";
 import { ModalState, ModalType, User } from "@/lib/types";
-import { useGetSubscriptionsQuery } from "@/redux/api";
+import { useGetSubscriptionPackagesQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
@@ -15,7 +15,7 @@ export default function Subscription() {
   const [modal, setModal] = useState<ModalState>({ type: null });
 
   // Pass them into your RTK hook
-  const { data, isLoading } = useGetSubscriptionsQuery({
+  const { data, isLoading } = useGetSubscriptionPackagesQuery({
     page,
     limit,
   });

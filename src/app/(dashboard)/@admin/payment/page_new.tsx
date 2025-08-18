@@ -15,37 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   useGetSubscriptionPackagesQuery,
-  useSubscribeSchoolMutation,
-  useExtendSubscriptionMutation,
-  useGetSchoolPlanQuery,
+  useCreateSubscriptionPaymentMutation,
+  useGetCurrentSubscriptionQuery,
 } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import CustomCheckout from "./(components)/CustomCheckout";
 import { SubscriptionPackage } from "@/lib/types";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
-import { formatDate, formatCurrency } from "@/lib/dateUtils";
-
-// Helper function to render features from different formats
-const renderFeatures = (features: string[] | Record<string, any>): string[] => {
-  if (Array.isArray(features)) {
-    return features;
-  }
-
-  if (typeof features === "object" && features !== null) {
-    // Convert object features to array (only include true values)
-    return Object.entries(features)
-      .filter(([, value]) => value === true)
-      .map(([key]) => {
-        // Convert camelCase to readable format
-        return key
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase());
-      });
-  }
-
-  return [];
-};
 
 export default function Payment() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -53,30 +28,28 @@ export default function Payment() {
   const [showCustomCheckout, setShowCustomCheckout] = useState(false);
   const [selectedPackageDetails, setSelectedPackageDetails] =
     useState<SubscriptionPackage | null>(null);
-  const userData = useSelector((state: RootState) => state.user.user);
+
   // RTK Query hooks
   const {
-    data: packagesResponse,
+    data: packagesData,
     isLoading: packagesLoading,
     error: packagesError,
-  } = useGetSubscriptionPackagesQuery({ isActive: true });
+  } = useGetSubscriptionPackagesQuery({});
   const {
-    data: schoolPlan,
-    isLoading: schoolPlanLoading,
-    error: schoolPlanError,
-  } = useGetSchoolPlanQuery(undefined);
-  const [subscribeSchool] = useSubscribeSchoolMutation();
-  const [extendSubscription] = useExtendSubscriptionMutation();
+    data: currentSubscription,
+    isLoading: subscriptionLoading,
+    error: subscriptionError,
+  } = useGetCurrentSubscriptionQuery();
+  const [createSubscriptionPayment] = useCreateSubscriptionPaymentMutation();
 
   const handleSelectPackage = (packageId: string) => {
-    const currentPlan = schoolPlan?.currentPlan;
+    const currentPkg = currentSubscription;
 
     // Check if user is trying to select their current active package
     if (
-      currentPlan?.id === packageId &&
-      currentPlan?.isActive &&
-      schoolPlan?.schoolInfo?.subscriptionStatus &&
-      !schoolPlan?.schoolInfo?.isExpired
+      currentPkg?.packageId === packageId &&
+      currentPkg?.isActive &&
+      !currentPkg?.isExpired
     ) {
       toast.error("You are already subscribed to this package");
       return;
@@ -85,7 +58,7 @@ export default function Payment() {
     setSelectedPackage(packageId);
 
     // Find the package details
-    const selectedPkg = packagesResponse?.data?.find(
+    const selectedPkg = packagesData?.find(
       (pkg: SubscriptionPackage) => pkg.id === packageId
     );
     if (selectedPkg) {
@@ -104,41 +77,17 @@ export default function Payment() {
 
       // Check if this is an extension of current plan
       const isExtension =
-        schoolPlan?.currentPlan?.id === selectedPackage &&
-        schoolPlan?.schoolInfo?.subscriptionStatus &&
-        !schoolPlan?.schoolInfo?.isExpired;
+        currentSubscription?.packageId === selectedPackage &&
+        currentSubscription?.isActive;
 
-      let result;
-
-      if (isExtension) {
-        // Use extend subscription endpoint
-        result = await extendSubscription({
-          packageId: selectedPackage,
-          email: userData.email,
-          additionalMonths: selectedPackageDetails?.duration || 1,
-          metadata: {
-            reason: "Subscription extension",
-          },
-        }).unwrap();
-      } else {
-        // Use subscribe school endpoint
-        result = await subscribeSchool({
-          packageId: selectedPackage,
-          email: userData.email,
-          paymentMethod: "online",
-          metadata: {
-            schoolName: userData.schoolName,
-            adminName: `${userData?.firstname ?? ""} ${
-              userData?.lastname ?? ""
-            }`.trim(),
-          },
-        }).unwrap();
-      }
+      const result = await createSubscriptionPayment({
+        packageId: selectedPackage,
+        isExtension,
+      }).unwrap();
 
       // Redirect to the Paystack payment page
-      if (result.data.authorizationUrl || result.data.authorization_url) {
-        window.location.href =
-          result.data.authorizationUrl || result.data.authorization_url;
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
       } else {
         toast.error("Could not initialize payment");
       }
@@ -172,12 +121,12 @@ export default function Payment() {
   };
 
   // Loading state
-  if (packagesLoading || schoolPlanLoading) {
+  if (packagesLoading || subscriptionLoading) {
     return <LoaderComponent />;
   }
 
   // Error state
-  if (packagesError || schoolPlanError) {
+  if (packagesError || subscriptionError) {
     return (
       <div className='flex items-center justify-center min-h-[400px]'>
         <div className='text-center'>
@@ -186,7 +135,7 @@ export default function Payment() {
           <p className='text-gray-600 mb-4'>
             {packagesError
               ? "Failed to load subscription packages"
-              : "Failed to load school plan"}
+              : "Failed to load current subscription"}
           </p>
           <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
@@ -194,38 +143,45 @@ export default function Payment() {
     );
   }
 
-  const subscriptionPackages = packagesResponse?.data || [];
-  const currentPlan = schoolPlan?.currentPlan;
-  const schoolInfo = schoolPlan?.schoolInfo;
+  const subscriptionPackages = packagesData || [];
+  const currentSubscriptionInfo = currentSubscription;
 
   const canSelectPackage = (pkg: SubscriptionPackage) => {
     // If no current subscription, allow all packages
-    if (!currentPlan || !schoolInfo) return true;
+    if (!currentSubscriptionInfo) return true;
 
     // If current subscription is expired, allow all packages
-    if (schoolInfo.isExpired) return true;
+    if (currentSubscriptionInfo.isExpired) return true;
 
     // If current subscription is active but different package, don't allow
-    if (schoolInfo.subscriptionStatus && currentPlan.id !== pkg.id) {
+    if (
+      currentSubscriptionInfo.isActive &&
+      currentSubscriptionInfo.packageId !== pkg.id
+    ) {
       return false;
     }
 
     // If same package and active, allow for extension
-    if (currentPlan.id === pkg.id && schoolInfo.subscriptionStatus) {
-      // Allow extension if the subscription is close to expiry (e.g., within 30 days)
-      return schoolInfo.daysUntilExpiry <= 30;
+    if (
+      currentSubscriptionInfo.packageId === pkg.id &&
+      currentSubscriptionInfo.isActive
+    ) {
+      return currentSubscriptionInfo.canExtend;
     }
 
     return true;
   };
 
   const getButtonText = (pkg: SubscriptionPackage) => {
-    if (!currentPlan || !schoolInfo) {
+    if (!currentSubscriptionInfo) {
       return selectedPackage === pkg.id ? "Selected" : "Select Plan";
     }
 
-    if (currentPlan.id === pkg.id && schoolInfo.subscriptionStatus) {
-      if (schoolInfo.daysUntilExpiry <= 30) {
+    if (
+      currentSubscriptionInfo.packageId === pkg.id &&
+      currentSubscriptionInfo.isActive
+    ) {
+      if (currentSubscriptionInfo.canExtend) {
         return selectedPackage === pkg.id
           ? "Selected for Extension"
           : "Extend Plan";
@@ -233,7 +189,10 @@ export default function Payment() {
       return "Current Plan";
     }
 
-    if (schoolInfo.subscriptionStatus && currentPlan.id !== pkg.id) {
+    if (
+      currentSubscriptionInfo.isActive &&
+      currentSubscriptionInfo.packageId !== pkg.id
+    ) {
       return "Unavailable";
     }
 
@@ -263,8 +222,7 @@ export default function Payment() {
       </div>
 
       {/* Current Subscription Info */}
-      {/* Current Subscription Display */}
-      {currentPlan && schoolInfo && (
+      {currentSubscriptionInfo && (
         <Card className='bg-blue-50 border-blue-200'>
           <CardHeader>
             <CardTitle className='text-lg'>Current Subscription</CardTitle>
@@ -273,42 +231,39 @@ export default function Payment() {
             <div className='flex items-center justify-between'>
               <div>
                 <p className='font-medium text-lg'>
-                  {currentPlan.name || "Unknown Package"}
+                  {currentSubscriptionInfo.packageName || "Unknown Package"}
                 </p>
                 <p className='text-sm text-gray-600'>
-                  Expires: {formatDate(schoolInfo.subscriptionExpiresAt)}
+                  Expires:{" "}
+                  {new Date(
+                    currentSubscriptionInfo.expiresAt
+                  ).toLocaleDateString()}
                 </p>
-                {schoolInfo.daysUntilExpiry > 0 && (
+                {currentSubscriptionInfo.daysRemaining > 0 && (
                   <p className='text-sm text-amber-600'>
-                    {schoolInfo.daysUntilExpiry} days remaining
-                  </p>
-                )}
-                {schoolPlan?.usage && (
-                  <p className='text-sm text-gray-600 mt-1'>
-                    Students: {schoolPlan.usage.currentStudents} /{" "}
-                    {schoolPlan.usage.studentLimit}(
-                    {schoolPlan.usage.usagePercentage}% used)
+                    {currentSubscriptionInfo.daysRemaining} days remaining
                   </p>
                 )}
               </div>
               <div className='flex flex-col items-end gap-2'>
                 <Badge
                   variant={
-                    schoolInfo.subscriptionStatus && !schoolInfo.isExpired
+                    currentSubscriptionInfo.isActive &&
+                    !currentSubscriptionInfo.isExpired
                       ? "default"
                       : "destructive"
                   }
                 >
-                  {schoolInfo.subscriptionStatus && !schoolInfo.isExpired
+                  {currentSubscriptionInfo.isActive &&
+                  !currentSubscriptionInfo.isExpired
                     ? "Active"
                     : "Expired"}
                 </Badge>
-                {schoolInfo.daysUntilExpiry <= 30 &&
-                  schoolInfo.subscriptionStatus && (
-                    <Badge variant='outline' className='text-xs'>
-                      Can Extend
-                    </Badge>
-                  )}
+                {currentSubscriptionInfo.canExtend && (
+                  <Badge variant='outline' className='text-xs'>
+                    Can Extend
+                  </Badge>
+                )}
               </div>
             </div>
           </CardContent>
@@ -318,12 +273,13 @@ export default function Payment() {
       {/* Subscription Packages */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         {subscriptionPackages.map((pkg: SubscriptionPackage) => {
-          const isCurrentPackage = currentPlan?.id === pkg.id;
+          const isCurrentPackage =
+            currentSubscriptionInfo?.packageId === pkg.id;
           const canSelect = canSelectPackage(pkg);
           const isActiveCurrentPackage =
             isCurrentPackage &&
-            schoolInfo?.subscriptionStatus &&
-            !schoolInfo?.isExpired;
+            currentSubscriptionInfo?.isActive &&
+            !currentSubscriptionInfo?.isExpired;
 
           return (
             <Card
@@ -349,12 +305,10 @@ export default function Payment() {
                     </Badge>
                   )}
                 </CardTitle>
-                <CardDescription>
-                  {pkg.duration} month{pkg.duration > 1 ? "s" : ""} validity
-                </CardDescription>
+                <CardDescription>{pkg.validity} days validity</CardDescription>
                 <div className='mt-2'>
                   <span className='text-3xl font-bold'>
-                    ₦{formatCurrency(pkg.amount)}
+                    ₦{pkg.price && pkg.price.toLocaleString()}
                   </span>
                   {pkg.studentLimit && (
                     <p className='text-sm text-gray-500 mt-1'>
@@ -366,7 +320,7 @@ export default function Payment() {
               <CardContent className='flex-grow'>
                 <h4 className='font-medium mb-2'>Features:</h4>
                 <ul className='space-y-2'>
-                  {renderFeatures(pkg.features).map((feature, index) => (
+                  {pkg.features.map((feature: any, index: number) => (
                     <li key={index} className='flex items-center'>
                       <Check className='h-4 w-4 text-green-500 mr-2' />
                       <span className='text-sm'>{feature}</span>
@@ -408,7 +362,7 @@ export default function Payment() {
         >
           {isProcessing
             ? "Processing..."
-            : currentPlan?.id === selectedPackage
+            : currentSubscriptionInfo?.packageId === selectedPackage
             ? "Extend Subscription"
             : "Subscribe Now"}
         </Button>
@@ -427,9 +381,9 @@ export default function Payment() {
               successful payment, your subscription will be automatically
               activated. For any payment issues, please contact support.
             </p>
-            {schoolInfo?.subscriptionStatus &&
+            {currentSubscriptionInfo?.isActive &&
               selectedPackage &&
-              currentPlan?.id !== selectedPackage && (
+              currentSubscriptionInfo?.packageId !== selectedPackage && (
                 <div className='mt-2 p-2 bg-amber-100 rounded text-sm'>
                   <strong>Note:</strong> You currently have an active
                   subscription. Subscribing to a different package will replace
@@ -446,7 +400,7 @@ export default function Payment() {
           <CustomCheckout
             packageId={selectedPackageDetails.id}
             packageName={selectedPackageDetails.name}
-            packagePrice={selectedPackageDetails.amount}
+            packagePrice={selectedPackageDetails.price!}
             onSuccess={handleCheckoutSuccess}
             onCancel={handleCheckoutCancel}
           />

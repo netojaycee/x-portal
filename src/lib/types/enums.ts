@@ -15,7 +15,7 @@ export enum ENUM_MODULES {
     STAFF = "staff",
     PARENT = "parent",
     USER = "user",
-    SESSION= "session",
+    SESSION = "session",
     SUBSCRIPTION = "subscription",
     SUBROLE = "subrole",
     CLASS = "class",
@@ -28,6 +28,10 @@ export enum ENUM_MODULES {
     GRADING_SYSTEM = "gradingSystem",
     CONTINUOUS_ASSESSMENT = "continuousAssessment",
     RESULT = "result",
+    INVOICE = "invoice",
+    DISCOUNT = "discount",
+    OFFLINE_PAYMENT = "offlinePayment",
+    EVENT = "event",
     CLASS_ARM_SUBJECT = "classArmSubject",
     CLASS_ARM_STUDENT = "classArmStudent",
     CLASS_ARM_STUDENT_SUBJECT = "classArmStudentSubject",
@@ -44,4 +48,4 @@ export enum ENUM_MODULES {
 export enum ENUM_PERMISSION_SCOPE {
     PLATFORM = 'platform',
     SCHOOL = 'school',
-  }
+}

@@ -44,7 +44,7 @@ export const adminMenu = [
         title: 'Fees',
         icon: DollarSign,
         url: '/fees',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'fee:read',
     },
     {
@@ -86,7 +86,7 @@ export const adminMenu = [
         title: 'Communication',
         icon: MessageSquare,
         url: '/communication',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'communication:read',
     },
     {
