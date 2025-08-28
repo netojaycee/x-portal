@@ -16,6 +16,7 @@ import {
   useDeleteGradingSystemMutation,
   useApproveResultMutation,
   useDeleteInvoiceMutation,
+  useApproveDiscountMutation,
 } from "@/redux/api";
 import { ENUM_MODULES } from "@/lib/types/enums";
 
@@ -80,6 +81,16 @@ export default function ConfirmationForm({
       error: errorApproveResult,
     },
   ] = useApproveResultMutation();
+
+   const [
+     approveDiscount,
+     {
+       isLoading: isLoadingApproveDiscount,
+       isSuccess: isSuccessApproveDiscount,
+       isError: isErrorApproveDiscount,
+       error: errorApproveDiscount,
+     },
+   ] = useApproveDiscountMutation();
 
   const [
     deleteMarkingScheme,
@@ -234,6 +245,13 @@ export default function ConfirmationForm({
       isSuccess: isSuccessApproveResult,
       isError: isErrorApproveResult,
       error: errorApproveResult,
+    },
+    [ENUM_MODULES.DISCOUNT]: {
+      mutation: approveDiscount,
+      isLoading: isLoadingApproveDiscount,
+      isSuccess: isSuccessApproveDiscount,
+      isError: isErrorApproveDiscount,
+      error: errorApproveDiscount,
     },
   };
 

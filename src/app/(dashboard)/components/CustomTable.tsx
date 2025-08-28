@@ -50,6 +50,7 @@ interface TableColumn {
   key: string;
   label: string;
   sortable?: boolean;
+  render?: (row: any) => React.ReactNode;
 }
 
 interface FilterConfig {
@@ -441,7 +442,9 @@ const CustomTable: React.FC<CustomTableProps> = ({
               <TableRow key={index}>
                 {columns.map((column) => (
                   <TableCell key={column.key}>
-                    {column.key === "sn" ? (
+                    {column.render ? (
+                      column.render(row)
+                    ) : column.key === "sn" ? (
                       ((currentPage ?? 1) - 1) * rowsPerPage + index + 1
                     ) : column.key === "fullname" ? (
                       `${row.firstname ?? ""} ${row.lastname ?? ""}`.trim() ||
@@ -487,6 +490,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       </span>
                     ) : column.key === "subRole" ? (
                       row.subRole?.name || "--"
+                    ) : column.key === "approvedBy" ? (
+                      row.approvedBy == null ? (
+                        "null"
+                      ) : (
+                        row.approvedBy?.firstname +
+                          " " +
+                          row.approvedBy?.lastname || "--"
+                      )
                     ) : column.key === "teacher" ? (
                       row?.assignments?.[0]?.classArms?.[0]?.teacher
                         ?.staffName || "--"
@@ -516,12 +527,6 @@ const CustomTable: React.FC<CustomTableProps> = ({
                         `₦${row.amount.toLocaleString()}`
                       ) : (
                         "--"
-                      )
-                    ) : column.key === "invoiceType" ? (
-                      row.classId || row.classArmId ? (
-                        "Class/Class Arm"
-                      ) : (
-                        "General"
                       )
                     ) : column.key === "issuedDate" ? (
                       row.issuedDate ? (
@@ -630,7 +635,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                       )
                     ) : column.key === "actions" &&
                       (getActionOptions || actionOptions.length > 0) ? (
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant='ghost'
@@ -640,14 +645,23 @@ const CustomTable: React.FC<CustomTableProps> = ({
                             <MoreVertical className='h-4 w-4' />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align='end'>
+                        <DropdownMenuContent
+                          align='end'
+                          onCloseAutoFocus={(e) => e.preventDefault()}
+                        >
                           {(getActionOptions
                             ? getActionOptions(row)
                             : actionOptions
                           ).map((action, index) => (
                             <DropdownMenuItem
                               key={index}
-                              onClick={() => action.handler(row)}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                // Execute the action handler after a short delay to allow the dropdown to close properly
+                                setTimeout(() => {
+                                  action.handler(row);
+                                }, 0);
+                              }}
                             >
                               {action.label}
                             </DropdownMenuItem>

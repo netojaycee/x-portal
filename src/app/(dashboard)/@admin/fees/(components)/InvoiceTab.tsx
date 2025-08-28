@@ -93,7 +93,7 @@ export default function InvoiceTab() {
           { key: "title", label: "Invoice Title" },
           // { key: "description", label: "Description" },
           { key: "amount", label: "Amount (₦)" },
-          { key: "type", label: "Type" },
+          { key: "invoiceType", label: "Type" },
           { key: "date", label: "Generated Date" },
           { key: "createdByUser", label: "Created By" },
           { key: "session", label: "Session" },

@@ -79,7 +79,7 @@ export const adminMenu = [
         title: 'CBT',
         icon: MonitorPlay,
         url: '/cbt',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'cbt:read',
     },
     {

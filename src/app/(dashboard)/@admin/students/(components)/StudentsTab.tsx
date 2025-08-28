@@ -25,7 +25,12 @@ export default function StudentsTab() {
     data,
     isLoading: studentsLoading,
     // error: studentsError,
-  } = useGetStudentsQuery({ q: debouncedSearchTerm, page, limit, gender: true });
+  } = useGetStudentsQuery({
+    q: debouncedSearchTerm,
+    page,
+    limit,
+    gender: true,
+  });
 
   if (studentsLoading) {
     return <LoaderComponent />;

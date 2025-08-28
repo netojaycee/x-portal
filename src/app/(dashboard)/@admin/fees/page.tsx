@@ -1,8 +1,19 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePersistentTab } from "@/hooks/usePersistentTab";
 import FeesHeaderCard from "./(components)/FeesHeaderCard";
+import RevenueCard from "../../@admin/dashboard/components/RevenueCard";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import { CustomModal } from "../../components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 import InvoiceForm from "./(components)/InvoiceForm";
@@ -12,7 +23,7 @@ import DiscountTab from "./(components)/DiscountTab";
 import PaymentLogsTab from "./(components)/PaymentLogsTab";
 import StudentListTab from "./(components)/StudentListTab";
 import OfflinePaymentsTab from "./(components)/OfflinePaymentsTab";
-import { useGetSessionsQuery } from "@/redux/api";
+import { useGetSessionsQuery, useGetPaymentSummaryQuery } from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 
 // Type for session data from API
@@ -52,6 +63,37 @@ export default function FeesPage() {
     return sessionsData?.data?.[0]?.id || "";
   });
 
+  // Fetch payment summary data
+  const { data: paymentSummary, isLoading: isLoadingPaymentSummary } = useGetPaymentSummaryQuery({});
+
+  // Transform payment summary data for revenue cards
+  const revenueData = [
+    {
+      title: "Total Revenue",
+      amount: paymentSummary?.summary?.expectedRevenue?.toString() || "0",
+      icon: "/expected.png",
+    },
+    {
+      title: "Total Collected",
+      amount: paymentSummary?.summary?.generatedRevenue?.toString() || "0",
+      icon: "/generated.png",
+    },
+    {
+      title: "Outstanding Fees",
+      amount: paymentSummary?.summary?.outstandingRevenue?.toString() || "0",
+      icon: "/outstanding.png",
+    },
+  ];
+
+  // Transform class stats data for the chart
+  const classRevenueData = useMemo(() => 
+    paymentSummary?.classStats?.map((stat: any) => ({
+      name: stat.className,
+      expected: stat.totalAmount,
+      paid: stat.paidAmount,
+    })) || [], [paymentSummary?.classStats]
+  );
+
   // Update selectedSessionId when sessionsData changes and no session is selected
   React.useEffect(() => {
     if (sessionsData?.data?.[0]?.id && !selectedSessionId) {
@@ -83,8 +125,8 @@ export default function FeesPage() {
       label: session.name,
     })) || [];
 
-  // Show loading state if sessions are being fetched
-  if (isLoadingSessions) {
+  // Show loading state if data is being fetched
+  if (isLoadingSessions || isLoadingPaymentSummary) {
     return <LoaderComponent />;
   }
 
@@ -143,7 +185,47 @@ export default function FeesPage() {
             </TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value='finance'>finance content</TabsContent>
+        <TabsContent value='finance'>
+          <div className='space-y-6'>
+            <div className='space-y-3 bg-white rounded-lg shadow-md px-3 py-5'>
+              <h2 className='font-lato text-base text-[#4A4A4A]'>
+                Financial Report
+              </h2>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {revenueData.map((revenue, index) => (
+                  <RevenueCard key={index} {...revenue} />
+                ))}
+              </div>
+            </div>
+
+            <div className='bg-white rounded-lg shadow-md px-3 py-5'>
+              <h2 className='font-lato text-base text-[#4A4A4A] mb-4'>
+                Revenue by Class
+              </h2>
+              <div className='w-full h-[400px]'>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={classRevenueData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="expected" fill="#FFA07A" name="Expected Revenue" />
+                    <Bar dataKey="paid" fill="#4CAF50" name="Paid Amount" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
         <TabsContent value='students'>
           <StudentListTab />
         </TabsContent>

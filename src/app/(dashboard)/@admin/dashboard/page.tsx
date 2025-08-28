@@ -2,14 +2,35 @@
 import React from "react";
 import StatsCard from "../../components/StatsCard";
 import TermProgressWrapper from "./components/TermProgressWrapper";
+import { useGetPaymentSummaryQuery } from "@/redux/api";
 import { LearnersDistribution } from "./components/LearnersDistribution";
 import { PaymentDistribution } from "./components/PaymentDistribution";
-import ActivityBoard from "./components/ActivityBoard";
-import { activities, revenueData, stats } from "@/lib/data";
+import { stats } from "@/lib/data";
+import ActivityBoardWrapper from "./components/ActivityBoardWrapper";
 import AttendanceStats from "./components/AttendanceStatus";
 import RevenueCard from "./components/RevenueCard";
 
 export default function AdminPage() {
+  const { data: paymentSummary } = useGetPaymentSummaryQuery({});
+
+  const dashboardRevenueData = [
+    {
+      title: "Total Revenue",
+      amount: paymentSummary?.summary?.expectedRevenue?.toString() || "0",
+      icon: "/expected.png",
+    },
+    {
+      title: "Total Collected",
+      amount: paymentSummary?.summary?.generatedRevenue?.toString() || "0",
+      icon: "/generated.png",
+    },
+    {
+      title: "Outstanding Fees",
+      amount: paymentSummary?.summary?.outstandingRevenue?.toString() || "0",
+      icon: "/outstanding.png",
+    },
+  ];
+
   return (
     <div className='space-y-4'>
       <div className=''>
@@ -51,13 +72,14 @@ export default function AdminPage() {
           />
         </div>
       </div>
-      <ActivityBoard entries={activities} />
+      {/* Activity Board with upcoming events */}
+      <ActivityBoardWrapper />
       <LearnersDistribution />
       <AttendanceStats total='400' statuses={stats} viewMoreUrl='/attendance' />
       <div className='space-y-3 bg-white rounded-lg shadow-md px-3 py-5'>
         <h2 className='font-lato text-base text-[#4A4A4A]'>Financial Report</h2>
         <div className='grid grid-cols-1 md:grid-cols-3  gap-4 '>
-          {revenueData.map((revenue, index) => (
+          {dashboardRevenueData.map((revenue, index) => (
             <RevenueCard key={index} {...revenue} />
           ))}
         </div>

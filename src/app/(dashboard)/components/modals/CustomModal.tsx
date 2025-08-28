@@ -28,6 +28,17 @@ import StaffForm from "../forms/StaffForm";
 import InvoiceForm from "../../@admin/fees/(components)/InvoiceForm";
 // import { ModalType } from "@/lib/types";
 
+type ModalSize =
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl"
+  | "2xl"
+  | "3xl"
+  | "4xl"
+  | "5xl"
+  | "full";
+
 interface CustomModalProps {
   type: ENUM_MODULES;
   isEditMode?: boolean;
@@ -38,6 +49,7 @@ interface CustomModalProps {
   children?: React.ReactNode;
   title?: string;
   description?: string;
+  size?: ModalSize;
 }
 
 export function CustomModal({
@@ -50,12 +62,28 @@ export function CustomModal({
   title,
   description,
   children,
+  size = "md",
 }: CustomModalProps) {
   const handleClose = () => onOpenChange(false);
 
+  const getModalWidth = (size: ModalSize) => {
+    const sizes = {
+      sm: "w-[400px]",
+      md: "w-[500px]",
+      lg: "w-[640px]",
+      xl: "w-[768px]",
+      "2xl": "w-[1024px]",
+      "3xl": "w-[1280px]",
+      "4xl": "w-[1536px]",
+      "5xl": "w-[1920px]",
+      full: "w-[calc(100vw-4rem)]",
+    };
+    return sizes[size];
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='w-[500px] p-2'>
+      <DialogContent className={`${getModalWidth(size)} p-2 max-h-[90vh]`}>
         <DialogHeader className='sticky top-0 p-1 border-b'>
           <DialogTitle>
             {(() => {
@@ -190,7 +218,8 @@ export function CustomModal({
               }
               if (
                 Object.values(ENUM_MODULES).includes(type) &&
-                status === "confirmation"
+                status === "confirmation" &&
+                !description
               ) {
                 return `Are you sure you want to ${
                   selectedRow?.isActive
@@ -203,9 +232,9 @@ export function CustomModal({
                 }?`;
               }
               if (
-                (Object.values(ENUM_MODULES).includes(type) &&
-                  status === "approve") ||
-                status === "reject"
+                Object.values(ENUM_MODULES).includes(type) &&
+                (status === "approve" || status === "reject") &&
+                !description
               ) {
                 return `Are you sure you want to ${
                   status === "reject"

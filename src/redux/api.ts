@@ -77,7 +77,10 @@ export const api = createApi({
         "Discounts",
         "InvoiceId",
         "InvoiceCode",
-        "Events"
+        "Events",
+        "StudentsByInvoice",
+        "PaymentsDashboardSummary",
+
     ],
     endpoints: (builder) => ({
         // Register Endpoint
@@ -1169,23 +1172,45 @@ export const api = createApi({
             termId?: string;
             classId?: string;
             classArmId?: string;
+            status?: string;
         }>({
-            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId } = {}) => {
+            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
                 const params = new URLSearchParams();
                 params.append('page', page.toString());
                 params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
+                if (q) params.append('search', q.toLowerCase());
                 if (sessionId) params.append('sessionId', sessionId);
                 if (termId) params.append('termId', termId);
                 if (classId) params.append('classId', classId);
                 if (classArmId) params.append('classArmId', classArmId);
+                if (status) params.append('status', status);
                 return {
-                    url: `/payments/student-summary?${params.toString()}`,
+                    url: `/invoice/payments/student-summary?${params.toString()}`,
                 };
             },
             providesTags: ['Payments'],
         }),
 
+        // get students in an invoice
+        getStudentsByInvoice: builder.query<any, {
+            invoiceId?: string;
+            page?: number;
+            limit?: number;
+            q?: string;
+            status?: string;
+        }>({
+            query: ({ invoiceId, page = 1, limit = 10, q = '', status } = {}) => {
+                const params = new URLSearchParams();
+                params.append('page', page.toString());
+                params.append('limit', limit.toString());
+                if (q) params.append('search', q.toLowerCase());
+                if (status) params.append('status', status);
+                return {
+                    url: `/invoice/${invoiceId}/students?${params.toString()}`,
+                };
+            },
+            providesTags: ['StudentsByInvoice'],
+        }),
         // Get offline payments with filters
         getOfflinePayments: builder.query<any, {
             page?: number;
@@ -1208,7 +1233,7 @@ export const api = createApi({
                 if (classArmId) params.append('classArmId', classArmId);
                 if (status) params.append('status', status);
                 return {
-                    url: `/payments/offline?${params.toString()}`,
+                    url: `/invoice/offline-payment?${params.toString()}`,
                 };
             },
             providesTags: ['Payments'],
@@ -1217,7 +1242,7 @@ export const api = createApi({
         // Get offline payment by ID
         getOfflinePaymentById: builder.query<any, string>({
             query: (id) => ({
-                url: `/payments/offline/${id}`,
+                url: `/invoice/offline-payment/detail/${id}`,
                 method: 'GET',
             }),
             providesTags: ['Payments'],
@@ -1228,7 +1253,7 @@ export const api = createApi({
         // Create offline payment
         createOfflinePayment: builder.mutation<any, any>({
             query: (data) => ({
-                url: '/payments/offline',
+                url: '/invoice/offline-payment/record',
                 method: 'POST',
                 body: data,
             }),
@@ -1236,23 +1261,26 @@ export const api = createApi({
         }),
 
         // Approve offline payment
-        approveOfflinePayment: builder.mutation<any, string>({
-            query: (id) => ({
-                url: `/payments/offline/${id}/approve`,
+        processOfflinePayment: builder.mutation<any, any>({
+            query: ({ id, body }) => ({
+                url: `/invoice/offline-payment/${id}/process`,
                 method: 'PATCH',
+                body,
             }),
             invalidatesTags: ['Payments', 'Invoices'],
         }),
 
-        // Reject offline payment
-        rejectOfflinePayment: builder.mutation<any, { id: string; reason: string }>({
-            query: ({ id, reason }) => ({
-                url: `/payments/offline/${id}/reject`,
-                method: 'PATCH',
-                body: { reason },
-            }),
-            invalidatesTags: ['Payments', 'Invoices'],
+
+        getPaymentSummary: builder.query<any, any>({
+            query: () => {
+
+                return {
+                    url: `/invoice/payment-dashboard`,
+                };
+            },
+            providesTags: ['PaymentsDashboardSummary'],
         }),
+
 
         // Event Management Endpoints
         getEvents: builder.query<any, {
@@ -1270,7 +1298,7 @@ export const api = createApi({
                 if (month) params.append('month', month);
                 if (year) params.append('year', year);
                 return {
-                    url: `/events?${params.toString()}`,
+                    url: `/communication/events?${params.toString()}`,
                 };
             },
             providesTags: ['Events'],
@@ -1278,7 +1306,7 @@ export const api = createApi({
 
         getEventById: builder.query<any, string>({
             query: (id) => ({
-                url: `/events/${id}`,
+                url: `/communication/events/${id}`,
                 method: 'GET',
             }),
             providesTags: ['Events'],
@@ -1286,7 +1314,7 @@ export const api = createApi({
 
         createEvent: builder.mutation<any, any>({
             query: (data) => ({
-                url: '/events',
+                url: '/communication/events/create',
                 method: 'POST',
                 body: data,
             }),
@@ -1295,8 +1323,8 @@ export const api = createApi({
 
         updateEvent: builder.mutation<any, { id: string; data: any }>({
             query: ({ id, data }) => ({
-                url: `/events/${id}`,
-                method: 'PUT',
+                url: `/communication/events/${id}`,
+                method: 'PATCH',
                 body: data,
             }),
             invalidatesTags: ['Events'],
@@ -1304,7 +1332,7 @@ export const api = createApi({
 
         deleteEvent: builder.mutation<any, string>({
             query: (id) => ({
-                url: `/events/${id}`,
+                url: `/communication/events/${id}`,
                 method: 'DELETE',
             }),
             invalidatesTags: ['Events'],
@@ -1736,7 +1764,7 @@ export const api = createApi({
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: ['Invoices'],
+            invalidatesTags: ['Invoices', 'Payments'],
         }),
         updateInvoice: builder.mutation({
             query: ({ id, ...body }) => ({
@@ -1789,7 +1817,7 @@ export const api = createApi({
         // Discount CRUD operations
         createDiscount: builder.mutation({
             query: (newDiscount) => ({
-                url: '/discount',
+                url: `/invoice/${newDiscount.invoiceId}/discount`,
                 method: 'POST',
                 body: newDiscount,
             }),
@@ -1822,7 +1850,7 @@ export const api = createApi({
                 if (sessionId) params.append('sessionId', sessionId);
                 if (termId) params.append('termId', termId);
                 return {
-                    url: `/discount/list?${params.toString()}`,
+                    url: `/invoice/discounts/list?${params.toString()}`,
                 };
             },
             providesTags: ['Discounts'],
@@ -1834,7 +1862,33 @@ export const api = createApi({
             }),
             providesTags: ['Discounts'],
         }),
+        approveDiscount: builder.mutation({
+            query: (id) => ({
+                url: `/invoice/discount/${id}/approve`,
+                method: "PATCH",
+                // body: data,
+            }),
+            invalidatesTags: ["Discounts"],
+        }),
 
+        getQuestions: builder.query({
+            query: ({ subjectId, classId }) => ({
+                url: `/questions/${subjectId}/${classId}`,
+            }),
+        }),
+        updateQuestions: builder.mutation({
+            query: (data) => ({
+                url: `/questions/${data.id}`,
+                method: 'PUT',
+                body: data,
+            }),
+        }),
+        deleteQuestions: builder.mutation({
+            query: ({ subjectId, classId }) => ({
+                url: `/questions/${subjectId}/${classId}`,
+                method: 'DELETE',
+            }),
+        }),
     }),
 });
 
@@ -1997,18 +2051,20 @@ export const {
     useGetInvoiceByCodeQuery,
     useGetInvoiceByIdQuery,
     useGetInvoicesQuery,
+    useGetStudentsByInvoiceQuery,
 
     useCreateDiscountMutation,
     useUpdateDiscountMutation,
     useDeleteDiscountMutation,
     useGetDiscountsQuery,
     useGetDiscountByIdQuery,
+    useApproveDiscountMutation,
+    useGetPaymentSummaryQuery,
 
     // Offline payment hooks
     useGetOfflinePaymentByIdQuery,
     useCreateOfflinePaymentMutation,
-    useApproveOfflinePaymentMutation,
-    useRejectOfflinePaymentMutation,
+    useProcessOfflinePaymentMutation,
 
     // Event management hooks
     useGetEventsQuery,
@@ -2016,6 +2072,12 @@ export const {
     useCreateEventMutation,
     useUpdateEventMutation,
     useDeleteEventMutation,
+
+    // question managent hooks
+    useGetQuestionsQuery,
+    useUpdateQuestionsMutation,
+    useDeleteQuestionsMutation,
+
 } = api;
 
 export type AppApi = typeof api;

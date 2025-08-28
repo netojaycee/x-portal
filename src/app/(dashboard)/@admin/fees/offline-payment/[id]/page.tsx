@@ -1,22 +1,33 @@
 "use client";
-
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useGetOfflinePaymentByIdQuery } from "@/redux/api";
+import {
+  useGetOfflinePaymentByIdQuery,
+  useProcessOfflinePaymentMutation,
+} from "@/redux/api";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Check, X, Eye } from "lucide-react";
 import Image from "next/image";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { CustomModal } from "@/app/(dashboard)/components/modals/CustomModal";
+import ApprovalForm from "../(components)/ApprovalForm";
+import RejectionForm from "../(components)/RejectionForm";
+import { ENUM_MODULES } from "@/lib/types/enums";
 
 const ViewOfflinePaymentPage: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const paymentId = params.id as string;
   const [showFullImage, setShowFullImage] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const [processOfflinePayment] = useProcessOfflinePaymentMutation();
 
   // Fetch offline payment data
   const {
@@ -25,36 +36,38 @@ const ViewOfflinePaymentPage: React.FC = () => {
     error,
   } = useGetOfflinePaymentByIdQuery(paymentId);
 
+  console.log(paymentData, "paymentdata");
+
   const handleApprove = async () => {
     setIsProcessing(true);
     try {
-      // API call to approve payment
-      console.log("Approving payment:", paymentId);
-      // await approveOfflinePaymentMutation(paymentId);
-      alert("Payment approved successfully!");
+      await processOfflinePayment({
+        id: paymentId,
+        approve: true,
+      }).unwrap();
+      toast.success("Payment approved successfully!");
       router.refresh();
-    } catch (error) {
-      console.error("Error approving payment:", error);
-      alert("Failed to approve payment. Please try again.");
+      setShowApproveModal(false);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to approve payment.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleReject = async () => {
-    const reason = prompt("Please enter rejection reason:");
-    if (!reason) return;
-
+  const handleReject = async (reason: string) => {
     setIsProcessing(true);
     try {
-      // API call to reject payment
-      console.log("Rejecting payment:", paymentId, "Reason:", reason);
-      // await rejectOfflinePaymentMutation({ id: paymentId, reason });
-      alert("Payment rejected successfully!");
+      await processOfflinePayment({
+        id: paymentId,
+        approve: false,
+        rejectionReason: reason,
+      }).unwrap();
+      toast.success("Payment rejected successfully!");
       router.refresh();
-    } catch (error) {
-      console.error("Error rejecting payment:", error);
-      alert("Failed to reject payment. Please try again.");
+      setShowRejectModal(false);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to reject payment.");
     } finally {
       setIsProcessing(false);
     }
@@ -105,8 +118,8 @@ const ViewOfflinePaymentPage: React.FC = () => {
   return (
     <div className='container mx-auto px-4 py-8'>
       {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
-        <div className='flex items-center space-x-4'>
+      <div className='flex md:flex-row flex-col md:items-center items-start justify-between mb-6 space-y-4'>
+        <div className='flex flex-col md:flex-row md:items-center items-start space-x-4 space-y-3'>
           <Button
             variant='outline'
             onClick={() => router.back()}
@@ -116,8 +129,8 @@ const ViewOfflinePaymentPage: React.FC = () => {
             <span>Back</span>
           </Button>
           <div>
-            <h1 className='text-2xl font-bold'>Offline Payment Details</h1>
-            <p className='text-gray-600'>Payment ID: {paymentId}</p>
+            <h1 className='text-xl font-bold'>Offline Payment Details</h1>
+            {/* <p className='text-gray-600'>Payment ID: {paymentId}</p> */}
           </div>
         </div>
 
@@ -126,7 +139,7 @@ const ViewOfflinePaymentPage: React.FC = () => {
           {paymentData.status === "pending" && (
             <>
               <Button
-                onClick={handleApprove}
+                onClick={() => setShowApproveModal(true)}
                 disabled={isProcessing}
                 className='bg-green-600 hover:bg-green-700'
               >
@@ -134,7 +147,7 @@ const ViewOfflinePaymentPage: React.FC = () => {
                 Approve
               </Button>
               <Button
-                onClick={handleReject}
+                onClick={() => setShowRejectModal(true)}
                 disabled={isProcessing}
                 variant='destructive'
               >
@@ -169,20 +182,20 @@ const ViewOfflinePaymentPage: React.FC = () => {
                   <Label className='text-sm font-medium text-gray-600'>
                     Student Name
                   </Label>
-                  <p className='font-semibold'>{paymentData.studentName}</p>
+                  <p className='font-semibold'>{`${paymentData.student.user.firstname} ${paymentData.student.user.lastname}`}</p>
                 </div>
                 <div>
                   <Label className='text-sm font-medium text-gray-600'>
                     Class
                   </Label>
-                  <p className='font-semibold'>{paymentData.class}</p>
+                  <p className='font-semibold'>{`${paymentData.student.class.name} ${paymentData.student.classArm.name}`}</p>
                 </div>
-                <div>
+                {/* <div>
                   <Label className='text-sm font-medium text-gray-600'>
                     Invoice Reference
                   </Label>
-                  <p className='font-semibold'>{paymentData.invoiceNumber}</p>
-                </div>
+                  <p className='font-semibold'>{paymentData.invoice.reference}</p>
+                </div> */}
                 <div>
                   <Label className='text-sm font-medium text-gray-600'>
                     Amount Paid
@@ -195,14 +208,14 @@ const ViewOfflinePaymentPage: React.FC = () => {
                   <Label className='text-sm font-medium text-gray-600'>
                     Generated By
                   </Label>
-                  <p className='font-semibold'>{paymentData.generatedBy}</p>
+                  <p className='font-semibold'>{`${paymentData.createdByUser.firstname} ${paymentData.createdByUser.lastname}`}</p>
                 </div>
                 <div>
                   <Label className='text-sm font-medium text-gray-600'>
                     Created On
                   </Label>
                   <p className='font-semibold'>
-                    {new Date(paymentData.createdOn).toLocaleDateString(
+                    {new Date(paymentData.createdAt).toLocaleDateString(
                       "en-GB",
                       {
                         day: "2-digit",
@@ -250,15 +263,15 @@ const ViewOfflinePaymentPage: React.FC = () => {
                     Invoice Total
                   </Label>
                   <p className='font-semibold'>
-                    ₦{paymentData.invoice?.totalAmount?.toLocaleString()}
+                    ₦{paymentData.invoice?.amount?.toLocaleString()}
                   </p>
                 </div>
                 <div>
                   <Label className='text-sm font-medium text-gray-600'>
-                    Amount Paid (Before)
+                    Term/Session
                   </Label>
                   <p className='font-semibold text-green-600'>
-                    ₦{paymentData.invoice?.previouslyPaid?.toLocaleString()}
+                    {`${paymentData.invoice?.term?.name} - ${paymentData.invoice?.session?.name}`}
                   </p>
                 </div>
                 <div>
@@ -293,11 +306,11 @@ const ViewOfflinePaymentPage: React.FC = () => {
             <CardTitle>Payment Proof</CardTitle>
           </CardHeader>
           <CardContent>
-            {paymentData.paymentProofUrl ? (
+            {paymentData.proofOfPayment ? (
               <div className='space-y-4'>
                 <div className='relative w-full h-96 border rounded-lg overflow-hidden bg-gray-50'>
                   <Image
-                    src={paymentData.paymentProofUrl}
+                    src={paymentData.proofOfPayment}
                     alt='Payment proof'
                     fill
                     className='object-contain'
@@ -316,10 +329,20 @@ const ViewOfflinePaymentPage: React.FC = () => {
                   <Button
                     variant='outline'
                     onClick={() => {
-                      const link = document.createElement("a");
-                      link.href = paymentData.paymentProofUrl;
-                      link.download = `payment-proof-${paymentId}`;
-                      link.click();
+                      // Convert base64 to blob
+                      const base64Response = fetch(paymentData.proofOfPayment);
+                      base64Response
+                        .then((res) => res.blob())
+                        .then((blob) => {
+                          const blobUrl = window.URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = blobUrl;
+                          link.download = `payment-proof-${paymentId}.jpg`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(blobUrl);
+                        });
                     }}
                   >
                     <Download className='h-4 w-4 mr-2' />
@@ -337,18 +360,18 @@ const ViewOfflinePaymentPage: React.FC = () => {
       </div>
 
       {/* Full Size Image Modal */}
-      {showFullImage && paymentData.paymentProofUrl && (
+      {showFullImage && paymentData.proofOfPayment && (
         <div
           className='fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50'
           onClick={() => setShowFullImage(false)}
         >
-          <div className='max-w-4xl max-h-full p-4'>
+          <div className='max-w-4xl max-h-[90vh] p-4'>
             <Image
-              src={paymentData.paymentProofUrl}
+              src={paymentData.proofOfPayment}
               alt='Payment proof - Full size'
-              width={800}
-              height={600}
-              className='max-w-full max-h-full object-contain'
+              width={400}
+              height={200}
+              className='max-w-[90vw] max-h-[90vh] object-contain'
             />
             <Button
               className='absolute top-4 right-4 bg-white text-black'
@@ -359,6 +382,40 @@ const ViewOfflinePaymentPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Approval Modal */}
+      <CustomModal
+        open={showApproveModal}
+        onOpenChange={setShowApproveModal}
+        type={ENUM_MODULES.OFFLINE_PAYMENT}
+        status='approve'
+        title='Approve Offline Payment'
+        description='Are you sure you want to approve this offline payment?'
+      >
+        <ApprovalForm
+          paymentId={paymentId}
+          onClose={() => setShowApproveModal(false)}
+          onApprove={handleApprove}
+          isProcessing={isProcessing}
+        />
+      </CustomModal>
+
+      {/* Rejection Modal */}
+      <CustomModal
+        open={showRejectModal}
+        onOpenChange={setShowRejectModal}
+        type={ENUM_MODULES.OFFLINE_PAYMENT}
+        status='reject'
+        title='Reject Offline Payment'
+        description='Please provide a reason for rejecting this payment.'
+      >
+        <RejectionForm
+          paymentId={paymentId}
+          onClose={() => setShowRejectModal(false)}
+          onReject={handleReject}
+          isProcessing={isProcessing}
+        />
+      </CustomModal>
     </div>
   );
 };

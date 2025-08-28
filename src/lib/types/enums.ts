@@ -32,6 +32,7 @@ export enum ENUM_MODULES {
     DISCOUNT = "discount",
     OFFLINE_PAYMENT = "offlinePayment",
     EVENT = "event",
+    CBT = "cbt",
     CLASS_ARM_SUBJECT = "classArmSubject",
     CLASS_ARM_STUDENT = "classArmStudent",
     CLASS_ARM_STUDENT_SUBJECT = "classArmStudentSubject",

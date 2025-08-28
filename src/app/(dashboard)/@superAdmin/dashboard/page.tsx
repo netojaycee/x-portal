@@ -48,12 +48,12 @@ export default function SuperAdminPage() {
       <CustomTable
         title='Subscriber List'
         columns={[
-          // { key: "sn", label: "SN", sortable: true },
+          { key: "sn", label: "SN", sortable: true },
           { key: "school", label: "School", sortable: true },
           { key: "email", label: "Email Address" },
           { key: "plan", label: "Plan" },
           { key: "startedDate", label: "Started Date" },
-          { key: "dueDate", label: "Due Date" },
+          { key: "date", label: "Due Date" },
           { key: "status", label: "Status" },
         ]}
         data={subscribersData.slice(0, 5)}

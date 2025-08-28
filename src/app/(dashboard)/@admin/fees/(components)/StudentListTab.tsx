@@ -8,26 +8,61 @@ import {
   useGetStudentPaymentSummaryQuery,
   useGetSessionsQuery,
   useGetTermsQuery,
-  useGetClassesQuery,
-  useGetClassArmsQuery,
+  useGetSessionClassesQuery,
 } from "@/redux/api";
+import LoaderComponent from "@/components/local/LoaderComponent";
+import { useDebounce } from "use-debounce";
 
 interface StudentPaymentSummary {
   id: string;
-  studentName: string;
-  class: string;
-  totalAmount: number;
-  discount: number;
-  expected: number;
-  paid: number;
+  invoiceId: string;
+  studentId: string;
+  status: string;
+  paid: number | null;
   outstanding: number;
-  status: "paid" | "partial" | "unpaid";
+  student: {
+    id: string;
+    studentRegNo: string;
+    user: {
+      firstname: string;
+      lastname: string;
+    };
+    class: {
+      id: string;
+      name: string;
+    };
+    classArm: {
+      id: string;
+      name: string;
+    };
+  };
+  invoice: {
+    id: string;
+    amount: number;
+    title: string;
+    reference: string;
+    discounts: Array<{
+      id: string;
+      amount: number;
+      status: string;
+    }>;
+    session: {
+      id: string;
+      name: string;
+    };
+    term: {
+      id: string;
+      name: string;
+    };
+  };
 }
 
 const StudentListTab: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterValues>({
     sessionId: "",
     termId: "",
@@ -39,20 +74,40 @@ const StudentListTab: React.FC = () => {
   // Fetch filter data
   const { data: sessionsData } = useGetSessionsQuery({});
   const { data: termsData } = useGetTermsQuery({});
-  const { data: classesData } = useGetClassesQuery({});
-  const { data: classArmsData } = useGetClassArmsQuery({});
+  const { data: classesData, isFetching: isClassesFetching } =
+    useGetSessionClassesQuery(advancedFilters.sessionId || "", {
+      skip: !advancedFilters.sessionId,
+      // Ensure we refetch when session changes
+      refetchOnMountOrArgChange: true,
+    });
+
+  console.log(classesData);
 
   // Fetch student payment summary with filters
-  const { data: studentSummaryData, isLoading } =
-    useGetStudentPaymentSummaryQuery({
+  const {
+    data: studentSummaryData,
+    isLoading,
+    isFetching,
+  } = useGetStudentPaymentSummaryQuery(
+    {
       page: currentPage,
       limit: rowsPerPage,
-      q: searchTerm,
-      sessionId: advancedFilters.sessionId,
-      termId: advancedFilters.termId,
-      classId: advancedFilters.classId,
-      classArmId: advancedFilters.classArmId,
-    });
+      q: debouncedSearchTerm,
+      sessionId: advancedFilters.sessionId || undefined,
+      termId: advancedFilters.termId || undefined,
+      classId: advancedFilters.classId || undefined,
+      classArmId: advancedFilters.classArmId || undefined,
+      status: advancedFilters.status || undefined,
+    },
+    {
+      // Ensure we refetch when filters change
+      refetchOnMountOrArgChange: true,
+    }
+  );
+
+  console.log(studentSummaryData, "ffffffffffff");
+
+  console.log(sessionsData);
 
   const sessions = useMemo(
     () =>
@@ -70,23 +125,41 @@ const StudentListTab: React.FC = () => {
     [termsData]
   );
 
-  const classes = useMemo(
-    () =>
-      classesData?.data?.map((classItem: any) => ({
-        id: classItem.id,
-        name: classItem.name,
-      })) || [],
-    [classesData]
-  );
+  const { classes, classArms } = useMemo(() => {
+    try {
+      // Check if we have the classes array in the nested structure
+      const classesArray = classesData?.data?.classes;
+      if (!classesArray || !Array.isArray(classesArray)) {
+        return { classes: [], classArms: [] };
+      }
 
-  const classArms = useMemo(
-    () =>
-      classArmsData?.data?.map((arm: any) => ({
-        id: arm.id,
-        name: arm.name,
-      })) || [],
-    [classArmsData]
-  );
+      // Map classes with their category info
+      const classOptions = classesArray.map((classItem: any) => ({
+        id: classItem.id,
+        name: `${classItem.name} (${classItem.category.name})`,
+      }));
+
+      // Find selected class and get its arms
+      const selectedClass = classesArray.find(
+        (c: any) => c.id === advancedFilters.classId
+      );
+
+      // Map arms from the selected class
+      const armOptions =
+        selectedClass?.classArms?.map((arm: any) => ({
+          id: arm.id,
+          name: arm.name,
+        })) || [];
+
+      return {
+        classes: classOptions,
+        classArms: armOptions,
+      };
+    } catch (error) {
+      console.error("Error processing class data:", error);
+      return { classes: [], classArms: [] };
+    }
+  }, [classesData?.data?.classes, advancedFilters.classId]);
 
   const statusOptions = [
     { value: "paid", label: "Fully Paid" },
@@ -96,36 +169,85 @@ const StudentListTab: React.FC = () => {
 
   const columns = [
     {
-      key: "serialNumber",
+      key: "sn",
       label: "S/N",
+      // render: (row: any) => {
+      //   console.log(row, "hhjjh");
+      //   return row.serialNumber;
+      // },
     },
     {
       key: "studentName",
       label: "Student Name",
+      render: (row: any) =>
+        `${row?.student?.user?.firstname} ${row?.student?.user?.lastname}`,
     },
     {
       key: "class",
       label: "Class",
+      render: (row: any) =>
+        `${row.student?.class?.name} ${row.student?.classArm?.name || ""}`,
     },
     {
       key: "totalAmount",
       label: "Total Amount",
+      render: (row: any) =>
+        row.invoice?.amount.toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 0,
+        }),
     },
     {
       key: "discount",
       label: "Discount",
+      render: (row: any) =>
+        (row.invoice?.discounts[0]?.amount || 0).toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 0,
+        }),
     },
     {
       key: "expected",
       label: "Expected",
+      render: (row: any) =>
+        (
+          row.invoice?.amount - (row.invoice?.discounts[0]?.amount || 0)
+        ).toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 0,
+        }),
     },
     {
       key: "paid",
       label: "Paid",
+      render: (row: any) =>
+        (row?.paid || 0).toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 0,
+        }),
     },
     {
       key: "outstanding",
       label: "Outstanding",
+      render: (row: any) =>
+        (row?.outstanding || 0).toLocaleString("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          minimumFractionDigits: 0,
+        }),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (row: any) => (
+        <div className={`status-pill status-${row.status}`}>
+          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+        </div>
+      ),
     },
     {
       key: "actions",
@@ -174,70 +296,35 @@ const StudentListTab: React.FC = () => {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    if (!studentSummaryData?.data) return null;
-
-    const totalStudents = studentSummaryData.data.length;
-    const totalExpected = studentSummaryData.data.reduce(
-      (sum: number, student: any) => sum + student.expected,
-      0
-    );
-    const totalPaid = studentSummaryData.data.reduce(
-      (sum: number, student: any) => sum + student.paid,
-      0
-    );
-    const totalOutstanding = studentSummaryData.data.reduce(
-      (sum: number, student: any) => sum + student.outstanding,
-      0
-    );
-
-    return {
-      totalStudents,
-      totalExpected,
-      totalPaid,
-      totalOutstanding,
-      collectionRate: totalExpected > 0 ? (totalPaid / totalExpected) * 100 : 0,
-    };
-  }, [studentSummaryData?.data]);
+  // Show loader when initially loading or when fetching new data
+  if (isLoading || isFetching || isClassesFetching) {
+    return <LoaderComponent />;
+  }
 
   return (
     <div className='space-y-4'>
-      {/* Summary Cards */}
-      {summaryStats && (
-        <div className='grid grid-cols-1 md:grid-cols-5 gap-4 mb-6'>
-          <div className='bg-white p-4 rounded-lg border'>
-            <div className='text-sm text-gray-600'>Total Students</div>
-            <div className='text-2xl font-bold'>
-              {summaryStats.totalStudents}
-            </div>
-          </div>
-          <div className='bg-white p-4 rounded-lg border'>
-            <div className='text-sm text-gray-600'>Expected Amount</div>
-            <div className='text-2xl font-bold text-blue-600'>
-              ₦{summaryStats.totalExpected.toLocaleString()}
-            </div>
-          </div>
-          <div className='bg-white p-4 rounded-lg border'>
-            <div className='text-sm text-gray-600'>Amount Paid</div>
-            <div className='text-2xl font-bold text-green-600'>
-              ₦{summaryStats.totalPaid.toLocaleString()}
-            </div>
-          </div>
-          <div className='bg-white p-4 rounded-lg border'>
-            <div className='text-sm text-gray-600'>Outstanding</div>
-            <div className='text-2xl font-bold text-red-600'>
-              ₦{summaryStats.totalOutstanding.toLocaleString()}
-            </div>
-          </div>
-          <div className='bg-white p-4 rounded-lg border'>
-            <div className='text-sm text-gray-600'>Collection Rate</div>
-            <div className='text-2xl font-bold text-purple-600'>
-              {summaryStats.collectionRate.toFixed(1)}%
-            </div>
-          </div>
-        </div>
-      )}
+      <style jsx global>{`
+        .status-pill {
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          text-align: center;
+          width: fit-content;
+        }
+        .status-paid {
+          background-color: #e6f4ea;
+          color: #1e8e3e;
+        }
+        .status-partial {
+          background-color: #fef7e0;
+          color: #f9a825;
+        }
+        .status-unpaid {
+          background-color: #fce8e6;
+          color: #d93025;
+        }
+      `}</style>
 
       <CustomTable
         title='Student Payment Summary'

@@ -6,6 +6,7 @@ import { CustomModal } from "../../../components/modals/CustomModal";
 import { ENUM_MODULES } from "@/lib/types/enums";
 import InvoiceReferenceForm from "./InvoiceReferenceForm";
 import { useGetDiscountsQuery } from "@/redux/api";
+import { Switch } from "@/components/ui/switch";
 
 export default function DiscountTab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,11 +23,8 @@ export default function DiscountTab() {
     limit: limit,
     q: searchQuery,
   });
-
-  const discounts = useMemo(
-    () => discountsData?.data?.discounts || [],
-    [discountsData]
-  );
+  console.log(discountsData, "discountsData");
+  const discounts = useMemo(() => discountsData || [], [discountsData]);
 
   const totalItems = useMemo(
     () => discountsData?.data?.totalItems || discounts.length,
@@ -35,14 +33,18 @@ export default function DiscountTab() {
 
   // Table columns for discounts
   const columns = [
+    { key: "sn", label: "S/N" },
     { key: "reference", label: "Invoice Reference" },
     { key: "invoiceTitle", label: "Invoice Title" },
-    { key: "discountAmount", label: "Discount Amount" },
-    { key: "originalAmount", label: "Original Amount" },
-    { key: "newAmount", label: "New Amount" },
+    { key: "amount", label: "Amount" },
+    // { key: "originalAmount", label: "Original Amount" },
+    // { key: "newAmount", label: "New Amount" },
+
     { key: "dueDate", label: "Due Date" },
+    
     { key: "status", label: "Status" },
-    { key: "createdAt", label: "Created" },
+    { key: "date", label: "Created" },
+    { key: "approvedBy", label: "ApprovedBy" },
     { key: "actions", label: "Actions" },
   ];
 
@@ -60,20 +62,41 @@ export default function DiscountTab() {
   };
 
   // Get action options for each row
-  const getActionOptions = (discount: any) => [
-    {
-      label: "Edit",
-      type: "edit" as const,
-      handler: () => openModal("edit", discount),
-      key: "edit",
-    },
-    {
-      label: "Delete",
+  const getActionOptions = (discount: any) => {
+    const toggleOption = {
+      key: "discount",
+      label:
+        discount.status === "approved" ? (
+          <div className='flex items-center gap-2'>
+            <Switch checked disabled />
+            <span>Approved</span>
+          </div>
+        ) : (
+          "Approve Discount"
+        ),
       type: "confirmation" as const,
-      handler: () => openModal("delete", discount),
-      key: "delete",
-    },
-  ];
+      disabled: discount.status === "expired" || discount.status === "approved",
+      handler:
+        discount.status === "expired" || discount.status === "approved"
+          ? () => {}
+          : () => openModal("status", discount),
+    };
+    // const otherOptions = [
+      // {
+      //   label: "Edit",
+      //   type: "edit" as const,
+      //   handler: () => openModal("edit", discount),
+      //   key: "edit",
+      // },
+      // {
+      //   label: "Delete",
+      //   type: "confirmation" as const,
+      //   handler: () => openModal("delete", discount),
+      //   key: "delete",
+      // },
+    // ];
+    return [toggleOption];
+  };
 
   return (
     <div className='space-y-6'>
@@ -126,7 +149,9 @@ export default function DiscountTab() {
           onOpenChange={handleModalOpenChange}
           isEditMode={true}
           type={ENUM_MODULES.DISCOUNT}
-        />
+        >
+          <InvoiceReferenceForm  onClose={() => setOpenCreateModal(false)} />
+        </CustomModal>
       )}
 
       {/* Delete Modal */}
@@ -137,6 +162,17 @@ export default function DiscountTab() {
           onOpenChange={handleModalOpenChange}
           type={ENUM_MODULES.DISCOUNT}
           status='delete'
+        />
+      )}
+
+      {modal.type === "status" && (
+        <CustomModal
+          open={modal.type === "status"}
+          selectedRow={modal.data}
+          onOpenChange={handleModalOpenChange}
+          type={ENUM_MODULES.DISCOUNT}
+          description={`Are you sure you want to approve this discount?`}
+          status={"confirmation"}
         />
       )}
     </div>

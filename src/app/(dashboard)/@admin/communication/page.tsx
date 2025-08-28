@@ -2,16 +2,11 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+// import { Input } from "@/components/ui/input";
+// import { Card, CardContent } from "@/components/ui/card";
+// import { Badge } from "@/components/ui/badge";
+import { CustomModal } from "../../components/modals/CustomModal";
+import { ENUM_MODULES } from "@/lib/types/enums";
 import {
   Select,
   SelectContent,
@@ -19,64 +14,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
-  Search,
-  Calendar as CalendarIcon,
-  List,
-  MapPin,
-  Clock,
-  Users,
-  Edit,
-  Trash2,
+  // Search,
+  // Calendar as CalendarIcon,
+  // List,
+  // MapPin,
+  // Clock,
+  // Users,
+  // Edit,
+  // Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import EventForm from "./(components)/EventForm";
 import Calendar from "./(components)/Calendar";
-import { useGetEventsQuery, useDeleteEventMutation } from "@/redux/api";
-import { toast } from "sonner";
+import { useGetEventsQuery } from "@/redux/api";
+// import { toast } from "sonner";
+import ActivityBoard from "../dashboard/components/ActivityBoard";
+import LoaderComponent from "@/components/local/LoaderComponent";
+
+interface Event {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  eventColor: string;
+  eventDescription: string;
+  schoolId: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
 
 const CommunicationPage = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState("list");
+  // const [activeTab, setActiveTab] = useState("list");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [initialDate, setInitialDate] = useState<Date | null>(null);
 
   const {
     data: eventsData,
     isLoading,
     refetch,
   } = useGetEventsQuery({
-    q: searchQuery,
-    month: selectedMonth.toString(),
-    year: selectedYear.toString(),
-    limit: 50,
+    // q: searchQuery,
+    // month: selectedMonth.toString(),
+    // year: selectedYear.toString(),
+    // limit: 50,
   });
 
-  const [deleteEvent] = useDeleteEventMutation();
+  console.log(eventsData, "events");
 
-  const events = eventsData?.data || [];
+  // const [deleteEvent] = useDeleteEventMutation();
 
-  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete "${eventTitle}"?`)) {
-      try {
-        await deleteEvent(eventId).unwrap();
-        toast.success("Event deleted successfully!");
-        refetch();
-      } catch (error: any) {
-        toast.error(error?.data?.message || "Failed to delete event");
-      }
-    }
-  };
+  const events: Event[] = eventsData?.data || [];
 
-  const handleEditEvent = (event: any) => {
-    setEditingEvent(event);
-    setIsEditModalOpen(true);
-  };
+  // const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+  //   if (window.confirm(`Are you sure you want to delete "${eventTitle}"?`)) {
+  //     try {
+  //       await deleteEvent(eventId).unwrap();
+  //       toast.success("Event deleted successfully!");
+  //       refetch();
+  //     } catch (error: any) {
+  //       toast.error(error?.data?.message || "Failed to delete event");
+  //     }
+  //   }
+  // };
+
+  // const handleEditEvent = (event: any) => {
+  //   setEditingEvent(event);
+  //   setIsEditModalOpen(true);
+  // };
 
   const handleCreateSuccess = () => {
     setIsCreateModalOpen(false);
@@ -89,164 +102,221 @@ const CommunicationPage = () => {
     refetch();
   };
 
-  const EventCard = ({ event }: { event: any }) => (
-    <Card className='hover:shadow-md transition-shadow'>
-      <CardContent className='p-4'>
-        <div className='flex items-start justify-between mb-3'>
-          <div className='flex items-start space-x-3'>
-            <div
-              className='w-4 h-4 rounded-full mt-1 flex-shrink-0'
-              style={{ backgroundColor: event.color }}
-            />
-            <div className='flex-1'>
-              <h3 className='font-semibold text-gray-900 mb-1'>
-                {event.title}
-              </h3>
-              {event.description && (
-                <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
-                  {event.description}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className='flex items-center space-x-1'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => handleEditEvent(event)}
-              className='h-8 w-8 p-0'
-            >
-              <Edit className='h-4 w-4' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={() => handleDeleteEvent(event.id, event.title)}
-              className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          </div>
-        </div>
+  // const EventCard = ({ event }: { event: any }) => (
+  //   <Card className='hover:shadow-md transition-shadow'>
+  //     <CardContent className='p-4'>
+  //       <div className='flex items-start justify-between mb-3'>
+  //         <div className='flex items-start space-x-3'>
+  //           <div
+  //             className='w-4 h-4 rounded-full mt-1 flex-shrink-0'
+  //             style={{ backgroundColor: event.color }}
+  //           />
+  //           <div className='flex-1'>
+  //             <h3 className='font-semibold text-gray-900 mb-1'>
+  //               {event.title}
+  //             </h3>
+  //             {event.description && (
+  //               <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
+  //                 {event.description}
+  //               </p>
+  //             )}
+  //           </div>
+  //         </div>
+  //         <div className='flex items-center space-x-1'>
+  //           <Button
+  //             variant='ghost'
+  //             size='sm'
+  //             onClick={() => handleEditEvent(event)}
+  //             className='h-8 w-8 p-0'
+  //           >
+  //             <Edit className='h-4 w-4' />
+  //           </Button>
+  //           <Button
+  //             variant='ghost'
+  //             size='sm'
+  //             onClick={() => handleDeleteEvent(event.id, event.title)}
+  //             className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
+  //           >
+  //             <Trash2 className='h-4 w-4' />
+  //           </Button>
+  //         </div>
+  //       </div>
 
-        <div className='space-y-2 text-sm text-gray-600'>
-          <div className='flex items-center space-x-2'>
-            <CalendarIcon className='h-4 w-4' />
-            <span>{format(new Date(event.eventDate), "PPP")}</span>
-            {event.isAllDay && (
-              <Badge variant='secondary' className='text-xs'>
-                All Day
-              </Badge>
-            )}
-          </div>
+  //       <div className='space-y-2 text-sm text-gray-600'>
+  //         <div className='flex items-center space-x-2'>
+  //           <CalendarIcon className='h-4 w-4' />
+  //           <span>{format(new Date(event.eventDate), "PPP")}</span>
+  //           {event.isAllDay && (
+  //             <Badge variant='secondary' className='text-xs'>
+  //               All Day
+  //             </Badge>
+  //           )}
+  //         </div>
 
-          {!event.isAllDay && (event.startTime || event.endTime) && (
-            <div className='flex items-center space-x-2'>
-              <Clock className='h-4 w-4' />
-              <span>
-                {event.startTime &&
-                  format(new Date(`2000-01-01T${event.startTime}`), "h:mm a")}
-                {event.startTime && event.endTime && " - "}
-                {event.endTime &&
-                  format(new Date(`2000-01-01T${event.endTime}`), "h:mm a")}
-              </span>
-            </div>
-          )}
+  //         {!event.isAllDay && (event.startTime || event.endTime) && (
+  //           <div className='flex items-center space-x-2'>
+  //             <Clock className='h-4 w-4' />
+  //             <span>
+  //               {event.startTime &&
+  //                 format(new Date(`2000-01-01T${event.startTime}`), "h:mm a")}
+  //               {event.startTime && event.endTime && " - "}
+  //               {event.endTime &&
+  //                 format(new Date(`2000-01-01T${event.endTime}`), "h:mm a")}
+  //             </span>
+  //           </div>
+  //         )}
 
-          {event.location && (
-            <div className='flex items-center space-x-2'>
-              <MapPin className='h-4 w-4' />
-              <span>{event.location}</span>
-            </div>
-          )}
+  //         {event.location && (
+  //           <div className='flex items-center space-x-2'>
+  //             <MapPin className='h-4 w-4' />
+  //             <span>{event.location}</span>
+  //           </div>
+  //         )}
 
-          {event.maxAttendees && (
-            <div className='flex items-center space-x-2'>
-              <Users className='h-4 w-4' />
-              <span>Max {event.maxAttendees} attendees</span>
-            </div>
-          )}
-        </div>
+  //         {event.maxAttendees && (
+  //           <div className='flex items-center space-x-2'>
+  //             <Users className='h-4 w-4' />
+  //             <span>Max {event.maxAttendees} attendees</span>
+  //           </div>
+  //         )}
+  //       </div>
 
-        {event.tags && event.tags.length > 0 && (
-          <div className='flex flex-wrap gap-1 mt-3'>
-            {event.tags.map((tag: string, index: number) => (
-              <Badge key={index} variant='outline' className='text-xs'>
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
+  //       {event.tags && event.tags.length > 0 && (
+  //         <div className='flex flex-wrap gap-1 mt-3'>
+  //           {event.tags.map((tag: string, index: number) => (
+  //             <Badge key={index} variant='outline' className='text-xs'>
+  //               {tag}
+  //             </Badge>
+  //           ))}
+  //         </div>
+  //       )}
 
-        <div className='flex items-center justify-between mt-3 pt-3 border-t'>
-          <div className='flex items-center space-x-2'>
-            {event.isPublic && (
-              <Badge variant='secondary' className='text-xs'>
-                Public
-              </Badge>
-            )}
-            {event.isRecurring && (
-              <Badge variant='outline' className='text-xs'>
-                Recurring
-              </Badge>
-            )}
-          </div>
-          <span className='text-xs text-gray-500'>
-            Created {format(new Date(event.createdAt || Date.now()), "MMM d")}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  //       <div className='flex items-center justify-between mt-3 pt-3 border-t'>
+  //         <div className='flex items-center space-x-2'>
+  //           {event.isPublic && (
+  //             <Badge variant='secondary' className='text-xs'>
+  //               Public
+  //             </Badge>
+  //           )}
+  //           {event.isRecurring && (
+  //             <Badge variant='outline' className='text-xs'>
+  //               Recurring
+  //             </Badge>
+  //           )}
+  //         </div>
+  //         <span className='text-xs text-gray-500'>
+  //           Created {format(new Date(event.createdAt || Date.now()), "MMM d")}
+  //         </span>
+  //       </div>
+  //     </CardContent>
+  //   </Card>
+  // );
 
   const CalendarView = () => {
     const currentDate = new Date(selectedYear, selectedMonth - 1, 1);
 
+    // Transform events data to match calendar component format
+    const formattedEvents = events.map((event: Event) => {
+      // Convert UTC dates to local dates and reset time to midnight
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+
+      // Set time to midnight local time
+      const start = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      );
+
+      const end = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      );
+
+      return {
+        id: event.id,
+        title: event.name,
+        start,
+        end,
+        color: event.eventColor,
+        description: event.eventDescription,
+      };
+    });
+
     return (
       <Calendar
-        events={events}
+        events={formattedEvents}
         selectedDate={currentDate}
         onDateClick={(date) => {
-          // Could add functionality to create event on specific date
-          console.log("Date clicked:", date);
+          // Open create form with selected date
+          setIsCreateModalOpen(true);
+          // You'll need to pass this date to your EventForm component
+          setInitialDate(date);
         }}
         onEventClick={(event) => {
-          handleEditEvent(event);
+          // Find the original event data to pass to edit form
+          const originalEvent = events.find((e) => e.id === event.id);
+          if (originalEvent) {
+            setEditingEvent(originalEvent);
+            setIsEditModalOpen(true);
+          }
         }}
       />
     );
   };
 
+  if(isLoading) {
+    return <LoaderComponent />
+  }
+
   return (
-    <div className='p-6 max-w-7xl mx-auto'>
+    <div className='p-3 max-w-7xl mx-auto space-y-4'>
       {/* Header */}
       <div className='flex items-center justify-between mb-6'>
-        <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Communication</h1>
-          <p className='text-gray-600 mt-1'>Manage events and communications</p>
-        </div>
-
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button className='flex items-center space-x-2'>
+        <div className='w-full rounded-[18px] bg-[#E9EEF8] flex items-center px-12 py-8 justify-between'>
+          {/* Left */}
+          <div>
+            <div className='text-[2rem] font-bold text-[#4A6CF7]'>
+              Communication
+            </div>
+          </div>
+          {/* Right: Invoice and Discount buttons */}
+          <div className='flex flex-col items-end gap-3'>
+            <Button
+              className='flex items-center space-x-2'
+              onClick={() => setIsCreateModalOpen(true)}
+            >
               <Plus className='h-4 w-4' />
               <span>Add Event</span>
             </Button>
-          </DialogTrigger>
-          <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-            <DialogHeader>
-              <DialogTitle>Create New Event</DialogTitle>
-            </DialogHeader>
-            <EventForm
-              onSuccess={handleCreateSuccess}
-              onCancel={() => setIsCreateModalOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+
+            <CustomModal
+              open={isCreateModalOpen}
+              onOpenChange={setIsCreateModalOpen}
+              type={ENUM_MODULES.EVENT}
+              status='create'
+              title='Create New Event'
+              description='Fill in the form to create a new event.'
+            >
+              <EventForm
+                eventData={initialDate}
+                onSuccess={() => {
+                  handleCreateSuccess();
+                  setInitialDate(null);
+                }}
+                onCancel={() => {
+                  setIsCreateModalOpen(false);
+                  setInitialDate(null);
+                }}
+              />
+            </CustomModal>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card className='mb-6'>
+      {/* <Card className='mb-6'>
         <CardContent className='p-4'>
           <div className='flex flex-wrap items-center gap-4'>
             <div className='flex-1 min-w-[200px]'>
@@ -297,10 +367,10 @@ const CommunicationPage = () => {
             </Select>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Tabs */}
-      <Tabs
+      {/* <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className='space-y-4'
@@ -354,25 +424,82 @@ const CommunicationPage = () => {
         <TabsContent value='calendar'>
           <CalendarView />
         </TabsContent>
-      </Tabs>
+      </Tabs> */}
+
+      <ActivityBoard
+        entries={events.slice(0, 2).map((event) => ({
+          id: event.id,
+          title: event.name,
+          description: event.eventDescription,
+          date: new Date(event.startDate),
+          type: "event",
+          icon: "/calendar.svg",
+          color: event.eventColor,
+        }))}
+      />
+
+      <div className='space-y-3'>
+        <div className='flex md:items-center justify-between items-start space-y-3'>
+          <h2>Calendar</h2>
+          <div className='flex items-center'>
+            <Select
+              value={selectedMonth.toString()}
+              onValueChange={(value) => setSelectedMonth(parseInt(value))}
+            >
+              <SelectTrigger className='w-32'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    {format(new Date(2024, i, 1), "MMMM")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(value) => setSelectedYear(parseInt(value))}
+            >
+              <SelectTrigger className='w-24'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <CalendarView />
+      </div>
 
       {/* Edit Event Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
-          </DialogHeader>
-          <EventForm
-            eventData={editingEvent}
-            isEdit={true}
-            onSuccess={handleEditSuccess}
-            onCancel={() => {
-              setIsEditModalOpen(false);
-              setEditingEvent(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <CustomModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        type={ENUM_MODULES.EVENT}
+        status='edit'
+        title='Edit Event'
+        description='Modify the event details below.'
+      >
+        <EventForm
+          eventData={editingEvent}
+          isEdit={true}
+          onSuccess={handleEditSuccess}
+          onCancel={() => {
+            setIsEditModalOpen(false);
+            setEditingEvent(null);
+          }}
+        />
+      </CustomModal>
     </div>
   );
 };

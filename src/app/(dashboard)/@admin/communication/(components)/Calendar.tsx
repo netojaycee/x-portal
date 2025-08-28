@@ -14,11 +14,10 @@ import { cn } from "@/lib/utils";
 interface Event {
   id: string;
   title: string;
-  eventDate: string;
+  start: Date;
+  end: Date;
   color: string;
-  isAllDay: boolean;
-  startTime?: string;
-  endTime?: string;
+  description?: string;
 }
 
 interface CalendarProps {
@@ -46,9 +45,12 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const getEventsForDate = (date: Date) => {
     const dateString = format(date, "yyyy-MM-dd");
-    return events.filter(
-      (event) => format(new Date(event.eventDate), "yyyy-MM-dd") === dateString
-    );
+    return events.filter((event) => {
+      // Check if the date falls between start and end dates (inclusive)
+      const eventStart = format(event.start, "yyyy-MM-dd");
+      const eventEnd = format(event.end, "yyyy-MM-dd");
+      return dateString >= eventStart && dateString <= eventEnd;
+    });
   };
 
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -113,25 +115,16 @@ const Calendar: React.FC<CalendarProps> = ({
                       color: event.color,
                       borderLeft: `3px solid ${event.color}`,
                     }}
-                    title={`${event.title} ${
-                      event.isAllDay
-                        ? "(All Day)"
-                        : event.startTime
-                        ? `at ${event.startTime}`
-                        : ""
-                    }`}
+                    title={`${event.title} (${format(event.start, "MMM d")} - ${format(event.end, "MMM d")})`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onEventClick?.(event);
                     }}
                   >
                     <div className='font-medium truncate'>{event.title}</div>
-                    {!event.isAllDay && event.startTime && (
-                      <div className='text-xs opacity-75'>
-                        {format(
-                          new Date(`2000-01-01T${event.startTime}`),
-                          "h:mm a"
-                        )}
+                    {event.description && (
+                      <div className='text-xs opacity-75 truncate'>
+                        {event.description}
                       </div>
                     )}
                   </div>

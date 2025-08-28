@@ -7,7 +7,6 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormField,
@@ -51,7 +50,7 @@ export default function InvoiceDiscountPage() {
     : params?.reference;
 
   const decodedReference = reference ? decodeURIComponent(reference) : "";
-  console.log(decodedReference, "decodedReference");
+  // console.log(decodedReference, "decodedReference");
   // Fetch invoice by code
   const {
     data: invoiceData,
@@ -104,7 +103,7 @@ export default function InvoiceDiscountPage() {
       await createDiscount({
         invoiceId: invoice.id,
         amount: values.discountAmount,
-        dueDate: values.dueDate,
+        dueDate: new Date(values.dueDate).toISOString(),
         reason: `Discount applied to invoice ${invoice.reference}`,
       }).unwrap();
 
@@ -177,7 +176,7 @@ export default function InvoiceDiscountPage() {
                   {invoice.reference}
                 </p>
               </div>
-              <div>
+              {/* <div>
                 <p className='text-sm font-medium text-gray-500'>Status</p>
                 <Badge
                   variant={invoice.status === "paid" ? "default" : "secondary"}
@@ -185,7 +184,7 @@ export default function InvoiceDiscountPage() {
                 >
                   {invoice.status}
                 </Badge>
-              </div>
+              </div> */}
             </div>
 
             <div className='grid grid-cols-2 gap-4'>
@@ -213,15 +212,15 @@ export default function InvoiceDiscountPage() {
                 <p className='text-sm font-medium text-gray-500'>Issued Date</p>
                 <p className='text-sm flex items-center'>
                   <Calendar className='w-4 h-4 mr-1' />
-                  {formatDate(invoice.issuedDate)}
+                  {formatDate(invoice.createdAt)}
                 </p>
               </div>
               <div>
                 <p className='text-sm font-medium text-gray-500'>Created By</p>
                 <p className='text-sm flex items-center'>
                   <User className='w-4 h-4 mr-1' />
-                  {invoice.createdByUser?.firstName}{" "}
-                  {invoice.createdByUser?.lastName}
+                  {invoice.createdByUser?.firstname}{" "}
+                  {invoice.createdByUser?.lastname}
                 </p>
               </div>
             </div>
@@ -247,29 +246,42 @@ export default function InvoiceDiscountPage() {
                   <div className='bg-blue-50 p-3 rounded-lg'>
                     <p className='font-medium flex items-center'>
                       <GraduationCap className='w-4 h-4 mr-2' />
-                      {invoice.student?.firstName} {invoice.student?.lastName}
+                      {
+                        invoice.studentInvoiceAssignments[0]?.student?.user
+                          ?.firstname
+                      }{" "}
+                      {
+                        invoice.studentInvoiceAssignments[0]?.student?.user
+                          ?.lastname
+                      }
                     </p>
                     <p className='text-sm text-gray-600'>
-                      {invoice.class?.name} - {invoice.classArm?.name}
+                      {invoice?.classes[0]?.class?.name} -{" "}
+                      {invoice.classArm?.name}
                     </p>
-                    {invoice.student?.regNumber && (
+                    {invoice.studentInvoiceAssignments[0]?.student
+                      ?.studentRegNo && (
                       <p className='text-xs text-gray-500'>
-                        Reg: {invoice.student.regNumber}
+                        Reg:{" "}
+                        {
+                          invoice.studentInvoiceAssignments[0]?.student
+                            ?.studentRegNo
+                        }
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className='space-y-2'>
+                <div className='gap-2 grid grid-cols-4'>
                   {invoice.classes?.map((cls: any, index: number) => (
-                    <div key={index} className='bg-green-50 p-3 rounded-lg'>
-                      <p className='font-medium flex items-center'>
+                    <div key={index} className='bg-green-50 p-1 rounded-lg'>
+                      <p className='font-medium text-xs flex items-center'>
                         <GraduationCap className='w-4 h-4 mr-2' />
-                        {cls.name}
+                        {cls.class.name}
                       </p>
-                      <p className='text-sm text-gray-600'>
-                        {cls.category} Class
-                      </p>
+                      {/* <p className='text-sm text-gray-600'>
+                        {cls.class.classCategory} Class
+                      </p> */}
                     </div>
                   ))}
                 </div>
@@ -329,7 +341,7 @@ export default function InvoiceDiscountPage() {
                   name='dueDate'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>New Due Date</FormLabel>
+                      <FormLabel>Due Date</FormLabel>
                       <FormControl>
                         <Input
                           type='date'

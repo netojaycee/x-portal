@@ -8,7 +8,7 @@ interface ActivityEntryProps {
   icon: string;
   title: string;
   description: string;
-  url: string;
+  url?: string;
 }
 
 const ActivityEntry = ({
