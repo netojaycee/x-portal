@@ -18,6 +18,8 @@ export default function QuestionTab() {
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const { data: subjects } = useGetSubjectQuery({});
 
+  console.log(debouncedSearch)
+
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between gap-2'>

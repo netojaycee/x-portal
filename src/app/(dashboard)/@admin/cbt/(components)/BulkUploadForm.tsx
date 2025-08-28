@@ -18,6 +18,8 @@ export default function BulkUploadForm({ onClose }: { onClose: () => void }) {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
 
+  console.log(onClose())
+
   const { data: classesData, isLoading: classesLoading } = useGetClassesQuery(
     {}
   );
