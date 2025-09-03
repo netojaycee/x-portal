@@ -100,7 +100,7 @@ export const adminMenu = [
         title: 'Lesson Plan',
         icon: BookOpen,
         url: '/lesson-plan',
-        isActive: false,
+        isActive: true,
         requiredPermission: 'lesson-plan:read',
     },
     {
