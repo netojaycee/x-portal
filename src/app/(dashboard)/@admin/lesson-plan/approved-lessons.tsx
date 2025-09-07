@@ -12,6 +12,9 @@ interface ApprovedLessonsProps {
 }
 
 export function ApprovedLessons({ onCreatePlan }: ApprovedLessonsProps) {
+
+  if (onCreatePlan) console.log(onCreatePlan())
+    
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("all")

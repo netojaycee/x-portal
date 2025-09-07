@@ -90,7 +90,7 @@ export function MyLessonPlans() {
             </tr>
           </thead>
           <tbody>
-            {lessons.map((lesson, i) => (
+            {lessons.map((lesson) => (
               <tr key={lesson.id} className="border-t">
                 <td className="p-4">1.</td>
                 <td className="p-4">{lesson.subject}</td>
