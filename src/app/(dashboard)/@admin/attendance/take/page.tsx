@@ -38,6 +38,7 @@ import {
   useMarkAttendanceMutation,
 } from "@/redux/api";
 import { AttendanceStatus, AttendanceRecord } from "@/lib/types/attendance";
+import { toast } from "sonner";
 
 export default function TakeAttendance() {
   const router = useRouter();
@@ -69,32 +70,27 @@ export default function TakeAttendance() {
       term,
       classId,
       classArmId,
+      date: dateParam || date.toISOString(),
     },
-    { skip: !sessionId || !term || !classId || !classArmId }
+    { skip: !sessionId || !term || !classId || !classArmId || !date }
   );
-  // console.log("studentsData", studentsData);
+  console.log("studentsData", studentsData);
   // Mark attendance mutation
   const [markAttendance, { isLoading: isSubmitting }] =
     useMarkAttendanceMutation();
 
   // Set default attendance status for all students (present)
   useEffect(() => {
-    if (studentsData?.data?.students) {
+    if (studentsData?.length) {
       const initialAttendance: Record<string, AttendanceRecord> = {};
 
-      // If there's existing attendance data, use that
-      if (studentsData.data.existingAttendance?.length) {
-        studentsData.data.existingAttendance.forEach((record: any) => {
-          initialAttendance[record.studentId] = {
-            studentId: record.studentId,
-            status: record.status,
+      studentsData.forEach((student: any) => {
+        if (student.attendanceRecords && student.attendanceRecords.length > 0) {
+          initialAttendance[student.id] = {
+            studentId: student.id,
+            status: student.attendanceRecords[0].status,
           };
-        });
-      }
-
-      // Set default status for students without existing records
-      studentsData.data.students.forEach((student: any) => {
-        if (!initialAttendance[student.id]) {
+        } else {
           initialAttendance[student.id] = {
             studentId: student.id,
             status: AttendanceStatus.PRESENT,
@@ -107,14 +103,16 @@ export default function TakeAttendance() {
   }, [studentsData]);
 
   // Filter students based on search term
-  const filteredStudents = studentsData?.data?.students
-    ? studentsData.data.students.filter(
+  const filteredStudents = studentsData
+    ? studentsData.filter(
         (student: any) =>
-          student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.registrationNumber
+          student.user.firstname
             .toLowerCase()
-            .includes(searchTerm.toLowerCase())
+            .includes(searchTerm.toLowerCase()) ||
+          student.user.lastname
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          student.studentRegNo.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
 
@@ -131,10 +129,10 @@ export default function TakeAttendance() {
 
   // Bulk update all students' status
   const markAllAs = (status: AttendanceStatus) => {
-    if (!studentsData?.data?.students) return;
+    if (!studentsData) return;
 
     const updatedRecords: Record<string, AttendanceRecord> = {};
-    studentsData.data.students.forEach((student: any) => {
+    studentsData.forEach((student: any) => {
       updatedRecords[student.id] = {
         studentId: student.id,
         status,
@@ -144,18 +142,31 @@ export default function TakeAttendance() {
     setAttendanceRecords(updatedRecords);
   };
 
+  // Check if attendance already taken for any student
+  const attendanceAlreadyTaken = studentsData?.some((student: any) => student.attendanceRecords && student.attendanceRecords.length > 0);
+
   // Submit attendance records
   const handleSubmit = async () => {
+    if (attendanceAlreadyTaken) {
+      toast.error("Attendance already taken for this class today.");
+      return;
+    }
     try {
-      const credentials = {
+      const studentsPayload = filteredStudents.map((student: any) => ({
+        studentId: student.id,
+        attendanceStatus: attendanceRecords[student.id]?.status || AttendanceStatus.PRESENT
+      }));
+      const payload = {
         sessionId,
-        term,
+        termId: term,
         classId,
         classArmId,
         date: dateParam || date.toISOString(),
-        attendanceRecords: Object.values(attendanceRecords),
+        students: studentsPayload,
       };
-      await markAttendance(credentials).unwrap();
+
+      console.log("Submitting attendance:", payload);
+      await markAttendance(payload).unwrap();
 
       setShowSuccessDialog(true);
     } catch (error) {
@@ -176,13 +187,13 @@ export default function TakeAttendance() {
 
   if (isError) {
     return (
-      <div className='p-6'>
-        <Button onClick={goBack} className='mb-6' variant='outline'>
-          <ArrowLeft className='h-4 w-4 mr-2' /> Back
+      <div className="p-6">
+        <Button onClick={goBack} className="mb-6" variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
-        <Card className='w-full'>
+        <Card className="w-full">
           <CardHeader>
-            <CardTitle className='text-red-500'>Error</CardTitle>
+            <CardTitle className="text-red-500">Error</CardTitle>
           </CardHeader>
           <CardContent>
             <p>Failed to load students. Please try again later.</p>
@@ -193,10 +204,10 @@ export default function TakeAttendance() {
   }
 
   return (
-    <div className='p-6 space-y-6'>
-      <div className='flex justify-between items-center'>
-        <Button onClick={goBack} variant='outline'>
-          <ArrowLeft className='h-4 w-4 mr-2' /> Back to Attendance
+    <div className="p-3 space-y-6">
+      <div className="flex justify-between items-center">
+        <Button onClick={goBack} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Attendance
         </Button>
       </div>
 
@@ -211,62 +222,65 @@ export default function TakeAttendance() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className='flex justify-center items-center py-12'>
-              <Loader2 className='h-8 w-8 animate-spin text-primary' />
-              <span className='ml-2 text-lg'>Loading students...</span>
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2 text-lg">Loading students...</span>
             </div>
           ) : (
             <>
-              <div className='flex justify-between mb-6'>
-                <div className='relative w-64'>
+              <div className="flex justify-between mb-6">
+                <div className="relative w-40 mr-2">
                   <Input
-                    placeholder='Search students...'
+                    placeholder="Search students..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className='pl-10'
+                    className="pl-10"
                   />
-                  <Search className='absolute top-1/2 left-3 w-4 h-4 transform -translate-y-1/2 text-gray-400' />
+                  <Search className="absolute top-1/2 left-3 w-4 h-4 transform -translate-y-1/2 text-gray-400" />
                 </div>
 
-                <div className='flex space-x-2'>
+                <div className="flex space-x-2">
                   <Button
-                    variant='outline'
+                    variant="outline"
                     onClick={() => markAllAs(AttendanceStatus.PRESENT)}
-                    className='border-green-500 text-green-600'
+                    className="border-green-500 text-green-600 text-xs"
+                    disabled={attendanceAlreadyTaken}
                   >
-                    <Check className='h-4 w-4 mr-2' /> Mark All Present
+                    <Check className="h-4 w-4 mr-2" /> Mark All Present
                   </Button>
                   <Button
-                    variant='outline'
+                    variant="outline"
                     onClick={() => markAllAs(AttendanceStatus.LATE)}
-                    className='border-amber-500 text-amber-600'
+                    className="border-amber-500 text-amber-600 text-xs"
+                    disabled={attendanceAlreadyTaken}
                   >
-                    <Clock className='h-4 w-4 mr-2' /> Mark All Late
+                    <Clock className="h-4 w-4 mr-2" /> Mark All Late
                   </Button>
                   <Button
-                    variant='outline'
+                    variant="outline"
                     onClick={() => markAllAs(AttendanceStatus.ABSENT)}
-                    className='border-red-500 text-red-600'
+                    className="border-red-500 text-red-600 text-xs"
+                    disabled={attendanceAlreadyTaken}
                   >
-                    <X className='h-4 w-4 mr-2' /> Mark All Absent
+                    <X className="h-4 w-4 mr-2" /> Mark All Absent
                   </Button>
                 </div>
               </div>
 
               {filteredStudents.length > 0 ? (
                 <Table>
-                  <TableHeader className='bg-[#E1E8F8]'>
+                  <TableHeader className="bg-[#E1E8F8]">
                     <TableRow>
-                      <TableHead className='w-12 font-semibold text-gray-700'>
+                      <TableHead className="w-12 font-semibold text-gray-700">
                         S/N
                       </TableHead>
-                      <TableHead className='font-semibold text-gray-700'>
+                      <TableHead className="font-semibold text-gray-700">
                         Student
                       </TableHead>
-                      <TableHead className='font-semibold text-gray-700'>
+                      <TableHead className="font-semibold text-gray-700">
                         Registration No.
                       </TableHead>
-                      <TableHead className='font-semibold text-gray-700'>
+                      <TableHead className="font-semibold text-gray-700">
                         Attendance Status
                       </TableHead>
                     </TableRow>
@@ -274,62 +288,60 @@ export default function TakeAttendance() {
                   <TableBody>
                     {filteredStudents.map((student: any, index: number) => (
                       <TableRow key={student.id}>
-                        <TableCell className='font-medium'>
+                        <TableCell className="font-medium">
                           {index + 1}
                         </TableCell>
                         <TableCell>
-                          {student.lastName}, {student.firstName}{" "}
-                          {student.middleName || ""}
+                          {student.user.lastname} {student.user.firstname}{" "}
                         </TableCell>
-                        <TableCell>{student.registrationNumber}</TableCell>
+                        <TableCell>{student.studentRegNo}</TableCell>
                         <TableCell>
                           <RadioGroup
-                            className='flex flex-row space-x-4'
-                            value={
-                              attendanceRecords[student.id]?.status ||
-                              AttendanceStatus.PRESENT
-                            }
-                            onValueChange={(value: AttendanceStatus) =>
-                              handleStatusChange(student.id, value)
-                            }
+                            className="flex flex-row space-x-4"
+                            value={attendanceRecords[student.id]?.status || AttendanceStatus.PRESENT}
+                            onValueChange={(value: AttendanceStatus) => handleStatusChange(student.id, value)}
+                            disabled={student.attendanceRecords && student.attendanceRecords.length > 0}
                           >
-                            <div className='flex items-center space-x-1'>
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value={AttendanceStatus.PRESENT}
                                 id={`present-${student.id}`}
-                                className='text-green-600 border-green-600 focus:ring-green-600'
+                                className="text-green-600 border-green-600 focus:ring-green-600"
+                                disabled={student.attendanceRecords && student.attendanceRecords.length > 0}
                               />
                               <Label
                                 htmlFor={`present-${student.id}`}
-                                className='text-green-600'
+                                className="text-green-600"
                               >
                                 Present
                               </Label>
                             </div>
 
-                            <div className='flex items-center space-x-1'>
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value={AttendanceStatus.LATE}
                                 id={`late-${student.id}`}
-                                className='text-amber-500 border-amber-500 focus:ring-amber-500'
+                                className="text-amber-500 border-amber-500 focus:ring-amber-500"
+                                disabled={student.attendanceRecords && student.attendanceRecords.length > 0}
                               />
                               <Label
                                 htmlFor={`late-${student.id}`}
-                                className='text-amber-500'
+                                className="text-amber-500"
                               >
                                 Late
                               </Label>
                             </div>
 
-                            <div className='flex items-center space-x-1'>
+                            <div className="flex items-center space-x-1">
                               <RadioGroupItem
                                 value={AttendanceStatus.ABSENT}
                                 id={`absent-${student.id}`}
-                                className='text-red-600 border-red-600 focus:ring-red-600'
+                                className="text-red-600 border-red-600 focus:ring-red-600"
+                                disabled={student.attendanceRecords && student.attendanceRecords.length > 0}
                               />
                               <Label
                                 htmlFor={`absent-${student.id}`}
-                                className='text-red-600'
+                                className="text-red-600"
                               >
                                 Absent
                               </Label>
@@ -341,7 +353,7 @@ export default function TakeAttendance() {
                   </TableBody>
                 </Table>
               ) : (
-                <div className='py-8'>
+                <div className="py-8">
                   <NoData
                     text={
                       searchTerm
@@ -354,21 +366,17 @@ export default function TakeAttendance() {
             </>
           )}
         </CardContent>
-        <CardFooter className='flex justify-end'>
+        <CardFooter className="flex justify-end">
           <Button
             onClick={handleSubmit}
-            disabled={
-              isSubmitting || isLoading || filteredStudents.length === 0
-            }
-            className='w-40'
+            disabled={isSubmitting || isLoading || filteredStudents.length === 0}
+            className="w-40"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className='h-4 w-4 mr-2 animate-spin' /> Saving...
-              </>
-            ) : (
-              "Save Attendance"
-            )}
+            {attendanceAlreadyTaken
+              ? "Attendance Taken"
+              : isSubmitting
+              ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>)
+              : "Save Attendance"}
           </Button>
         </CardFooter>
       </Card>

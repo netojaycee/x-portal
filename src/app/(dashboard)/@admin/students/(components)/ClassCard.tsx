@@ -243,8 +243,8 @@ export default function ClassCard({ classData, type }: ClassCardProps) {
         <div className='flex justify-end mt-3'>
             <Link
             href={type === "class" 
-              ? `/class/${classData.sessionId}/${classData.id}` 
-              : `/class/${classData.sessionId}/${classData.classId}/${classData.id}`}
+              ? `/students/class/${classData.sessionId}/${classData.id}` 
+              : `/students/class/${classData.sessionId}/${classData.classId}/${classData.id}`}
             className='text-[#4A6CF7] hover:text-[#232E3E] text-base font-medium flex items-center gap-1'
             onClick={(e) => e.stopPropagation()} // Prevent parent click
             tabIndex={-1}

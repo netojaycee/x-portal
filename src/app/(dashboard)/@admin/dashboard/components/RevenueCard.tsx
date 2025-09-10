@@ -16,7 +16,7 @@ const IconContainer = ({ src, alt }: IconContainerProps) => {
         alt={alt}
         width={48}
         height={48}
-        className='object-contain'
+        className='object-contain w-12 h-12'
       />
     </div>
   );
@@ -31,11 +31,11 @@ interface RevenueCardProps {
 export default function RevenueCard(revenue: RevenueCardProps) {
   const { title, icon, amount } = revenue;
   return (
-    <div className='bg-[#FFF8E1] border border-gray-200 rounded-lg p-4 flex items-center space-x-4 max-w-md'>
+    <div className='bg-[#FFF8E1] border border-gray-200 rounded-lg p-4 flex items-center space-x-4'>
       <IconContainer src={icon} alt={`${title} icon`} />
       <div>
         <h3 className='text-sm font-medium text-gray-600'>{title}</h3>
-        <p className='text-2xl font-bold text-gray-900'>
+        <p className='lg:text-2xl font-bold text-gray-900'>
           {new Intl.NumberFormat("en-NG", {
             style: "currency",
             currency: "NGN",

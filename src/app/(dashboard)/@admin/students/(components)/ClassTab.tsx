@@ -112,6 +112,15 @@ export default function ClassTab() {
     return classesData.data;
   };
 
+  
+   if (classesLoading || !classesData) {
+     return (
+       <div className='py-10'>
+         <LoaderComponent />
+       </div>
+     );
+   }
+
   return (
     <div className='space-y-4'>
       {/* Session Selector */}
@@ -151,7 +160,7 @@ export default function ClassTab() {
       </div>
 
       {/* Loading State */}
-      {classesLoading && (
+      {classesLoading  && (
         <div className='py-10'>
           <LoaderComponent />
         </div>
@@ -169,7 +178,7 @@ export default function ClassTab() {
       )}
 
       {/* Empty State */}
-      {!classesLoading &&
+      {!classesLoading && !sessionsLoading &&
         !classesError &&
         (!classesData?.data?.classes ||
           classesData.data.classes.length === 0) && (
@@ -184,7 +193,7 @@ export default function ClassTab() {
         )}
 
       {/* Classes Grid */}
-      {!classesLoading && hasClassData() && (
+      {!classesLoading && !sessionsLoading && hasClassData() && (
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {getClassesData().classes.map((classItem: ClassData) => {
             // Use the stats directly from the class object

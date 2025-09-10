@@ -274,7 +274,7 @@ export default function StudentForm({
   }
 
   return (
-    <div className='w-full max-w-md'>
+   <div className='w-full max-w-md'>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -522,18 +522,18 @@ export default function StudentForm({
                             const search = parentSearch.trim().toLowerCase();
                             if (!search) return true;
                             return (
-                              parent.user.firstname
+                              parent?.firstname
                                 ?.toLowerCase()
                                 .includes(search) ||
-                              parent.user.lastname
+                              parent?.lastname
                                 ?.toLowerCase()
                                 .includes(search) ||
-                              parent.user.email?.toLowerCase().includes(search)
+                              parent?.email?.toLowerCase().includes(search)
                             );
                           })
                           .map((parent: any) => (
                             <SelectItem key={parent.id} value={parent.id}>
-                              {parent.user.firstname} {parent.user.lastname}
+                              {parent?.firstname} {parent?.lastname}
                             </SelectItem>
                           ))
                       ) : (

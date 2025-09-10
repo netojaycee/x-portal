@@ -1,2083 +1,2327 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import type {
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from "@reduxjs/toolkit/query";
 // import { clearUserInfo, setUserInfo } from "./slices/userSlice";
 // import { AuthResponse, GetUsersQuery, GetUsersResponse, Permission, Subrole, UpdateUserInput, User, SubscriptionPackage, CurrentSubscription, CreatePaymentInput, PaymentResponse, PaymentVerificationResponse, SubscriptionsResponse } from "@/lib/types";
-import { AuthResponse, GetUsersQuery, GetUsersResponse, Permission, Subrole, UpdateUserInput, User } from "@/lib/types";
-import { LoginCredentials, loginSchema, RegisterCredentials, registerSchema } from "@/lib/schema";
+import {
+  AuthResponse,
+  GetUsersQuery,
+  GetUsersResponse,
+  Permission,
+  Subrole,
+  UpdateUserInput,
+  User,
+} from "@/lib/types";
+import {
+  LoginCredentials,
+  loginSchema,
+  RegisterCredentials,
+  registerSchema,
+} from "@/lib/schema";
 import { setUser } from "./slices/userSlice";
 import { ENUM_ROLE } from "@/lib/types/enums";
-import { CreateSchoolInput, GetSchoolsQuery, GetSchoolsResponse, School, UpdateSchoolInput } from "@/lib/types/school";
+import {
+  CreateSchoolInput,
+  GetSchoolsQuery,
+  GetSchoolsResponse,
+  School,
+  UpdateSchoolInput,
+} from "@/lib/types/school";
 // import { setCookie } from "@/lib/cookieUtils";
 
-
 const BASE_URL =
-    process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_API_URL || "https://api.x-portal.bitekitchen.com.ng"
-        : `http://localhost:${process.env.PORT || 3900}`;
+  process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_API_URL ||
+      "https://api.x-portal.bitekitchen.com.ng"
+    : `http://localhost:${process.env.PORT || 3900}`;
 
 // Base query with TypeScript annotations
-const baseQuery: BaseQueryFn<FetchArgs, unknown, FetchBaseQueryError> = fetchBaseQuery({
+const baseQuery: BaseQueryFn<FetchArgs, unknown, FetchBaseQueryError> =
+  fetchBaseQuery({
     baseUrl: `${BASE_URL}`,
     // baseUrl: "https://x-portal-server-x2uk.onrender.com",
     // baseUrl: "http://localhost:3000",
-    credentials: 'include',
+    credentials: "include",
     prepareHeaders: (headers: Headers) => {
-        headers.set("Content-Type", "application/json");
-        return headers;
+      headers.set("Content-Type", "application/json");
+      return headers;
     },
-});
+  });
 
 // Define the API
 export const api = createApi({
-    baseQuery,
-    tagTypes: [
-        "User",
-        "Subscriptions",
-        "Schools",
-        "Users",
-        "Subroles",
-        "PermissionsSchool",
-        "RolePermissions",
-        "Logs",
-        "Sessions",
-        "Classes",
-        "ClassArms",
-        "Subjects",
-        "Admissions",
-        "Students",
-        "SessionClassClassArms",
-        "MarkingSchemes",
-        "GradingSystem",
-        "AssessmentSchemes",
-        "ReportSettings",
-        "Payments",
-        "Configuration",
-        "ClassCategory",
-        "Terms",
-        "SessionTerms",
-        "SessionClass",
-        "ClassClassArmSubject",
-        "Scores",
-        "SessionsPublic",
-        "ClassesPublic",
-        "Results",
-        "MarkingSchemesClass",
-        "BroadsheetResults",
-        "Transcript",
-        "PromotionStudents",
-        "SessionClassDetails",
-        "SessionClassArmDetails",
-        "Student",
-        "ClassClassArmTeacher",
-        "Teachers",
-        "AttendanceRecords",
-        "Staff",
-        "Parents",
-        "Invoices",
-        "Discounts",
-        "InvoiceId",
-        "InvoiceCode",
-        "Events",
-        "StudentsByInvoice",
-        "PaymentsDashboardSummary",
-
-    ],
-    endpoints: (builder) => ({
-        // Register Endpoint
-        register: builder.mutation<AuthResponse, RegisterCredentials>({
-            query: (credentials) => ({
-                url: "/auth/register",
-                method: "POST",
-                body: registerSchema.parse(credentials),
-            }),
-            onQueryStarted: async (_arg, { queryFulfilled }) => {
-                try {
-                    await queryFulfilled;
-                    // setCookie("token", data.token, 24 * 60 * 60); // 1 day
-                } catch (error) {
-                    console.error("Register failed:", error);
-                }
-            },
-        }),
-
-        // Login Endpoint
-        login: builder.mutation<AuthResponse, LoginCredentials>({
-            query: (credentials) => ({
-                url: "/auth/login",
-                method: "POST",
-                body: loginSchema.parse(credentials),
-            }),
-            onQueryStarted: async (arg, { dispatch, queryFulfilled }) => {
-                try {
-                    const { data } = await queryFulfilled;
-                    dispatch(setUser(data.user));
-                } catch (error) {
-                    console.error("Login failed:", error);
-                }
-            },
-        }),
-
-        getProfile: builder.query<User, void>({
-            query: () => ({ url: "/auth/profile" }),
-            providesTags: (result) =>
-                result ? [{ type: 'User', id: result.id }, 'User'] : ['User'],
-            onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
-                try {
-                    const { data } = await queryFulfilled;
-
-                    dispatch(setUser(data));
-
-                } catch (error) {
-                    console.error("Get user failed:", error);
-                }
-            },
-        }),
-
-        setViewAs: builder.mutation<{ view_as: string; schoolId: string; schoolSlug: string },
-            { view_as: ENUM_ROLE; schoolId: string; schoolSlug: string }>({
-                query: ({ view_as, schoolId, schoolSlug }) => ({
-                    url: '/auth/set-view-as',
-                    method: 'PATCH',
-                    body: { view_as, schoolId, schoolSlug },
-                }),
-                invalidatesTags: ['User'], // Refetch /profile
-            }),
-        logout: builder.mutation<{ message: string }, void>({
-            query: () => ({
-                url: '/auth/logout',
-                method: 'POST',
-            }),
-        }),
-
-        getSchools: builder.query<GetSchoolsResponse, GetSchoolsQuery>({
-            query: ({ search, page = 1, limit = 5, subscriptionId }) => {
-                const params = new URLSearchParams();
-                if (search) params.append('search', search.toLowerCase());
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (subscriptionId) params.append('subscriptionId', subscriptionId);
-                return {
-                    url: `/schools/list?${params.toString()}`,
-                };
-            },
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.schools.map(({ id }) => ({ type: 'Schools' as const, id })),
-                        { type: 'Schools', id: 'LIST' },
-                    ]
-                    : [{ type: 'Schools', id: 'LIST' }],
-        }),
-
-        getSchoolById: builder.query<any, string>({
-            query: (id) => { return { url: `/schools/${id}` } },
-            providesTags: (result) => (result ? [{ type: 'Schools', id: result.id }] : []),
-        }),
-
-        createSchool: builder.mutation<School, CreateSchoolInput>({
-            query: (input) => ({
-                url: '/schools',
-                method: 'POST',
-                body: input,
-            }),
-            invalidatesTags: [{ type: 'Schools', id: 'LIST' }],
-        }),
-        updateSchool: builder.mutation<School, { id: string; input: UpdateSchoolInput }>({
-            query: ({ id, input }) => ({
-                url: `/schools/${id}`,
-                method: 'PATCH',
-                body: input,
-            }),
-            invalidatesTags: (result) => (result ? [{ type: 'Schools', id: result.id }, { type: 'Schools', id: 'LIST' }] : []),
-        }),
-        deleteSchool: builder.mutation<{ message: string }, string>({
-            query: (id) => ({
-                url: `/schools/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, id) => [{ type: 'Schools', id }, { type: 'Schools', id: 'LIST' }],
-        }),
-        toggleSchoolActive: builder.mutation<School, string>({
-            query: (id) => ({
-                url: `/schools/${id}/toggle-active`,
-                method: 'PATCH',
-            }),
-            invalidatesTags: (result) => (result ? [{ type: 'Schools', id: result.id }, { type: 'Schools', id: 'LIST' }] : []),
-        }),
-
-        getUsers: builder.query<GetUsersResponse, GetUsersQuery>({
-            query: ({ q, page = 1, limit = 5, subRoleFlag = "", schoolId = "", gender }) => {
-                const params = new URLSearchParams();
-                if (q) params.append('q', q.toLowerCase());
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (subRoleFlag) params.append('subRoleFlag', subRoleFlag);
-                if (schoolId) params.append('schoolId', schoolId);
-                if (gender) params.append('gender', gender);
-                return {
-                    url: `/users/get/all-users?${params.toString()}`,
-                };
-            },
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.users.map(({ id }) => ({ type: 'Users' as const, id })),
-                        { type: 'Users', id: 'LIST' },
-                    ]
-                    : [{ type: 'Users', id: 'LIST' }],
-        }),
-
-
-
-        getUserById: builder.query<any, string>({
-            query: (id) => { return { url: `/users/id/${id}` } },
-            providesTags: (result) => (result ? [{ type: 'User', id: result.id }] : []),
-        }),
-        getStudentById: builder.query<any, string>({
-            query: (id) => { return { url: `/users/student/${id}` } },
-            providesTags: (result) => (result ? [{ type: 'Student', id: result.id }] : []),
-        }),
-        createStudent: builder.mutation({
-            query: (body) => ({
-                url: "/users/student",
-                method: "POST",
-                body,
-            }),
-            invalidatesTags: [{ type: 'Students', id: 'LIST' }],
-        }),
-        updateStudent: builder.mutation({
-            query: ({ id, ...body }) => ({
-                url: `/users/student/${id}`,
-                method: "PATCH",
-                body,
-            }),
-            invalidatesTags: (result) => (result ? [{ type: 'Student', id: result.id }, { type: 'Students', id: 'LIST' }] : []),
-        }),
-        deleteStudent: builder.mutation({
-            query: (id) => ({
-                url: `/users/student/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: (result, error, id) => [{ type: 'Student', id }, { type: 'Students', id: 'LIST' }],
-        }),
-        // Get students
-        getStudents: builder.query({
-            query: ({
-                sessionId,
-                classId,
-                classArmId,
-                q = "",
-                page = 1,
-                limit = 10,
-                gender = false,
-                alumni = false
-            }: {
-                sessionId?: string;
-                classId?: string;
-                classArmId?: string;
-                q?: string;
-                page?: number;
-                limit?: number;
-                gender?: boolean;
-                alumni?: boolean;
-            }) => {
-                const params = new URLSearchParams();
-                if (sessionId) params.append("sessionId", sessionId);
-                if (classId) params.append("classId", classId);
-                if (classArmId) params.append("classArmId", classArmId);
-                if (page) params.append("page", page.toString());
-                if (limit) params.append("limit", limit.toString());
-                if (q) params.append("q", q.toLowerCase());
-                if (gender) params.append("gender", gender.toString());
-                if (alumni) params.append("alumni", alumni.toString());
-                return {
-                    url: `/classes/all/get-students?${params.toString()}`,
-                    method: "GET",
-                };
-            },
-            providesTags: ["Students"],
-        }),
-
-
-        createUser: builder.mutation<User, any>({
-            query: (input) => ({
-                url: '/users',
-                method: 'POST',
-                body: input,
-            }),
-            invalidatesTags: [{ type: 'Users', id: 'LIST' }],
-        }),
-        updateUser: builder.mutation<User, { id: string; input: UpdateUserInput }>({
-            query: ({ id, input }) => ({
-                url: `/users/${id}`,
-                method: 'PATCH',
-                body: input,
-            }),
-            invalidatesTags: (result) => (result ? [{ type: 'User', id: result.id }, { type: 'User', id: 'LIST' }] : []),
-        }),
-        deleteUser: builder.mutation<{ message: string }, string>({
-            query: (id) => ({
-                url: `/users/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, id) => [{ type: 'User', id }, { type: 'User', id: 'LIST' }],
-        }),
-
-        createSubrole: builder.mutation<Subrole, any>({
-            query: (input) => ({
-                url: '/sub-roles',
-                method: 'POST',
-                body: input,
-            }),
-            invalidatesTags: [{ type: 'Subroles', id: 'LIST' }],
-        }),
-        updateSubrole: builder.mutation<Subrole, { id: string; input: any }>({
-            query: ({ id, input }) => ({
-                url: `/sub-roles/${id}`,
-                method: 'PATCH',
-                body: input,
-            }),
-            invalidatesTags: (result) => (result ? [{ type: 'Subroles', id: result.id }, { type: 'Subroles', id: 'LIST' }] : []),
-        }),
-        deleteSubrole: builder.mutation<{ message: string }, string>({
-            query: (id) => ({
-                url: `/sub-roles/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, id) => [{ type: 'Subroles', id }, { type: 'Subroles', id: 'LIST' }],
-        }),
-        getSubroles: builder.query({
-            query: ({ q }) => {
-                const params = new URLSearchParams();
-                if (q) params.append('q', q.toLowerCase());
-                // params.append('page', page.toString());
-                // params.append('limit', limit.toString());
-                return {
-                    url: `/sub-roles?${params.toString()}`,
-                };
-            },
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.data.map(({ id }: { id: string }) => ({ type: 'Subroles' as const, id })),
-                        { type: 'Subroles', id: 'LIST' },
-                    ]
-                    : [{ type: 'Subroles', id: 'LIST' }],
-        }),
-
-        getSubroleById: builder.query<Subrole, string>({
-            query: (id) => { return { url: `/sub-roles/${id}` } },
-            providesTags: (result) => (result ? [{ type: 'Subroles', id: result.id }] : []),
-        }),
-        getPermissionsSchool: builder.query<Permission[], void>({
-            query: () => { return { url: '/permissions/scope/school' } },
-            providesTags: ['PermissionsSchool'],
-        }),
-        getRolePermissions: builder.query<Permission[], string>({
-            query: (roleId) => { return { url: `/permissions/sub-role/${roleId}` } },
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.map(({ id }) => ({ type: 'RolePermissions' as const, id })),
-                        { type: 'RolePermissions', id: 'LIST' },
-                    ]
-                    : [{ type: 'RolePermissions', id: 'LIST' }],
-        }),
-        updateRolePermissions: builder.mutation<void, { roleId: string; permissionIds: string[] }>({
-            query: ({ roleId, permissionIds }) => ({
-                url: `/permissions/sub-role/${roleId}`,
-                method: 'PATCH',
-                body: { permissionIds },
-            }),
-            invalidatesTags: (result, error, { roleId }) => [
-                { type: 'RolePermissions', id: 'LIST' },
-                { type: 'RolePermissions', id: roleId },
-                { type: 'Subroles', id: 'LIST' },
-                { type: 'Subroles', id: roleId },
-            ],
-        }),
-
-        // getLogs
-        getLogs: builder.query<any, { page?: number; limit?: number }>({
-            query: ({ page = 1, limit = 20 }) => ({
-                url: "/logs",
-                params: { page, limit },
-            }),
-            providesTags: ["Logs"],
-        }),
-        assignSubscription: builder.mutation<void, { schoolId: string; subscriptionId: string }>({
-            query: ({ schoolId, subscriptionId }) => ({
-                url: '/subscription/assign-subscription-to-school',
-                method: 'POST',
-                body: { schoolId, subscriptionId },
-            }),
-            invalidatesTags: ['Schools'], // Refresh school list after assignment
-        }),
-
-        // createSubscription: builder.mutation({
-        //     query: (subscription) => ({
-        //         url: "/subscription/create",
-        //         method: "POST",
-        //         body: subscription,
-        //     }),
-        //     invalidatesTags: ["Subscriptions"],
-        // }),
-        // updateSubscription: builder.mutation({
-        //     query: ({ sn, ...updates }) => ({
-        //         url: `/subscriptions/${sn}`,
-        //         method: "PATCH",
-        //         body: updates,
-        //     }),
-        //     invalidatesTags: ["Subscriptions"],
-        // }),
-
-        // getSubscriptions: builder.query({
-        //     query: ({ page = 1, limit = 10 }) => ({
-        //         url: "/subscription/fetch",
-        //         params: { page, limit },
-        //     }),
-        //     providesTags: ["Subscriptions"],
-        // }),
-
-        updateSchoolConfiguration: builder.mutation({
-            query: (updates) => ({
-                url: `/configuration/school-information`,
-                method: "PATCH",
-                body: updates,
-
-            }),
-            invalidatesTags: ["Configuration"],
-        }),
-
-        // configuration
-        // endpoints to get configuration
-        getSchoolConfiguration: builder.query({
-            query: () => ({
-                url: "/configuration/school-information",
-            }),
-            providesTags: ["Configuration"],
-        }),
-        updateSchoolStaff: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/school/${id}/staff`,
-                method: "PATCH",
-                body: updates,
-            }),
-            // invalidatesTags: ["Subscriptions"],
-        }),
-        updateSystemSettings: builder.mutation({
-            query: (updates) => ({
-                url: `/system-settings`,
-                method: "PATCH",
-                body: updates,
-            }),
-            // invalidatesTags: ["Subscriptions"],
-        }),
-        getSessions: builder.query({
-            query: () => ({
-                url: "/sessions",
-            }),
-            providesTags: ["Sessions"],
-        }),
-        getSessionsPublic: builder.query({
-            query: ({ schoolId }) => ({
-                url: `/sessions/public?schoolId=${schoolId}`,
-            }),
-            providesTags: ["SessionsPublic"],
-        }),
-        createSession: builder.mutation({
-            query: (session) => ({
-                url: "/sessions",
-                method: "POST",
-                body: session,
-            }),
-            invalidatesTags: ["Sessions"],
-        }),
-        updateSession: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/sessions/${id}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["Sessions"],
-        }),
-        deleteSession: builder.mutation({
-            query: (id) => ({
-                url: `/sessions/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["Sessions"],
-        }),
-        getClasses: builder.query({
-            query: ({ page = 1, limit = 10 }) => ({
-                url: `/classes?page=${page}&limit=${limit}`,
-            }),
-            providesTags: ["Classes"],
-        }),
-        getClassesPublic: builder.query({
-            query: ({ schoolId }) => ({
-                url: `/classes/public?schoolId=${schoolId}`,
-            }),
-            providesTags: ["ClassesPublic"],
-        }),
-        createClass: builder.mutation({
-            query: (input) => ({
-                url: "/classes",
-                method: "POST",
-                body: input,
-            }),
-            invalidatesTags: ["Classes"],
-        }),
-
-        updateClass: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/classes/${id}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["Classes"],
-        }),
-        deleteClass: builder.mutation({
-            query: (id) => ({
-                url: `/classes/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["Classes"],
-        }),
-        getClassCategories: builder.query({
-            query: () => ({
-                url: "/classes/category/get/all",
-            }),
-            providesTags: ["ClassCategory"],
-        }),
-        createClassCategory: builder.mutation({
-            query: (input) => ({
-                url: "/classes/category",
-                method: "POST",
-                body: input,
-            }),
-            invalidatesTags: ["ClassCategory"],
-        }),
-
-        updateClassCategory: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/classes/category/${id}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["ClassCategory"],
-        }),
-        deleteClassCategory: builder.mutation({
-            query: (id) => ({
-                url: `/classes/category/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["ClassCategory"],
-        }),
-        getClassArms: builder.query({
-            query: () => ({
-                url: `/arm`,
-            }),
-            providesTags: ["ClassArms"],
-        }),
-        createClassArms: builder.mutation({
-            query: (input) => ({
-                url: "/arm",
-                method: "POST",
-                body: input,
-            }),
-            invalidatesTags: ["ClassArms"],
-        }),
-
-        updateClassArms: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/arm/${id}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["ClassArms"],
-        }),
-        deleteClassArms: builder.mutation({
-            query: (id) => ({
-                url: `/arm/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["ClassArms"],
-        }),
-        assignArms: builder.mutation({
-            query: (credentials) => ({
-                url: `/sessions/assign-class-to-session/${credentials.sessionId}`,
-                method: "POST",
-                body: credentials,
-            }),
-            invalidatesTags: ["Classes", "Sessions"],
-        }),
-        getSubject: builder.query({
-            query: () => ({
-                url: `/subject`,
-            }),
-            providesTags: ["Subjects"],
-        }),
-        createSubject: builder.mutation({
-            query: (input) => ({
-                url: "/subject",
-                method: "POST",
-                body: input,
-            }),
-            invalidatesTags: ["Subjects"],
-        }),
-
-        updateSubject: builder.mutation({
-            query: ({ id, ...updates }) => ({
-                url: `/subject/${id}`,
-                method: "PATCH",
-                body: updates,
-            }),
-            invalidatesTags: ["Subjects"],
-        }),
-        deleteSubject: builder.mutation({
-            query: (id) => ({
-                url: `/subject/subject/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["Subjects"],
-        }),
-        assignSubject: builder.mutation({
-            query: (credentials) => ({
-                url: `/subject/assign/${credentials.subjectId}`,
-                method: "POST",
-                body: credentials,
-            }),
-            invalidatesTags: ["Subjects"],
-        }),
-
-
-        manageAdmission: builder.mutation({
-            query: (credentials) => ({
-                url: `/admissions/${credentials.id}/status`,
-                method: "PATCH",
-                body: credentials,
-            }),
-            invalidatesTags: ["Admissions", "Students"],
-        }),
-        createAdmission: builder.mutation({
-            query: (credentials) => ({
-                url: `/admissions`,
-                method: "POST",
-                body: credentials,
-            }),
-            invalidatesTags: ["Admissions"],
-        }),
-        createAdmissionPublic: builder.mutation({
-            query: (credentials) => ({
-                url: `/admissions/public?schoolId=${credentials?.schoolId}`,
-                method: "POST",
-                body: credentials,
-            }),
-            invalidatesTags: ["Admissions"],
-        }),
-        // createStudent: builder.mutation({
-        //     query: (credentials) => ({
-        //         url: `/subject/assign/subject`,
-        //         method: "POST",
-        //         body: credentials,
-        //     }),
-        //     invalidatesTags: ["Subjects"],
-        // }),
-        getAdmissions: builder.query({
-            query: ({ page = 1, limit = 10, q = '', status = '' }) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                if (status) params.append('status', status);
-                return {
-                    url: `/admissions?${params.toString()}`,
-                };
-            },
-            providesTags: ['Admissions'],
-        }),
-
-        getAdmissionById: builder.query<any, string>({
-            query: (id) => ({
-                url: `/admissions/detail/${id}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'Admissions', id: result.id }] : ['Admissions'],
-        }),
-        getClassClassArmsBySessionId: builder.query({
-            query: (params) => {
-                const queryParams = new URLSearchParams();
-                if (params?.sessionId) queryParams.append('sessionId', params.sessionId);
-                if (params?.stats) queryParams.append('stats', 'true');
-
-                return {
-                    url: `/sessions/fetch-class-class-arm?${queryParams.toString()}`
-                };
-            },
-            providesTags: ["SessionClassClassArms"],
-        }),
-
-        getClassDetailsBySessionId: builder.query({
-            query: (params) => {
-                const queryParams = new URLSearchParams();
-                if (params?.sessionId) queryParams.append('sessionId', params.sessionId);
-
-                return {
-                    url: `/sessions/class/${params.classId}?${queryParams.toString()}`
-                };
-            },
-            providesTags: ["SessionClassDetails"],
-        }),
-
-        getClassArmDetailsBySessionId: builder.query({
-            query: (params) => {
-                const queryParams = new URLSearchParams();
-                if (params?.sessionId) queryParams.append('sessionId', params.sessionId);
-                if (params?.termId) queryParams.append('termId', params.termId);
-
-                return {
-                    url: `/sessions/class-arm/${params.classId}/${params.classArmId}?${queryParams.toString()}`
-                };
-            },
-            providesTags: ["SessionClassArmDetails"],
-        }),
-
-
-
-        // Attendance Management Endpoints
-        getAttendanceStudents: builder.query({
-            query: ({ sessionId, term, classId, classArmId }) => {
-                const params = new URLSearchParams();
-                params.append('sessionId', sessionId);
-                params.append('term', term);
-                params.append('classId', classId);
-                params.append('classArmId', classArmId);
-                // params.append('date', date);
-
-                return {
-                    url: `/attendance/students?${params.toString()}`,
-                };
-            },
-            providesTags: ['Students'],
-        }),
-
-        markAttendance: builder.mutation({
-            query: (data) => ({
-                url: '/attendance/mark',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Students'],
-        }),
-
-        // Marking Scheme Endpoints
-        getMarkingSchemes: builder.query({
-            query: () => {
-
-                return {
-                    url: `/configuration/marking-scheme`,
-                };
-            },
-            providesTags: ['MarkingSchemes'],
-        }),
-
-        getMarkingSchemeById: builder.query({
-            query: (id) => ({
-                url: `/configuration/marking-scheme/${id}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'MarkingSchemes', id: result.id }] : ['MarkingSchemes'],
-        }),
-        getMarkingSchemeByClass: builder.query({
-            query: ({ classId, termDefinitionId }) => ({
-                url: `/configuration/marking-scheme/class/${classId}/term/${termDefinitionId}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'MarkingSchemesClass', id: result.id }] : ['MarkingSchemesClass'],
-        }),
-
-        createMarkingScheme: builder.mutation({
-            query: (data) => ({
-                url: '/configuration/marking-scheme',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['MarkingSchemes'],
-        }),
-
-        updateMarkingScheme: builder.mutation({
-            query: ({ id, ...data }) => ({
-                url: `/configuration/marking-scheme/${id}`,
-                method: 'PATCH',
-                body: data,
-            }),
-            invalidatesTags: ['MarkingSchemes'],
-        }),
-
-        deleteMarkingScheme: builder.mutation({
-            query: (id) => ({
-                url: `/configuration/marking-scheme/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['MarkingSchemes'],
-        }),
-
-        assignMarkingScheme: builder.mutation({
-            query: (data) => ({
-                url: `/configuration/marking-scheme/${data.schemeId}/assign`,
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['MarkingSchemes'],
-        }),
-
-        getTerms: builder.query({
-            query: () => ({
-                url: `/configuration/terms`,
-            }),
-            providesTags: ['Terms'],
-        }),
-
-        // Grading Scheme Endpoints
-        getGradingSystem: builder.query({
-            query: () => {
-
-                return {
-                    url: `/configuration/grading-system`,
-                };
-            },
-            providesTags: ['GradingSystem'],
-        }),
-
-        getGradingSystemById: builder.query({
-            query: (id) => ({
-                url: `/configuration/grading-system/${id}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'GradingSystem', id: result.id }] : ['GradingSystem'],
-        }),
-
-        createGradingSystem: builder.mutation({
-            query: (data) => ({
-                url: '/configuration/grading-system',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['GradingSystem'],
-        }),
-
-        updateGradingSystem: builder.mutation({
-            query: ({ id, ...data }) => ({
-                url: `/configuration/grading-system/${id}`,
-                method: 'PATCH',
-                body: data,
-            }),
-            invalidatesTags: ['GradingSystem'],
-        }),
-
-        deleteGradingSystem: builder.mutation({
-            query: (id) => ({
-                url: `/configuration/grading-system/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['GradingSystem'],
-        }),
-
-        assignGradingSystem: builder.mutation({
-            query: (data) => ({
-                url: `/configuration/grading-system/${data.gradingSystemId}/assign`,
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['GradingSystem'],
-        }),
-
-        // Continuous Assessment Scheme Endpoints
-        getAssessmentSchemes: builder.query({
-            query: () => {
-
-                return {
-                    url: `/configuration/continuous-assessment`,
-                };
-            },
-            providesTags: ['AssessmentSchemes'],
-        }),
-
-        getAssessmentSchemeById: builder.query({
-            query: (id) => ({
-                url: `/assessment-schemes/${id}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'AssessmentSchemes', id: result.id }] : ['AssessmentSchemes'],
-        }),
-
-        createAssessmentScheme: builder.mutation({
-            query: (data) => ({
-                url: '/configuration/continuous-assessment',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['AssessmentSchemes'],
-        }),
-
-        updateAssessmentScheme: builder.mutation({
-            query: (data) => ({
-                url: `/configuration/continuous-assessment/${data.id}`,
-                method: 'PATCH',
-                body: data,
-            }),
-            invalidatesTags: ['AssessmentSchemes'],
-        }),
-
-        deleteAssessmentScheme: builder.mutation({
-            query: (id) => ({
-                url: `/configuration/continuous-assessment/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['AssessmentSchemes'],
-        }),
-
-        assignClassesToAssessmentScheme: builder.mutation({
-            query: (data) => ({
-                url: '/configuration/continuous-assessment/assign-classes',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['AssessmentSchemes'],
-        }),
-
-        // Report Settings Endpoints
-        getReportSettings: builder.query({
-            query: ({ classId }) => ({
-                url: `/report-settings/${classId}`,
-            }),
-            providesTags: ["ReportSettings"],
-        }),
-
-        getAllReportSettings: builder.query({
-            query: () => ({
-                url: `/report-settings/all`,
-            }),
-            providesTags: ["ReportSettings"],
-        }),
-
-        saveReportSettings: builder.mutation({
-            query: (data) => ({
-                url: `/report-settings`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["ReportSettings"],
-        }),
-
-        bulkSaveReportSettings: builder.mutation({
-            query: (data) => ({
-                url: `/report-settings/bulk`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["ReportSettings"],
-        }),
-
-        // Payment/Subscription Endpoints
-        getSubscriptionPackages: builder.query<any, {
-            search?: string;
-            isActive?: boolean;
-            page?: number;
-            limit?: number;
-        }>({
-            query: ({ search, isActive, page = 1, limit = 10 } = {}) => {
-                const params = new URLSearchParams();
-                if (search) params.append('search', search);
-                if (isActive !== undefined) params.append('isActive', isActive.toString());
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                return {
-                    url: `/subscription/packages?${params.toString()}`,
-                };
-            },
-            providesTags: ["Subscriptions"],
-        }),
-
-        getSubscriptionPackageById: builder.query<any, string>({
-            query: (id) => ({
-                url: `/subscription/packages/${id}`,
-            }),
-            providesTags: (result) => result ? [{ type: 'Subscriptions', id: result.id }] : ['Subscriptions'],
-        }),
-
-        // Create subscription package (SuperAdmin only)
-        createSubscriptionPackage: builder.mutation<any, {
-            name: string;
-            description?: string;
-            amount: number;
-            duration: number;
-            studentLimit: number;
-            features: Record<string, boolean>;
-            isActive?: boolean;
-        }>({
-            query: (data) => ({
-                url: `/subscription/packages`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Subscriptions"],
-        }),
-
-        // Update subscription package (SuperAdmin only)
-        updateSubscriptionPackage: builder.mutation<any, {
-            id: string;
-            data: Partial<{
-                name: string;
-                description: string;
-                amount: number;
-                duration: number;
-                studentLimit: number;
-                features: Record<string, boolean>;
-                isActive: boolean;
-            }>;
-        }>({
-            query: ({ id, data }) => ({
-                url: `/subscription/packages/${id}`,
-                method: "PATCH",
-                body: data,
-            }),
-            invalidatesTags: ["Subscriptions"],
-        }),
-
-        // Delete subscription package (SuperAdmin only)
-        deleteSubscriptionPackage: builder.mutation<any, string>({
-            query: (id) => ({
-                url: `/subscription/packages/${id}`,
-                method: "DELETE",
-            }),
-            invalidatesTags: ["Subscriptions"],
-        }),
-
-        // Subscribe school to package (online payment)
-        subscribeSchool: builder.mutation<any, {
-            packageId: string;
-            email: string;
-            paymentMethod?: string;
-            metadata?: {
-                schoolName?: string;
-                adminName?: string;
-                [key: string]: any;
-            };
-        }>({
-            query: (data) => ({
-                url: `/subscription/subscribe`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Payments", "Subscriptions"],
-        }),
-
-        // Extend school subscription (rollover logic)
-        extendSubscription: builder.mutation<any, {
-            packageId: string;
-            email: string;
-            additionalMonths?: number;
-            metadata?: {
-                reason?: string;
-                [key: string]: any;
-            };
-        }>({
-            query: (data) => ({
-                url: `/subscription/extend`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Payments", "Subscriptions"],
-        }),
-
-        // Assign subscription to school (offline payment, SuperAdmin only)
-        assignSubscriptionToSchool: builder.mutation<any, {
-            schoolId: string;
-            packageId: string;
-            paymentMethod: string;
-            paymentReference: string;
-            metadata?: {
-                paymentMode?: string;
-                verifiedBy?: string;
-                [key: string]: any;
-            };
-        }>({
-            query: (data) => ({
-                url: `/subscription/assign`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Payments", "Subscriptions", "Schools"],
-        }),
-
-        // Get subscription analytics (SuperAdmin)
-        getSubscriptionAnalytics: builder.query<any, void>({
-            query: () => ({
-                url: `/subscription/analytics`,
-            }),
-            providesTags: ["Subscriptions"],
-        }),
-
-        createPayment: builder.mutation({
-            query: (data) => ({
-                url: `/payments/create`,
-                method: "POST",
-                body: data,
-            }),
-        }),
-
-        verifyPayment: builder.mutation({
-            query: ({ reference }) => ({
-                url: `/subscription/payments/verify/${reference}`,
-                method: "POST",
-            }),
-        }),
-
-        // Get payment logs with filters
-        getPaymentLogs: builder.query<any, {
-            page?: number;
-            limit?: number;
-            q?: string;
-            sessionId?: string;
-            termId?: string;
-            classId?: string;
-            classArmId?: string;
-            status?: string;
-        }>({
-            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                if (sessionId) params.append('sessionId', sessionId);
-                if (termId) params.append('termId', termId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (status) params.append('status', status);
-                return {
-                    url: `/payments/logs?${params.toString()}`,
-                };
-            },
-            providesTags: ['Payments'],
-        }),
-
-        // Get student payment summary with filters
-        getStudentPaymentSummary: builder.query<any, {
-            page?: number;
-            limit?: number;
-            q?: string;
-            sessionId?: string;
-            termId?: string;
-            classId?: string;
-            classArmId?: string;
-            status?: string;
-        }>({
-            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('search', q.toLowerCase());
-                if (sessionId) params.append('sessionId', sessionId);
-                if (termId) params.append('termId', termId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (status) params.append('status', status);
-                return {
-                    url: `/invoice/payments/student-summary?${params.toString()}`,
-                };
-            },
-            providesTags: ['Payments'],
-        }),
-
-        // get students in an invoice
-        getStudentsByInvoice: builder.query<any, {
-            invoiceId?: string;
-            page?: number;
-            limit?: number;
-            q?: string;
-            status?: string;
-        }>({
-            query: ({ invoiceId, page = 1, limit = 10, q = '', status } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('search', q.toLowerCase());
-                if (status) params.append('status', status);
-                return {
-                    url: `/invoice/${invoiceId}/students?${params.toString()}`,
-                };
-            },
-            providesTags: ['StudentsByInvoice'],
-        }),
-        // Get offline payments with filters
-        getOfflinePayments: builder.query<any, {
-            page?: number;
-            limit?: number;
-            q?: string;
-            sessionId?: string;
-            termId?: string;
-            classId?: string;
-            classArmId?: string;
-            status?: string;
-        }>({
-            query: ({ page = 1, limit = 10, q = '', sessionId, termId, classId, classArmId, status } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                if (sessionId) params.append('sessionId', sessionId);
-                if (termId) params.append('termId', termId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (status) params.append('status', status);
-                return {
-                    url: `/invoice/offline-payment?${params.toString()}`,
-                };
-            },
-            providesTags: ['Payments'],
-        }),
-
-        // Get offline payment by ID
-        getOfflinePaymentById: builder.query<any, string>({
-            query: (id) => ({
-                url: `/invoice/offline-payment/detail/${id}`,
-                method: 'GET',
-            }),
-            providesTags: ['Payments'],
-        }),
-
-
-
-        // Create offline payment
-        createOfflinePayment: builder.mutation<any, any>({
-            query: (data) => ({
-                url: '/invoice/offline-payment/record',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Payments', 'Invoices'],
-        }),
-
-        // Approve offline payment
-        processOfflinePayment: builder.mutation<any, any>({
-            query: ({ id, body }) => ({
-                url: `/invoice/offline-payment/${id}/process`,
-                method: 'PATCH',
-                body,
-            }),
-            invalidatesTags: ['Payments', 'Invoices'],
-        }),
-
-
-        getPaymentSummary: builder.query<any, any>({
-            query: () => {
-
-                return {
-                    url: `/invoice/payment-dashboard`,
-                };
-            },
-            providesTags: ['PaymentsDashboardSummary'],
-        }),
-
-
-        // Event Management Endpoints
-        getEvents: builder.query<any, {
-            page?: number;
-            limit?: number;
-            q?: string;
-            month?: string;
-            year?: string;
-        }>({
-            query: ({ page = 1, limit = 10, q = '', month, year } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                if (month) params.append('month', month);
-                if (year) params.append('year', year);
-                return {
-                    url: `/communication/events?${params.toString()}`,
-                };
-            },
-            providesTags: ['Events'],
-        }),
-
-        getEventById: builder.query<any, string>({
-            query: (id) => ({
-                url: `/communication/events/${id}`,
-                method: 'GET',
-            }),
-            providesTags: ['Events'],
-        }),
-
-        createEvent: builder.mutation<any, any>({
-            query: (data) => ({
-                url: '/communication/events/create',
-                method: 'POST',
-                body: data,
-            }),
-            invalidatesTags: ['Events'],
-        }),
-
-        updateEvent: builder.mutation<any, { id: string; data: any }>({
-            query: ({ id, data }) => ({
-                url: `/communication/events/${id}`,
-                method: 'PATCH',
-                body: data,
-            }),
-            invalidatesTags: ['Events'],
-        }),
-
-        deleteEvent: builder.mutation<any, string>({
-            query: (id) => ({
-                url: `/communication/events/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Events'],
-        }),
-
-        getCurrentSubscription: builder.query<any, void>({
-            query: () => ({
-                url: `/subscription/current`,
-            }),
-            providesTags: ["Subscriptions"],
-        }),
-
-        // Create subscription payment (Legacy - keeping for compatibility)
-        createSubscriptionPayment: builder.mutation<any, { packageId: string; isExtension?: boolean }>({
-            query: (data) => ({
-                url: `/subscription/payments/create`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Payments", "Subscriptions"],
-        }),
-
-        // Get school plan details
-        getSchoolPlan: builder.query<any, void>({
-            query: () => ({
-                url: `/subscription/school-plan`,
-            }),
-            providesTags: ["Subscriptions"],
-        }),
-        // Add these new endpoints to the existing API
-
-        // Get terms for a specific session
-        getSessionTerms: builder.query({
-            query: (sessionId: string) => ({
-                url: `/sessions/${sessionId}/terms`,
-                method: "GET",
-            }),
-            providesTags: ["SessionTerms"],
-        }),
-
-        // Get classes for a specific session
-        getSessionClasses: builder.query({
-            query: (sessionId: string) => ({
-                url: `/classes/session/${sessionId}`,
-                method: "GET",
-            }),
-            providesTags: ["SessionClass"],
-        }),
-
-        // Get subjects for a specific class arm
-        getClassSubjects: builder.query({
-            query: ({ classId, classArmId, q, page, limit }: {
-                classId?: string;
-                classArmId?: string;
-                q?: string;
-                page?: number;
-                limit?: number;
-            }) => {
-                const params = new URLSearchParams();
-                if (page) params.append("page", page.toString());
-                if (limit) params.append("limit", limit.toString());
-                if (q) params.append("q", q.toLowerCase());
-                if (classId) params.append("classId", classId);
-                if (classArmId) params.append("classArmId", classArmId);
-                return {
-                    url: `/subject/by-class-arm?${params.toString()}`,
-                    // url: `/subject/class/${classId}/class-arm/${classArmId}?${params.toString()}`,
-                    method: "GET",
-                }
-            },
-            providesTags: ["ClassClassArmSubject"],
-        }),
-
-        // Score Management Endpoints
-
-
-
-
-
-        // Get marking scheme assigned to a class for a specific term
-        getClassMarkingScheme: builder.query({
-            query: ({ classId, termId }: {
-                classId: string;
-                termId: string;
-            }) => ({
-                url: `/configuration/marking-scheme/class/${classId}/term/${termId}`,
-                method: "GET",
-            }),
-            providesTags: ["MarkingSchemes"],
-        }),
-
-        // Get existing scores for students in a class arm for a subject
-        getStudentScores: builder.query({
-            query: ({ sessionId, classId, classArmId, termId, subjectId, studentId }: {
-                sessionId?: string;
-                classId?: string;
-                classArmId?: string;
-                termId?: string;
-                subjectId?: string;
-                studentId?: string;
-            }) => {
-                const params = new URLSearchParams();
-                if (sessionId) params.append('sessionId', sessionId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (termId) params.append('termId', termId);
-                if (subjectId) params.append('subjectId', subjectId);
-                if (studentId) params.append('studentId', studentId);
-
-                return {
-                    url: `/scores/fetch?${params.toString()}`,
-                    method: "GET",
-                };
-            },
-            providesTags: ["Scores"],
-        }),
-
-        // Submit/Update student scores
-        submitStudentScores: builder.mutation({
-            query: (scoresData: {
-                sessionId: string;
-                classId: string;
-                classArmId: string;
-                termId: string;
-                subjectId: string;
-                scores: Array<{
-                    studentId: string;
-                    componentId: string;
-                    subComponentId?: string; // For CA sub-components
-                    parentComponentId?: string; // For CA sub-components
-                    score: number;
-                    maxScore: number;
-                    type: "CA" | "EXAM";
-                }>;
-            }) => ({
-                url: `/scores/save`,
-                method: "POST",
-                body: scoresData,
-            }),
-            invalidatesTags: ["Scores"],
-        }),
-        getResults: builder.query<any, any>({
-            query: ({ q, page = 1, limit = 10, all = false, type, sessionId, classId, classArmId, termId, studentId }) => {
-                const params = new URLSearchParams();
-                if (q) params.append('q', q.toLowerCase());
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (all === true) params.append('all', all.toString());
-                if (type) params.append('type', type);
-                if (sessionId) params.append('sessionId', sessionId);
-                if (termId) params.append('termId', termId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (studentId) params.append('studentId', studentId);
-
-                return {
-                    url: `/results?${params.toString()}`,
-                };
-            },
-            providesTags: ["Results"],
-        }),
-        // compute result mutation
-        computeResult: builder.mutation({
-            query: (data) => ({
-                url: `/results/submit`,
-                method: "POST",
-                body: data,
-            }),
-            invalidatesTags: ["Results"],
-        }),
-
-        // approve result
-        approveResult: builder.mutation({
-            query: (id) => ({
-                url: `/results/${id}/approve`,
-                method: "PATCH",
-                // body: data,
-            }),
-            invalidatesTags: ["Results"],
-        }),
-
-        // get result by id
-        getResultById: builder.query({
-            query: ({ id, studentId }) => {
-                const params = new URLSearchParams();
-                if (studentId) params.append('studentId', studentId);
-                return {
-                    url: `/results/${id}?${params.toString()}`,
-                }
-            },
-            providesTags: (result) =>
-                result ? [{ type: 'Results', id: result.id }] : ['Results'],
-        }),
-        // right here we may need to disable this on student page or add it to backend
-        getBroadsheetResultById: builder.query({
-            query: ({ id, type, studentId }) => {
-                const params = new URLSearchParams();
-                if (studentId) params.append('studentId', studentId);
-                return {
-                    url: `/results/${id}/${type}?${params.toString()}`,
-                };
-            },
-            providesTags: (result) =>
-                result ? [{ type: 'BroadsheetResults', id: result.id }] : ['BroadsheetResults'],
-        }),
-        getTranscript: builder.query({
-            query: ({ studentIdentifier, classCategoryId }) => ({
-                url: `/results/transcript/${classCategoryId}/${studentIdentifier}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'Transcript', id: result.id }] : ['Transcript'],
-        }),
-
-        getStudentsPromotion: builder.query({
-            query: ({ classId, classArmId, sessionId }) => ({
-                url: `/results/promotion/${sessionId}/${classId}/${classArmId}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'PromotionStudents', id: result.id }] : ['PromotionStudents'],
-        }),
-
-        // use promote students mutation
-        promoteStudents: builder.mutation({
-            query: (credentials) => ({
-                url: `/results/promotion/promote`,
-                method: "POST",
-                body: credentials,
-            }),
-            invalidatesTags: ["PromotionStudents", "Students", "Results"],
-        }),
-        assignTeacherToClassArm: builder.mutation({
-            query: (data) => {
-                const params = new URLSearchParams();
-                // data: { staffId: string, assignments: Array<{ classId: string; classArmIds: string[] }>, remove?: string }
-                if (data.remove) params.append('remove', data.remove);
-                return {
-                    url: '/classes/class-arm-teacher/assign?' + params.toString(),
-                    method: 'POST',
-                    body: {
-                        staffId: data.staffId,
-                        assignments: data.assignments,
-                    },
-                }
-            },
-            invalidatesTags: ['ClassClassArmTeacher'],
-        }),
-        assignTeacherToSubject: builder.mutation({
-            query: (data) => {
-                const params = new URLSearchParams();
-                // data: { staffId: string, assignments: Array<{ classId: string; classArmIds: string[] }>, remove?: string }
-                if (data.remove) params.append('remove', data.remove);
-                return {
-                    url: `/subject/assign-teacher?${params.toString()}`,
-                    method: 'POST',
-                    body: {
-                        staffId: data.staffId,
-                        assignments: data.assignments,
-                    },
-                }
-            },
-            invalidatesTags: ['ClassClassArmTeacher'],
-        }),
-        getClassArmTeachers: builder.query({
-            query: ({ classId, classArmId }) => {
-                const params = new URLSearchParams();
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                return {
-                    url: `/classes/class/arm-teacher?${params.toString()}`,
-                }
-            },
-            providesTags: ['ClassClassArmTeacher'],
-
-        }),
-
-        // get teachers query 
-        getTeachers: builder.query({
-            query: ({ page, limit, q }: { page?: number; limit?: number; q?: string; }) => {
-                const params = new URLSearchParams();
-                if (page) params.append('page', page.toString());
-                if (limit) params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                return {
-                    url: `/classes/school/teachers?${params.toString()}`,
-                };
-            },
-            providesTags: ['Teachers'],
-        }),
-        getAttendanceSummary: builder.query({
-            query: ({ sessionId, classId, classArmId, termId, month, year }) => {
-                const params = new URLSearchParams();
-                params.append('sessionId', sessionId);
-                params.append('classId', classId);
-                params.append('classArmId', classArmId);
-                if (termId) params.append('termId', termId);
-                if (month) params.append('month', month);
-                if (year) params.append('year', year);
-
-                return {
-                    url: `/attendance/summary?${params.toString()}`,
-                };
-            },
-            providesTags: ['AttendanceRecords'],
-        }),
-        // --- Parent Endpoints ---
-        createParent: builder.mutation({
-            query: (body) => ({
-                url: '/users/parent',
-                method: 'POST',
-                body,
-            }),
-            invalidatesTags: ['Users', 'User', 'Parents'],
-        }),
-        updateParent: builder.mutation({
-            query: ({ id, ...body }) => ({
-                url: `/users/parent/${id}`,
-                method: 'PATCH',
-                body,
-            }),
-            invalidatesTags: (result, error, { parentId }) => [
-                { type: 'Parents', id: parentId },
-                { type: 'Parents', id: 'LIST' },
-                { type: 'User', id: parentId },
-            ],
-        }),
-        deleteParent: builder.mutation({
-            query: (parentId) => ({
-                url: `/users/parent/${parentId}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, parentId) => [
-                { type: 'Parents', id: parentId },
-                { type: 'Parents', id: 'LIST' },
-                { type: 'User', id: parentId },
-            ],
-        }),
-        getParentById: builder.query({
-            query: (id) => ({
-                url: `/users/parent/${id}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'Parents', id: result.id }, { type: 'User', id: result.id }] : ['Parents'],
-        }),
-        getAllParents: builder.query({
-            query: ({ sessionId, classId, classArmId, q = '', page, limit }) => {
-                const params = new URLSearchParams();
-                if (sessionId) params.append('sessionId', sessionId);
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (q) params.append('q', q.toLowerCase());
-                if (page) params.append('page', page.toString());
-                if (limit) params.append('limit', limit.toString());
-                return {
-                    url: `/users/all/parent/all?${params.toString()}`,
-                };
-            },
-            providesTags: ['Parents'],
-        }),
-
-        // --- Staff/Teacher Endpoints ---
-        createStaff: builder.mutation({
-            query: (body) => ({
-                url: '/users/staff',
-                method: 'POST',
-                body,
-            }),
-            invalidatesTags: ['Users', 'User', 'Staff'],
-        }),
-        updateStaff: builder.mutation({
-            query: ({ id, ...body }) => ({
-                url: `/users/staff/${id}`,
-                method: 'PATCH',
-                body,
-            }),
-            invalidatesTags: (result, error, { staffId }) => [
-                { type: 'Staff', id: staffId },
-                { type: 'Staff', id: 'LIST' },
-                { type: 'User', id: staffId },
-            ],
-        }),
-        deleteStaff: builder.mutation({
-            query: (staffId) => ({
-                url: `/users/staff/${staffId}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, staffId) => [
-                { type: 'Staff', id: staffId },
-                { type: 'Staff', id: 'LIST' },
-                { type: 'User', id: staffId },
-            ],
-        }),
-        getStaffById: builder.query({
-            query: (staffId) => ({
-                url: `/users/staff/${staffId}`,
-            }),
-            providesTags: (result) =>
-                result ? [{ type: 'Staff', id: result.id }, { type: 'User', id: result.id }] : ['Staff'],
-        }),
-        getAllStaff: builder.query({
-            query: ({ classId, classArmId, q = '', page = 1, limit = 20 }) => {
-                const params = new URLSearchParams();
-                if (classId) params.append('classId', classId);
-                if (classArmId) params.append('classArmId', classArmId);
-                if (q) params.append('q', q.toLowerCase());
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                return {
-                    url: `/users/staff/all?${params.toString()}`,
-                };
-            },
-            providesTags: ['Staff'],
-        }),
-
-        linkParentStudent: builder.mutation({
-            query: (data) => {
-                const params = new URLSearchParams();
-                if (data.unlink) params.append('unlink', data.unlink);
-                return {
-                    url: `/users/link-parent-student?${params.toString()}`,
-                    method: 'POST',
-                    body: data,
-                }
-            },
-            invalidatesTags: ['Parents', 'Students'],
-        }),
-        createInvoice: builder.mutation({
-            query: (body) => ({
-                url: '/invoice/generate',
-                method: 'POST',
-                body,
-            }),
-            invalidatesTags: ['Invoices', 'Payments'],
-        }),
-        updateInvoice: builder.mutation({
-            query: ({ id, ...body }) => ({
-                url: `/invoice/${id}`,
-                method: 'PATCH',
-                body,
-            }),
-            invalidatesTags: ['Invoices'],
-        }),
-
-        deleteInvoice: builder.mutation({
-            query: (id) => ({
-                url: `/invoice/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Invoices'],
-        }),
-
-        getInvoiceById: builder.query({
-            query: (id) => ({
-                url: `/invoice/${id}`,
-            }),
-            providesTags: ["InvoiceId"],
-        }),
-
-        getInvoices: builder.query({
-            query: ({ page = 1, limit = 10, q = '' }) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                return {
-                    url: `/invoice/list?${params.toString()}`,
-                };
-            }
-            ,
-            providesTags: ['Invoices'],
-        }),
-        getInvoiceByCode: builder.query({
-            query: ({ reference }) => {
-                // Encode the reference to make it safe for URLs
-                const encodedReference = encodeURIComponent(reference);
-                return {
-                    url: `/invoice/reference/${encodedReference}`,
-                };
-            },
-            providesTags: ['InvoiceCode'],
-        }),
-
-        // Discount CRUD operations
-        createDiscount: builder.mutation({
-            query: (newDiscount) => ({
-                url: `/invoice/${newDiscount.invoiceId}/discount`,
-                method: 'POST',
-                body: newDiscount,
-            }),
-            invalidatesTags: ['Discounts'],
-        }),
-
-        updateDiscount: builder.mutation({
-            query: ({ id, ...updatedDiscount }) => ({
-                url: `/discount/${id}`,
-                method: 'PUT',
-                body: updatedDiscount,
-            }),
-            invalidatesTags: ['Discounts'],
-        }),
-
-        deleteDiscount: builder.mutation({
-            query: (id) => ({
-                url: `/discount/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: ['Discounts'],
-        }),
-
-        getDiscounts: builder.query<any, { page?: number; limit?: number; q?: string; sessionId?: string; termId?: string }>({
-            query: ({ page = 1, limit = 10, q = '', sessionId, termId } = {}) => {
-                const params = new URLSearchParams();
-                params.append('page', page.toString());
-                params.append('limit', limit.toString());
-                if (q) params.append('q', q.toLowerCase());
-                if (sessionId) params.append('sessionId', sessionId);
-                if (termId) params.append('termId', termId);
-                return {
-                    url: `/invoice/discounts/list?${params.toString()}`,
-                };
-            },
-            providesTags: ['Discounts'],
-        }),
-
-        getDiscountById: builder.query({
-            query: (id) => ({
-                url: `/discount/${id}`,
-            }),
-            providesTags: ['Discounts'],
-        }),
-        approveDiscount: builder.mutation({
-            query: (id) => ({
-                url: `/invoice/discount/${id}/approve`,
-                method: "PATCH",
-                // body: data,
-            }),
-            invalidatesTags: ["Discounts"],
-        }),
-
-        getQuestions: builder.query({
-            query: ({ subjectId, classId }) => ({
-                url: `/questions/${subjectId}/${classId}`,
-            }),
-        }),
-        updateQuestions: builder.mutation({
-            query: (data) => ({
-                url: `/questions/${data.id}`,
-                method: 'PUT',
-                body: data,
-            }),
-        }),
-        deleteQuestions: builder.mutation({
-            query: ({ subjectId, classId }) => ({
-                url: `/questions/${subjectId}/${classId}`,
-                method: 'DELETE',
-            }),
-        }),
+  baseQuery,
+  tagTypes: [
+    "User",
+    "Subscriptions",
+    "Schools",
+    "Users",
+    "Subroles",
+    "PermissionsSchool",
+    "RolePermissions",
+    "Logs",
+    "Sessions",
+    "Classes",
+    "ClassArms",
+    "Subjects",
+    "Admissions",
+    "Students",
+    "SessionClassClassArms",
+    "MarkingSchemes",
+    "GradingSystem",
+    "AssessmentSchemes",
+    "ReportSettings",
+    "Payments",
+    "Configuration",
+    "ClassCategory",
+    "Terms",
+    "SessionTerms",
+    "SessionClass",
+    "ClassClassArmSubject",
+    "Scores",
+    "SessionsPublic",
+    "ClassesPublic",
+    "Results",
+    "MarkingSchemesClass",
+    "BroadsheetResults",
+    "Transcript",
+    "PromotionStudents",
+    "SessionClassDetails",
+    "SessionClassArmDetails",
+    "Student",
+    "ClassClassArmTeacher",
+    "Teachers",
+    "AttendanceRecords",
+    "Staff",
+    "Parents",
+    "Invoices",
+    "Discounts",
+    "InvoiceId",
+    "InvoiceCode",
+    "Events",
+    "StudentsByInvoice",
+    "PaymentsDashboardSummary",
+    "SchoolDashboardSummary",
+    "SchoolClassDashboardSummary",
+    "SchoolAttendanceDashboardSummary",
+  ],
+  endpoints: (builder) => ({
+    // Register Endpoint
+    register: builder.mutation<AuthResponse, RegisterCredentials>({
+      query: (credentials) => ({
+        url: "/auth/register",
+        method: "POST",
+        body: registerSchema.parse(credentials),
+      }),
+      onQueryStarted: async (_arg, { queryFulfilled }) => {
+        try {
+          await queryFulfilled;
+          // setCookie("token", data.token, 24 * 60 * 60); // 1 day
+        } catch (error) {
+          console.error("Register failed:", error);
+        }
+      },
     }),
+
+    // Login Endpoint
+    login: builder.mutation<AuthResponse, LoginCredentials>({
+      query: (credentials) => ({
+        url: "/auth/login",
+        method: "POST",
+        body: loginSchema.parse(credentials),
+      }),
+      onQueryStarted: async (arg, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setUser(data.user));
+        } catch (error) {
+          console.error("Login failed:", error);
+        }
+      },
+    }),
+
+    getProfile: builder.query<User, void>({
+      query: () => ({ url: "/auth/profile" }),
+      providesTags: (result) =>
+        result ? [{ type: "User", id: result.id }, "User"] : ["User"],
+      onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
+        try {
+          const { data } = await queryFulfilled;
+
+          dispatch(setUser(data));
+        } catch (error) {
+          console.error("Get user failed:", error);
+        }
+      },
+    }),
+
+    setViewAs: builder.mutation<
+      { view_as: string; schoolId: string; schoolSlug: string },
+      { view_as: ENUM_ROLE; schoolId: string; schoolSlug: string }
+    >({
+      query: ({ view_as, schoolId, schoolSlug }) => ({
+        url: "/auth/set-view-as",
+        method: "PATCH",
+        body: { view_as, schoolId, schoolSlug },
+      }),
+      invalidatesTags: ["User"], // Refetch /profile
+    }),
+    logout: builder.mutation<{ message: string }, void>({
+      query: () => ({
+        url: "/auth/logout",
+        method: "POST",
+      }),
+    }),
+
+    getSchools: builder.query<GetSchoolsResponse, GetSchoolsQuery>({
+      query: ({ search, page = 1, limit = 5, subscriptionId }) => {
+        const params = new URLSearchParams();
+        if (search) params.append("search", search.toLowerCase());
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (subscriptionId) params.append("subscriptionId", subscriptionId);
+        return {
+          url: `/schools/list?${params.toString()}`,
+        };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.schools.map(({ id }) => ({
+                type: "Schools" as const,
+                id,
+              })),
+              { type: "Schools", id: "LIST" },
+            ]
+          : [{ type: "Schools", id: "LIST" }],
+    }),
+
+    getSchoolById: builder.query<any, string>({
+      query: (id) => {
+        return { url: `/schools/${id}` };
+      },
+      providesTags: (result) =>
+        result ? [{ type: "Schools", id: result.id }] : [],
+    }),
+
+    createSchool: builder.mutation<School, CreateSchoolInput>({
+      query: (input) => ({
+        url: "/schools",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: [{ type: "Schools", id: "LIST" }],
+    }),
+    updateSchool: builder.mutation<
+      School,
+      { id: string; input: UpdateSchoolInput }
+    >({
+      query: ({ id, input }) => ({
+        url: `/schools/${id}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (result) =>
+        result
+          ? [
+              { type: "Schools", id: result.id },
+              { type: "Schools", id: "LIST" },
+            ]
+          : [],
+    }),
+    deleteSchool: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/schools/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Schools", id },
+        { type: "Schools", id: "LIST" },
+      ],
+    }),
+    toggleSchoolActive: builder.mutation<School, string>({
+      query: (id) => ({
+        url: `/schools/${id}/toggle-active`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (result) =>
+        result
+          ? [
+              { type: "Schools", id: result.id },
+              { type: "Schools", id: "LIST" },
+            ]
+          : [],
+    }),
+
+    getUsers: builder.query<GetUsersResponse, GetUsersQuery>({
+      query: ({
+        q,
+        page = 1,
+        limit = 5,
+        subRoleFlag = "",
+        schoolId = "",
+        gender,
+      }) => {
+        const params = new URLSearchParams();
+        if (q) params.append("q", q.toLowerCase());
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (subRoleFlag) params.append("subRoleFlag", subRoleFlag);
+        if (schoolId) params.append("schoolId", schoolId);
+        if (gender) params.append("gender", gender);
+        return {
+          url: `/users/get/all-users?${params.toString()}`,
+        };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.users.map(({ id }) => ({ type: "Users" as const, id })),
+              { type: "Users", id: "LIST" },
+            ]
+          : [{ type: "Users", id: "LIST" }],
+    }),
+
+    getUserById: builder.query<any, string>({
+      query: (id) => {
+        return { url: `/users/id/${id}` };
+      },
+      providesTags: (result) =>
+        result ? [{ type: "User", id: result.id }] : [],
+    }),
+    getStudentById: builder.query<any, string>({
+      query: (id) => {
+        return { url: `/users/student/${id}` };
+      },
+      providesTags: (result) =>
+        result ? [{ type: "Student", id: result.id }] : [],
+    }),
+    createStudent: builder.mutation({
+      query: (body) => ({
+        url: "/users/student",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "Students", id: "LIST" }],
+    }),
+    updateStudent: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/users/student/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (result) =>
+        result
+          ? [
+              { type: "Student", id: result.id },
+              { type: "Students", id: "LIST" },
+            ]
+          : [],
+    }),
+    deleteStudent: builder.mutation({
+      query: (id) => ({
+        url: `/users/student/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Student", id },
+        { type: "Students", id: "LIST" },
+      ],
+    }),
+    // Get students
+    getStudents: builder.query({
+      query: ({
+        sessionId,
+        classId,
+        classArmId,
+        q = "",
+        page = 1,
+        limit = 10,
+        gender = false,
+        alumni = false,
+      }: {
+        sessionId?: string;
+        classId?: string;
+        classArmId?: string;
+        q?: string;
+        page?: number;
+        limit?: number;
+        gender?: boolean;
+        alumni?: boolean;
+      }) => {
+        const params = new URLSearchParams();
+        if (sessionId) params.append("sessionId", sessionId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (page) params.append("page", page.toString());
+        if (limit) params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (gender) params.append("gender", gender.toString());
+        if (alumni) params.append("alumni", alumni.toString());
+        return {
+          url: `/classes/all/get-students?${params.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Students"],
+    }),
+
+    createUser: builder.mutation<User, any>({
+      query: (input) => ({
+        url: "/users",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: [{ type: "Users", id: "LIST" }],
+    }),
+    updateUser: builder.mutation<User, { id: string; input: UpdateUserInput }>({
+      query: ({ id, input }) => ({
+        url: `/users/${id}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (result) =>
+        result
+          ? [
+              { type: "User", id: result.id },
+              { type: "User", id: "LIST" },
+            ]
+          : [],
+    }),
+    deleteUser: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/users/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "User", id },
+        { type: "User", id: "LIST" },
+      ],
+    }),
+
+    createSubrole: builder.mutation<Subrole, any>({
+      query: (input) => ({
+        url: "/sub-roles",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: [{ type: "Subroles", id: "LIST" }],
+    }),
+    updateSubrole: builder.mutation<Subrole, { id: string; input: any }>({
+      query: ({ id, input }) => ({
+        url: `/sub-roles/${id}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (result) =>
+        result
+          ? [
+              { type: "Subroles", id: result.id },
+              { type: "Subroles", id: "LIST" },
+            ]
+          : [],
+    }),
+    deleteSubrole: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/sub-roles/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Subroles", id },
+        { type: "Subroles", id: "LIST" },
+      ],
+    }),
+    getSubroles: builder.query({
+      query: ({ q }) => {
+        const params = new URLSearchParams();
+        if (q) params.append("q", q.toLowerCase());
+        // params.append('page', page.toString());
+        // params.append('limit', limit.toString());
+        return {
+          url: `/sub-roles?${params.toString()}`,
+        };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.map(({ id }: { id: string }) => ({
+                type: "Subroles" as const,
+                id,
+              })),
+              { type: "Subroles", id: "LIST" },
+            ]
+          : [{ type: "Subroles", id: "LIST" }],
+    }),
+
+    getSubroleById: builder.query<Subrole, string>({
+      query: (id) => {
+        return { url: `/sub-roles/${id}` };
+      },
+      providesTags: (result) =>
+        result ? [{ type: "Subroles", id: result.id }] : [],
+    }),
+    getPermissionsSchool: builder.query<Permission[], void>({
+      query: () => {
+        return { url: "/permissions/scope/school" };
+      },
+      providesTags: ["PermissionsSchool"],
+    }),
+    getRolePermissions: builder.query<Permission[], string>({
+      query: (roleId) => {
+        return { url: `/permissions/sub-role/${roleId}` };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({
+                type: "RolePermissions" as const,
+                id,
+              })),
+              { type: "RolePermissions", id: "LIST" },
+            ]
+          : [{ type: "RolePermissions", id: "LIST" }],
+    }),
+    updateRolePermissions: builder.mutation<
+      void,
+      { roleId: string; permissionIds: string[] }
+    >({
+      query: ({ roleId, permissionIds }) => ({
+        url: `/permissions/sub-role/${roleId}`,
+        method: "PATCH",
+        body: { permissionIds },
+      }),
+      invalidatesTags: (result, error, { roleId }) => [
+        { type: "RolePermissions", id: "LIST" },
+        { type: "RolePermissions", id: roleId },
+        { type: "Subroles", id: "LIST" },
+        { type: "Subroles", id: roleId },
+      ],
+    }),
+
+    // getLogs
+    getLogs: builder.query<any, { page?: number; limit?: number }>({
+      query: ({ page = 1, limit = 20 }) => ({
+        url: "/logs",
+        params: { page, limit },
+      }),
+      providesTags: ["Logs"],
+    }),
+    assignSubscription: builder.mutation<
+      void,
+      { schoolId: string; subscriptionId: string }
+    >({
+      query: ({ schoolId, subscriptionId }) => ({
+        url: "/subscription/assign-subscription-to-school",
+        method: "POST",
+        body: { schoolId, subscriptionId },
+      }),
+      invalidatesTags: ["Schools"], // Refresh school list after assignment
+    }),
+
+    // createSubscription: builder.mutation({
+    //     query: (subscription) => ({
+    //         url: "/subscription/create",
+    //         method: "POST",
+    //         body: subscription,
+    //     }),
+    //     invalidatesTags: ["Subscriptions"],
+    // }),
+    // updateSubscription: builder.mutation({
+    //     query: ({ sn, ...updates }) => ({
+    //         url: `/subscriptions/${sn}`,
+    //         method: "PATCH",
+    //         body: updates,
+    //     }),
+    //     invalidatesTags: ["Subscriptions"],
+    // }),
+
+    // getSubscriptions: builder.query({
+    //     query: ({ page = 1, limit = 10 }) => ({
+    //         url: "/subscription/fetch",
+    //         params: { page, limit },
+    //     }),
+    //     providesTags: ["Subscriptions"],
+    // }),
+
+    updateSchoolConfiguration: builder.mutation({
+      query: (updates) => ({
+        url: `/configuration/school-information`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["Configuration"],
+    }),
+
+    // configuration
+    // endpoints to get configuration
+    getSchoolConfiguration: builder.query({
+      query: () => ({
+        url: "/configuration/school-information",
+      }),
+      providesTags: ["Configuration"],
+    }),
+    updateSchoolStaff: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/school/${id}/staff`,
+        method: "PATCH",
+        body: updates,
+      }),
+      // invalidatesTags: ["Subscriptions"],
+    }),
+    updateSystemSettings: builder.mutation({
+      query: (updates) => ({
+        url: `/system-settings`,
+        method: "PATCH",
+        body: updates,
+      }),
+      // invalidatesTags: ["Subscriptions"],
+    }),
+    getSessions: builder.query({
+      query: () => ({
+        url: "/sessions",
+      }),
+      providesTags: ["Sessions"],
+    }),
+    getSessionsPublic: builder.query({
+      query: ({ schoolId }) => ({
+        url: `/sessions/public?schoolId=${schoolId}`,
+      }),
+      providesTags: ["SessionsPublic"],
+    }),
+    createSession: builder.mutation({
+      query: (session) => ({
+        url: "/sessions",
+        method: "POST",
+        body: session,
+      }),
+      invalidatesTags: ["Sessions"],
+    }),
+    updateSession: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/sessions/${id}`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["Sessions"],
+    }),
+    deleteSession: builder.mutation({
+      query: (id) => ({
+        url: `/sessions/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Sessions"],
+    }),
+    getClasses: builder.query({
+      query: ({ page = 1, limit = 10 }) => ({
+        url: `/classes?page=${page}&limit=${limit}`,
+      }),
+      providesTags: ["Classes"],
+    }),
+    getClassesPublic: builder.query({
+      query: ({ schoolId }) => ({
+        url: `/classes/public?schoolId=${schoolId}`,
+      }),
+      providesTags: ["ClassesPublic"],
+    }),
+    createClass: builder.mutation({
+      query: (input) => ({
+        url: "/classes",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["Classes"],
+    }),
+
+    updateClass: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/classes/${id}`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["Classes"],
+    }),
+    deleteClass: builder.mutation({
+      query: (id) => ({
+        url: `/classes/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Classes"],
+    }),
+    getClassCategories: builder.query({
+      query: () => ({
+        url: "/classes/category/get/all",
+      }),
+      providesTags: ["ClassCategory"],
+    }),
+    createClassCategory: builder.mutation({
+      query: (input) => ({
+        url: "/classes/category",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["ClassCategory"],
+    }),
+
+    updateClassCategory: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/classes/category/${id}`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["ClassCategory"],
+    }),
+    deleteClassCategory: builder.mutation({
+      query: (id) => ({
+        url: `/classes/category/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ClassCategory"],
+    }),
+    getClassArms: builder.query({
+      query: () => ({
+        url: `/arm`,
+      }),
+      providesTags: ["ClassArms"],
+    }),
+    createClassArms: builder.mutation({
+      query: (input) => ({
+        url: "/arm",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["ClassArms"],
+    }),
+
+    updateClassArms: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/arm/${id}`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["ClassArms"],
+    }),
+    deleteClassArms: builder.mutation({
+      query: (id) => ({
+        url: `/arm/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ClassArms"],
+    }),
+    assignArms: builder.mutation({
+      query: (credentials) => ({
+        url: `/sessions/assign-class-to-session/${credentials.sessionId}`,
+        method: "POST",
+        body: credentials,
+      }),
+      invalidatesTags: ["Classes", "Sessions"],
+    }),
+    getSubject: builder.query({
+      query: () => ({
+        url: `/subject`,
+      }),
+      providesTags: ["Subjects"],
+    }),
+    createSubject: builder.mutation({
+      query: (input) => ({
+        url: "/subject",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["Subjects"],
+    }),
+
+    updateSubject: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/subject/${id}`,
+        method: "PATCH",
+        body: updates,
+      }),
+      invalidatesTags: ["Subjects"],
+    }),
+    deleteSubject: builder.mutation({
+      query: (id) => ({
+        url: `/subject/subject/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Subjects"],
+    }),
+    assignSubject: builder.mutation({
+      query: (credentials) => ({
+        url: `/subject/assign/${credentials.subjectId}`,
+        method: "POST",
+        body: credentials,
+      }),
+      invalidatesTags: ["Subjects"],
+    }),
+
+    manageAdmission: builder.mutation({
+      query: (credentials) => ({
+        url: `/admissions/${credentials.id}/status`,
+        method: "PATCH",
+        body: credentials,
+      }),
+      invalidatesTags: ["Admissions", "Students"],
+    }),
+    createAdmission: builder.mutation({
+      query: (credentials) => ({
+        url: `/admissions`,
+        method: "POST",
+        body: credentials,
+      }),
+      invalidatesTags: ["Admissions"],
+    }),
+    createAdmissionPublic: builder.mutation({
+      query: (credentials) => ({
+        url: `/admissions/public?schoolId=${credentials?.schoolId}`,
+        method: "POST",
+        body: credentials,
+      }),
+      invalidatesTags: ["Admissions"],
+    }),
+    // createStudent: builder.mutation({
+    //     query: (credentials) => ({
+    //         url: `/subject/assign/subject`,
+    //         method: "POST",
+    //         body: credentials,
+    //     }),
+    //     invalidatesTags: ["Subjects"],
+    // }),
+    getAdmissions: builder.query({
+      query: ({ page = 1, limit = 10, q = "", status = "" }) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (status) params.append("status", status);
+        return {
+          url: `/admissions?${params.toString()}`,
+        };
+      },
+      providesTags: ["Admissions"],
+    }),
+
+    getAdmissionById: builder.query<any, string>({
+      query: (id) => ({
+        url: `/admissions/detail/${id}`,
+      }),
+      providesTags: (result) =>
+        result ? [{ type: "Admissions", id: result.id }] : ["Admissions"],
+    }),
+    getClassClassArmsBySessionId: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.sessionId)
+          queryParams.append("sessionId", params.sessionId);
+        if (params?.stats) queryParams.append("stats", "true");
+
+        return {
+          url: `/sessions/fetch-class-class-arm?${queryParams.toString()}`,
+        };
+      },
+      providesTags: ["SessionClassClassArms"],
+    }),
+
+    getClassDetailsBySessionId: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.sessionId)
+          queryParams.append("sessionId", params.sessionId);
+
+        return {
+          url: `/sessions/class/${params.classId}?${queryParams.toString()}`,
+        };
+      },
+      providesTags: ["SessionClassDetails"],
+    }),
+
+    getClassArmDetailsBySessionId: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.sessionId)
+          queryParams.append("sessionId", params.sessionId);
+        if (params?.termId) queryParams.append("termId", params.termId);
+
+        return {
+          url: `/sessions/class-arm/${params.classId}/${
+            params.classArmId
+          }?${queryParams.toString()}`,
+        };
+      },
+      providesTags: ["SessionClassArmDetails"],
+    }),
+
+    // Attendance Management Endpoints
+    getAttendanceStudents: builder.query({
+      query: ({ sessionId, term, classId, classArmId, date}) => {
+        const params = new URLSearchParams();
+        params.append("sessionId", sessionId);
+        params.append("term", term);
+        params.append("classId", classId);
+        params.append("classArmId", classArmId);
+        params.append('date', date);
+
+        return {
+          url: `/attendance/students?${params.toString()}`,
+        };
+      },
+      providesTags: ["Students"],
+    }),
+
+    markAttendance: builder.mutation({
+      query: (data) => ({
+        url: "/attendance/mark",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Students"],
+    }),
+    getSchoolAttendanceSummary: builder.query<any, any>({
+      query: () => {
+        return {
+          url: `/attendance/school/month-summary`,
+        };
+      },
+      providesTags: ["SchoolAttendanceDashboardSummary"],
+    }),
+
+    // Marking Scheme Endpoints
+    getMarkingSchemes: builder.query({
+      query: () => {
+        return {
+          url: `/configuration/marking-scheme`,
+        };
+      },
+      providesTags: ["MarkingSchemes"],
+    }),
+
+    getMarkingSchemeById: builder.query({
+      query: (id) => ({
+        url: `/configuration/marking-scheme/${id}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [{ type: "MarkingSchemes", id: result.id }]
+          : ["MarkingSchemes"],
+    }),
+    getMarkingSchemeByClass: builder.query({
+      query: ({ classId, termDefinitionId }) => ({
+        url: `/configuration/marking-scheme/class/${classId}/term/${termDefinitionId}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [{ type: "MarkingSchemesClass", id: result.id }]
+          : ["MarkingSchemesClass"],
+    }),
+
+    createMarkingScheme: builder.mutation({
+      query: (data) => ({
+        url: "/configuration/marking-scheme",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["MarkingSchemes"],
+    }),
+
+    updateMarkingScheme: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/configuration/marking-scheme/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["MarkingSchemes"],
+    }),
+
+    deleteMarkingScheme: builder.mutation({
+      query: (id) => ({
+        url: `/configuration/marking-scheme/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["MarkingSchemes"],
+    }),
+
+    assignMarkingScheme: builder.mutation({
+      query: (data) => ({
+        url: `/configuration/marking-scheme/${data.schemeId}/assign`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["MarkingSchemes"],
+    }),
+
+    getTerms: builder.query({
+      query: () => ({
+        url: `/configuration/terms`,
+      }),
+      providesTags: ["Terms"],
+    }),
+
+    // Grading Scheme Endpoints
+    getGradingSystem: builder.query({
+      query: () => {
+        return {
+          url: `/configuration/grading-system`,
+        };
+      },
+      providesTags: ["GradingSystem"],
+    }),
+
+    getGradingSystemById: builder.query({
+      query: (id) => ({
+        url: `/configuration/grading-system/${id}`,
+      }),
+      providesTags: (result) =>
+        result ? [{ type: "GradingSystem", id: result.id }] : ["GradingSystem"],
+    }),
+
+    createGradingSystem: builder.mutation({
+      query: (data) => ({
+        url: "/configuration/grading-system",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["GradingSystem"],
+    }),
+
+    updateGradingSystem: builder.mutation({
+      query: ({ id, ...data }) => ({
+        url: `/configuration/grading-system/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["GradingSystem"],
+    }),
+
+    deleteGradingSystem: builder.mutation({
+      query: (id) => ({
+        url: `/configuration/grading-system/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["GradingSystem"],
+    }),
+
+    assignGradingSystem: builder.mutation({
+      query: (data) => ({
+        url: `/configuration/grading-system/${data.gradingSystemId}/assign`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["GradingSystem"],
+    }),
+
+    // Continuous Assessment Scheme Endpoints
+    getAssessmentSchemes: builder.query({
+      query: () => {
+        return {
+          url: `/configuration/continuous-assessment`,
+        };
+      },
+      providesTags: ["AssessmentSchemes"],
+    }),
+
+    getAssessmentSchemeById: builder.query({
+      query: (id) => ({
+        url: `/assessment-schemes/${id}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [{ type: "AssessmentSchemes", id: result.id }]
+          : ["AssessmentSchemes"],
+    }),
+
+    createAssessmentScheme: builder.mutation({
+      query: (data) => ({
+        url: "/configuration/continuous-assessment",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["AssessmentSchemes"],
+    }),
+
+    updateAssessmentScheme: builder.mutation({
+      query: (data) => ({
+        url: `/configuration/continuous-assessment/${data.id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["AssessmentSchemes"],
+    }),
+
+    deleteAssessmentScheme: builder.mutation({
+      query: (id) => ({
+        url: `/configuration/continuous-assessment/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AssessmentSchemes"],
+    }),
+
+    assignClassesToAssessmentScheme: builder.mutation({
+      query: (data) => ({
+        url: "/configuration/continuous-assessment/assign-classes",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["AssessmentSchemes"],
+    }),
+
+    // Report Settings Endpoints
+    getReportSettings: builder.query({
+      query: ({ classId }) => ({
+        url: `/report-settings/${classId}`,
+      }),
+      providesTags: ["ReportSettings"],
+    }),
+
+    getAllReportSettings: builder.query({
+      query: () => ({
+        url: `/report-settings/all`,
+      }),
+      providesTags: ["ReportSettings"],
+    }),
+
+    saveReportSettings: builder.mutation({
+      query: (data) => ({
+        url: `/report-settings`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["ReportSettings"],
+    }),
+
+    bulkSaveReportSettings: builder.mutation({
+      query: (data) => ({
+        url: `/report-settings/bulk`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["ReportSettings"],
+    }),
+
+    // Payment/Subscription Endpoints
+    getSubscriptionPackages: builder.query<
+      any,
+      {
+        search?: string;
+        isActive?: boolean;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: ({ search, isActive, page = 1, limit = 10 } = {}) => {
+        const params = new URLSearchParams();
+        if (search) params.append("search", search);
+        if (isActive !== undefined)
+          params.append("isActive", isActive.toString());
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        return {
+          url: `/subscription/packages?${params.toString()}`,
+        };
+      },
+      providesTags: ["Subscriptions"],
+    }),
+
+    getSubscriptionPackageById: builder.query<any, string>({
+      query: (id) => ({
+        url: `/subscription/packages/${id}`,
+      }),
+      providesTags: (result) =>
+        result ? [{ type: "Subscriptions", id: result.id }] : ["Subscriptions"],
+    }),
+
+    // Create subscription package (SuperAdmin only)
+    createSubscriptionPackage: builder.mutation<
+      any,
+      {
+        name: string;
+        description?: string;
+        amount: number;
+        duration: number;
+        studentLimit: number;
+        features: Record<string, boolean>;
+        isActive?: boolean;
+      }
+    >({
+      query: (data) => ({
+        url: `/subscription/packages`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
+
+    // Update subscription package (SuperAdmin only)
+    updateSubscriptionPackage: builder.mutation<
+      any,
+      {
+        id: string;
+        data: Partial<{
+          name: string;
+          description: string;
+          amount: number;
+          duration: number;
+          studentLimit: number;
+          features: Record<string, boolean>;
+          isActive: boolean;
+        }>;
+      }
+    >({
+      query: ({ id, data }) => ({
+        url: `/subscription/packages/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
+
+    // Delete subscription package (SuperAdmin only)
+    deleteSubscriptionPackage: builder.mutation<any, string>({
+      query: (id) => ({
+        url: `/subscription/packages/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Subscriptions"],
+    }),
+
+    // Subscribe school to package (online payment)
+    subscribeSchool: builder.mutation<
+      any,
+      {
+        packageId: string;
+        email: string;
+        paymentMethod?: string;
+        metadata?: {
+          schoolName?: string;
+          adminName?: string;
+          [key: string]: any;
+        };
+      }
+    >({
+      query: (data) => ({
+        url: `/subscription/subscribe`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Payments", "Subscriptions"],
+    }),
+
+    // Extend school subscription (rollover logic)
+    extendSubscription: builder.mutation<
+      any,
+      {
+        packageId: string;
+        email: string;
+        additionalMonths?: number;
+        metadata?: {
+          reason?: string;
+          [key: string]: any;
+        };
+      }
+    >({
+      query: (data) => ({
+        url: `/subscription/extend`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Payments", "Subscriptions"],
+    }),
+
+    // Assign subscription to school (offline payment, SuperAdmin only)
+    assignSubscriptionToSchool: builder.mutation<
+      any,
+      {
+        schoolId: string;
+        packageId: string;
+        paymentMethod: string;
+        paymentReference: string;
+        metadata?: {
+          paymentMode?: string;
+          verifiedBy?: string;
+          [key: string]: any;
+        };
+      }
+    >({
+      query: (data) => ({
+        url: `/subscription/assign`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Payments", "Subscriptions", "Schools"],
+    }),
+
+    // Get subscription analytics (SuperAdmin)
+    getSubscriptionAnalytics: builder.query<any, void>({
+      query: () => ({
+        url: `/subscription/analytics`,
+      }),
+      providesTags: ["Subscriptions"],
+    }),
+
+    createPayment: builder.mutation({
+      query: (data) => ({
+        url: `/payments/create`,
+        method: "POST",
+        body: data,
+      }),
+    }),
+
+    verifyPayment: builder.mutation({
+      query: ({ reference }) => ({
+        url: `/subscription/payments/verify/${reference}`,
+        method: "POST",
+      }),
+    }),
+
+    // Get payment logs with filters
+    getPaymentLogs: builder.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+        q?: string;
+        sessionId?: string;
+        termId?: string;
+        classId?: string;
+        classArmId?: string;
+        status?: string;
+      }
+    >({
+      query: ({
+        page = 1,
+        limit = 10,
+        q = "",
+        sessionId,
+        termId,
+        classId,
+        classArmId,
+        status,
+      } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (sessionId) params.append("sessionId", sessionId);
+        if (termId) params.append("termId", termId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (status) params.append("status", status);
+        return {
+          url: `/payments/logs?${params.toString()}`,
+        };
+      },
+      providesTags: ["Payments"],
+    }),
+
+    // Get student payment summary with filters
+    getStudentPaymentSummary: builder.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+        q?: string;
+        sessionId?: string;
+        termId?: string;
+        classId?: string;
+        classArmId?: string;
+        status?: string;
+      }
+    >({
+      query: ({
+        page = 1,
+        limit = 10,
+        q = "",
+        sessionId,
+        termId,
+        classId,
+        classArmId,
+        status,
+      } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("search", q.toLowerCase());
+        if (sessionId) params.append("sessionId", sessionId);
+        if (termId) params.append("termId", termId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (status) params.append("status", status);
+        return {
+          url: `/invoice/payments/student-summary?${params.toString()}`,
+        };
+      },
+      providesTags: ["Payments"],
+    }),
+
+    // get students in an invoice
+    getStudentsByInvoice: builder.query<
+      any,
+      {
+        invoiceId?: string;
+        page?: number;
+        limit?: number;
+        q?: string;
+        status?: string;
+      }
+    >({
+      query: ({ invoiceId, page = 1, limit = 10, q = "", status } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("search", q.toLowerCase());
+        if (status) params.append("status", status);
+        return {
+          url: `/invoice/${invoiceId}/students?${params.toString()}`,
+        };
+      },
+      providesTags: ["StudentsByInvoice"],
+    }),
+    // Get offline payments with filters
+    getOfflinePayments: builder.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+        q?: string;
+        sessionId?: string;
+        termId?: string;
+        classId?: string;
+        classArmId?: string;
+        status?: string;
+      }
+    >({
+      query: ({
+        page = 1,
+        limit = 10,
+        q = "",
+        sessionId,
+        termId,
+        classId,
+        classArmId,
+        status,
+      } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (sessionId) params.append("sessionId", sessionId);
+        if (termId) params.append("termId", termId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (status) params.append("status", status);
+        return {
+          url: `/invoice/offline-payment?${params.toString()}`,
+        };
+      },
+      providesTags: ["Payments"],
+    }),
+
+    // Get offline payment by ID
+    getOfflinePaymentById: builder.query<any, string>({
+      query: (id) => ({
+        url: `/invoice/offline-payment/detail/${id}`,
+        method: "GET",
+      }),
+      providesTags: ["Payments"],
+    }),
+
+    // Create offline payment
+    createOfflinePayment: builder.mutation<any, any>({
+      query: (data) => ({
+        url: "/invoice/offline-payment/record",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Payments", "Invoices"],
+    }),
+
+    // Approve offline payment
+    processOfflinePayment: builder.mutation<any, any>({
+      query: ({ id, body }) => ({
+        url: `/invoice/offline-payment/${id}/process`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Payments", "Invoices"],
+    }),
+
+    getPaymentSummary: builder.query<any, any>({
+      query: () => {
+        return {
+          url: `/invoice/payment-dashboard`,
+        };
+      },
+      providesTags: ["PaymentsDashboardSummary"],
+    }),
+    getSchoolSummary: builder.query<any, any>({
+      query: () => {
+        return {
+          url: `/users/school/totals`,
+        };
+      },
+      providesTags: ["SchoolDashboardSummary"],
+    }),
+
+    getSchoolClassSummary: builder.query<any, any>({
+      query: () => {
+        return {
+          url: `/users/school/students-by-class`,
+        };
+      },
+      providesTags: ["SchoolClassDashboardSummary"],
+    }),
+
+    // Event Management Endpoints
+    getEvents: builder.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+        q?: string;
+        month?: string;
+        year?: string;
+      }
+    >({
+      query: ({ page = 1, limit = 10, q = "", month, year } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (month) params.append("month", month);
+        if (year) params.append("year", year);
+        return {
+          url: `/communication/events?${params.toString()}`,
+        };
+      },
+      providesTags: ["Events"],
+    }),
+
+    getEventById: builder.query<any, string>({
+      query: (id) => ({
+        url: `/communication/events/${id}`,
+        method: "GET",
+      }),
+      providesTags: ["Events"],
+    }),
+
+    createEvent: builder.mutation<any, any>({
+      query: (data) => ({
+        url: "/communication/events/create",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Events"],
+    }),
+
+    updateEvent: builder.mutation<any, { id: string; data: any }>({
+      query: ({ id, data }) => ({
+        url: `/communication/events/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["Events"],
+    }),
+
+    deleteEvent: builder.mutation<any, string>({
+      query: (id) => ({
+        url: `/communication/events/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Events"],
+    }),
+
+    getCurrentSubscription: builder.query<any, void>({
+      query: () => ({
+        url: `/subscription/current`,
+      }),
+      providesTags: ["Subscriptions"],
+    }),
+
+    // Create subscription payment (Legacy - keeping for compatibility)
+    createSubscriptionPayment: builder.mutation<
+      any,
+      { packageId: string; isExtension?: boolean }
+    >({
+      query: (data) => ({
+        url: `/subscription/payments/create`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Payments", "Subscriptions"],
+    }),
+
+    // Get school plan details
+    getSchoolPlan: builder.query<any, void>({
+      query: () => ({
+        url: `/subscription/school-plan`,
+      }),
+      providesTags: ["Subscriptions"],
+    }),
+    // Add these new endpoints to the existing API
+
+    // Get terms for a specific session
+    getSessionTerms: builder.query({
+      query: (sessionId: string) => ({
+        url: `/sessions/${sessionId}/terms`,
+        method: "GET",
+      }),
+      providesTags: ["SessionTerms"],
+    }),
+
+    // Get classes for a specific session
+    getSessionClasses: builder.query({
+      query: (sessionId: string) => ({
+        url: `/classes/session/${sessionId}`,
+        method: "GET",
+      }),
+      providesTags: ["SessionClass"],
+    }),
+
+    // Get subjects for a specific class arm
+    getClassSubjects: builder.query({
+      query: ({
+        classId,
+        classArmId,
+        q,
+        page,
+        limit,
+      }: {
+        classId?: string;
+        classArmId?: string;
+        q?: string;
+        page?: number;
+        limit?: number;
+      }) => {
+        const params = new URLSearchParams();
+        if (page) params.append("page", page.toString());
+        if (limit) params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        return {
+          url: `/subject/by-class-arm?${params.toString()}`,
+          // url: `/subject/class/${classId}/class-arm/${classArmId}?${params.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["ClassClassArmSubject"],
+    }),
+
+    // Score Management Endpoints
+
+    // Get marking scheme assigned to a class for a specific term
+    getClassMarkingScheme: builder.query({
+      query: ({ classId, termId }: { classId: string; termId: string }) => ({
+        url: `/configuration/marking-scheme/class/${classId}/term/${termId}`,
+        method: "GET",
+      }),
+      providesTags: ["MarkingSchemes"],
+    }),
+
+    // Get existing scores for students in a class arm for a subject
+    getStudentScores: builder.query({
+      query: ({
+        sessionId,
+        classId,
+        classArmId,
+        termId,
+        subjectId,
+        studentId,
+      }: {
+        sessionId?: string;
+        classId?: string;
+        classArmId?: string;
+        termId?: string;
+        subjectId?: string;
+        studentId?: string;
+      }) => {
+        const params = new URLSearchParams();
+        if (sessionId) params.append("sessionId", sessionId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (termId) params.append("termId", termId);
+        if (subjectId) params.append("subjectId", subjectId);
+        if (studentId) params.append("studentId", studentId);
+
+        return {
+          url: `/scores/fetch?${params.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Scores"],
+    }),
+
+    // Submit/Update student scores
+    submitStudentScores: builder.mutation({
+      query: (scoresData: {
+        sessionId: string;
+        classId: string;
+        classArmId: string;
+        termId: string;
+        subjectId: string;
+        scores: Array<{
+          studentId: string;
+          componentId: string;
+          subComponentId?: string; // For CA sub-components
+          parentComponentId?: string; // For CA sub-components
+          score: number;
+          maxScore: number;
+          type: "CA" | "EXAM";
+        }>;
+      }) => ({
+        url: `/scores/save`,
+        method: "POST",
+        body: scoresData,
+      }),
+      invalidatesTags: ["Scores"],
+    }),
+    getResults: builder.query<any, any>({
+      query: ({
+        q,
+        page = 1,
+        limit = 10,
+        all = false,
+        type,
+        sessionId,
+        classId,
+        classArmId,
+        termId,
+        studentId,
+      }) => {
+        const params = new URLSearchParams();
+        if (q) params.append("q", q.toLowerCase());
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (all === true) params.append("all", all.toString());
+        if (type) params.append("type", type);
+        if (sessionId) params.append("sessionId", sessionId);
+        if (termId) params.append("termId", termId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (studentId) params.append("studentId", studentId);
+
+        return {
+          url: `/results?${params.toString()}`,
+        };
+      },
+      providesTags: ["Results"],
+    }),
+    // compute result mutation
+    computeResult: builder.mutation({
+      query: (data) => ({
+        url: `/results/submit`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Results"],
+    }),
+
+    // approve result
+    approveResult: builder.mutation({
+      query: (id) => ({
+        url: `/results/${id}/approve`,
+        method: "PATCH",
+        // body: data,
+      }),
+      invalidatesTags: ["Results"],
+    }),
+
+    // get result by id
+    getResultById: builder.query({
+      query: ({ id, studentId }) => {
+        const params = new URLSearchParams();
+        if (studentId) params.append("studentId", studentId);
+        return {
+          url: `/results/${id}?${params.toString()}`,
+        };
+      },
+      providesTags: (result) =>
+        result ? [{ type: "Results", id: result.id }] : ["Results"],
+    }),
+    // right here we may need to disable this on student page or add it to backend
+    getBroadsheetResultById: builder.query({
+      query: ({ id, type, studentId }) => {
+        const params = new URLSearchParams();
+        if (studentId) params.append("studentId", studentId);
+        return {
+          url: `/results/${id}/${type}?${params.toString()}`,
+        };
+      },
+      providesTags: (result) =>
+        result
+          ? [{ type: "BroadsheetResults", id: result.id }]
+          : ["BroadsheetResults"],
+    }),
+    getTranscript: builder.query({
+      query: ({ studentIdentifier, classCategoryId }) => ({
+        url: `/results/transcript/${classCategoryId}/${studentIdentifier}`,
+      }),
+      providesTags: (result) =>
+        result ? [{ type: "Transcript", id: result.id }] : ["Transcript"],
+    }),
+
+    getStudentsPromotion: builder.query({
+      query: ({ classId, classArmId, sessionId }) => ({
+        url: `/results/promotion/${sessionId}/${classId}/${classArmId}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [{ type: "PromotionStudents", id: result.id }]
+          : ["PromotionStudents"],
+    }),
+
+    // use promote students mutation
+    promoteStudents: builder.mutation({
+      query: (credentials) => ({
+        url: `/results/promotion/promote`,
+        method: "POST",
+        body: credentials,
+      }),
+      invalidatesTags: ["PromotionStudents", "Students", "Results"],
+    }),
+    assignTeacherToClassArm: builder.mutation({
+      query: (data) => {
+        const params = new URLSearchParams();
+        // data: { staffId: string, assignments: Array<{ classId: string; classArmIds: string[] }>, remove?: string }
+        if (data.remove) params.append("remove", data.remove);
+        return {
+          url: "/classes/class-arm-teacher/assign?" + params.toString(),
+          method: "POST",
+          body: {
+            staffId: data.staffId,
+            assignments: data.assignments,
+          },
+        };
+      },
+      invalidatesTags: ["ClassClassArmTeacher"],
+    }),
+    assignTeacherToSubject: builder.mutation({
+      query: (data) => {
+        const params = new URLSearchParams();
+        // data: { staffId: string, assignments: Array<{ classId: string; classArmIds: string[] }>, remove?: string }
+        if (data.remove) params.append("remove", data.remove);
+        return {
+          url: `/subject/assign-teacher?${params.toString()}`,
+          method: "POST",
+          body: {
+            staffId: data.staffId,
+            assignments: data.assignments,
+          },
+        };
+      },
+      invalidatesTags: ["ClassClassArmTeacher"],
+    }),
+    getClassArmTeachers: builder.query({
+      query: ({ classId, classArmId }) => {
+        const params = new URLSearchParams();
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        return {
+          url: `/classes/class/arm-teacher?${params.toString()}`,
+        };
+      },
+      providesTags: ["ClassClassArmTeacher"],
+    }),
+
+    // get teachers query
+    getTeachers: builder.query({
+      query: ({
+        page,
+        limit,
+        q,
+      }: {
+        page?: number;
+        limit?: number;
+        q?: string;
+      }) => {
+        const params = new URLSearchParams();
+        if (page) params.append("page", page.toString());
+        if (limit) params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        return {
+          url: `/classes/school/teachers?${params.toString()}`,
+        };
+      },
+      providesTags: ["Teachers"],
+    }),
+    getAttendanceSummary: builder.query({
+      query: ({ sessionId, classId, classArmId, termId, month, year }) => {
+        const params = new URLSearchParams();
+        params.append("sessionId", sessionId);
+        params.append("classId", classId);
+        params.append("classArmId", classArmId);
+        if (termId) params.append("termId", termId);
+        if (month) params.append("month", month);
+        if (year) params.append("year", year);
+
+        return {
+          url: `/attendance/summary?${params.toString()}`,
+        };
+      },
+      providesTags: ["AttendanceRecords"],
+    }),
+    // --- Parent Endpoints ---
+    createParent: builder.mutation({
+      query: (body) => ({
+        url: "/users/parent",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Users", "User", "Parents"],
+    }),
+    updateParent: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/users/parent/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (result, error, { parentId }) => [
+        { type: "Parents", id: parentId },
+        { type: "Parents", id: "LIST" },
+        { type: "User", id: parentId },
+      ],
+    }),
+    deleteParent: builder.mutation({
+      query: (parentId) => ({
+        url: `/users/parent/${parentId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, parentId) => [
+        { type: "Parents", id: parentId },
+        { type: "Parents", id: "LIST" },
+        { type: "User", id: parentId },
+      ],
+    }),
+    getParentById: builder.query({
+      query: (id) => ({
+        url: `/users/parent/${id}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "Parents", id: result.id },
+              { type: "User", id: result.id },
+            ]
+          : ["Parents"],
+    }),
+    getAllParents: builder.query({
+      query: ({ sessionId, classId, classArmId, q = "", page, limit }) => {
+        const params = new URLSearchParams();
+        if (sessionId) params.append("sessionId", sessionId);
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (q) params.append("q", q.toLowerCase());
+        if (page) params.append("page", page.toString());
+        if (limit) params.append("limit", limit.toString());
+        return {
+          url: `/users/all/parent/all?${params.toString()}`,
+        };
+      },
+      providesTags: ["Parents"],
+    }),
+
+    // --- Staff/Teacher Endpoints ---
+    createStaff: builder.mutation({
+      query: (body) => ({
+        url: "/users/staff",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Users", "User", "Staff"],
+    }),
+    updateStaff: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/users/staff/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (result, error, { staffId }) => [
+        { type: "Staff", id: staffId },
+        { type: "Staff", id: "LIST" },
+        { type: "User", id: staffId },
+      ],
+    }),
+    deleteStaff: builder.mutation({
+      query: (staffId) => ({
+        url: `/users/staff/${staffId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, staffId) => [
+        { type: "Staff", id: staffId },
+        { type: "Staff", id: "LIST" },
+        { type: "User", id: staffId },
+      ],
+    }),
+    getStaffById: builder.query({
+      query: (staffId) => ({
+        url: `/users/staff/${staffId}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "Staff", id: result.id },
+              { type: "User", id: result.id },
+            ]
+          : ["Staff"],
+    }),
+    getAllStaff: builder.query({
+      query: ({ classId, classArmId, q = "", page = 1, limit = 20 }) => {
+        const params = new URLSearchParams();
+        if (classId) params.append("classId", classId);
+        if (classArmId) params.append("classArmId", classArmId);
+        if (q) params.append("q", q.toLowerCase());
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        return {
+          url: `/users/staff/all?${params.toString()}`,
+        };
+      },
+      providesTags: ["Staff"],
+    }),
+
+    linkParentStudent: builder.mutation({
+      query: (data) => {
+        const params = new URLSearchParams();
+        if (data.unlink) params.append("unlink", data.unlink);
+        return {
+          url: `/users/link-parent-student?${params.toString()}`,
+          method: "POST",
+          body: data,
+        };
+      },
+      invalidatesTags: ["Parents", "Students"],
+    }),
+    createInvoice: builder.mutation({
+      query: (body) => ({
+        url: "/invoice/generate",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Invoices", "Payments"],
+    }),
+    updateInvoice: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `/invoice/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Invoices"],
+    }),
+
+    deleteInvoice: builder.mutation({
+      query: (id) => ({
+        url: `/invoice/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Invoices"],
+    }),
+
+    getInvoiceById: builder.query({
+      query: (id) => ({
+        url: `/invoice/${id}`,
+      }),
+      providesTags: ["InvoiceId"],
+    }),
+
+    getInvoices: builder.query({
+      query: ({ page = 1, limit = 10, q = "" }) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        return {
+          url: `/invoice/list?${params.toString()}`,
+        };
+      },
+      providesTags: ["Invoices"],
+    }),
+    getInvoiceByCode: builder.query({
+      query: ({ reference }) => {
+        // Encode the reference to make it safe for URLs
+        const encodedReference = encodeURIComponent(reference);
+        return {
+          url: `/invoice/reference/${encodedReference}`,
+        };
+      },
+      providesTags: ["InvoiceCode"],
+    }),
+
+    // Discount CRUD operations
+    createDiscount: builder.mutation({
+      query: (newDiscount) => ({
+        url: `/invoice/${newDiscount.invoiceId}/discount`,
+        method: "POST",
+        body: newDiscount,
+      }),
+      invalidatesTags: ["Discounts"],
+    }),
+
+    updateDiscount: builder.mutation({
+      query: ({ id, ...updatedDiscount }) => ({
+        url: `/discount/${id}`,
+        method: "PUT",
+        body: updatedDiscount,
+      }),
+      invalidatesTags: ["Discounts"],
+    }),
+
+    deleteDiscount: builder.mutation({
+      query: (id) => ({
+        url: `/discount/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Discounts"],
+    }),
+
+    getDiscounts: builder.query<
+      any,
+      {
+        page?: number;
+        limit?: number;
+        q?: string;
+        sessionId?: string;
+        termId?: string;
+      }
+    >({
+      query: ({ page = 1, limit = 10, q = "", sessionId, termId } = {}) => {
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        if (q) params.append("q", q.toLowerCase());
+        if (sessionId) params.append("sessionId", sessionId);
+        if (termId) params.append("termId", termId);
+        return {
+          url: `/invoice/discounts/list?${params.toString()}`,
+        };
+      },
+      providesTags: ["Discounts"],
+    }),
+
+    getDiscountById: builder.query({
+      query: (id) => ({
+        url: `/discount/${id}`,
+      }),
+      providesTags: ["Discounts"],
+    }),
+    approveDiscount: builder.mutation({
+      query: (id) => ({
+        url: `/invoice/discount/${id}/approve`,
+        method: "PATCH",
+        // body: data,
+      }),
+      invalidatesTags: ["Discounts"],
+    }),
+
+    getQuestions: builder.query({
+      query: ({ subjectId, classId }) => ({
+        url: `/questions/${subjectId}/${classId}`,
+      }),
+    }),
+    updateQuestions: builder.mutation({
+      query: (data) => ({
+        url: `/questions/${data.id}`,
+        method: "PUT",
+        body: data,
+      }),
+    }),
+    deleteQuestions: builder.mutation({
+      query: ({ subjectId, classId }) => ({
+        url: `/questions/${subjectId}/${classId}`,
+        method: "DELETE",
+      }),
+    }),
+  }),
 });
 
 // Export hooks with TypeScript types
 export const {
-    useRegisterMutation,
-    useLoginMutation,
-    useGetProfileQuery,
-    useSetViewAsMutation,
-    useLogoutMutation,
-    useGetSchoolsQuery,
-    useGetSchoolByIdQuery,
-    useCreateSchoolMutation,
-    useUpdateSchoolMutation,
-    useDeleteSchoolMutation,
-    useToggleSchoolActiveMutation,
-    useGetUsersQuery,
-    useGetUserByIdQuery,
-    useCreateUserMutation,
-    useUpdateUserMutation,
-    useDeleteUserMutation,
-    useCreateSubroleMutation,
-    useUpdateSubroleMutation,
-    useDeleteSubroleMutation,
-    useGetSubrolesQuery,
-    useGetSubroleByIdQuery,
-    useGetPermissionsSchoolQuery,
-    useGetRolePermissionsQuery,
-    useUpdateRolePermissionsMutation,
-    useGetLogsQuery,
-    useAssignSubscriptionMutation,
-    // useGetSubscriptionsQuery,
-    useCreateSubscriptionPackageMutation,
-    useUpdateSubscriptionPackageMutation,
-    useUpdateSchoolConfigurationMutation,
-    useGetSchoolConfigurationQuery,
-    useUpdateSchoolStaffMutation,
-    useUpdateSystemSettingsMutation,
-    useGetSessionsQuery,
-    useGetSessionsPublicQuery,
-    useCreateSessionMutation,
-    useUpdateSessionMutation,
-    useDeleteSessionMutation,
-    useGetClassesQuery,
-    useGetClassesPublicQuery,
-    useAssignArmsMutation,
-    useGetClassArmsQuery,
-    useCreateClassArmsMutation,
-    useUpdateClassArmsMutation,
-    useDeleteClassArmsMutation,
-    useCreateClassMutation,
-    useUpdateClassMutation,
-    useDeleteClassMutation,
-    useGetSubjectQuery,
-    useCreateSubjectMutation,
-    useUpdateSubjectMutation,
-    useAssignSubjectMutation,
-    useDeleteSubjectMutation,
-    useManageAdmissionMutation,
-    useCreateStudentMutation,
-    useCreateAdmissionMutation,
-    useCreateAdmissionPublicMutation,
-    useGetAdmissionsQuery,
-    useGetAdmissionByIdQuery,
-    useGetClassClassArmsBySessionIdQuery,
-    // New attendance hooks
-    useGetAttendanceStudentsQuery,
-    useMarkAttendanceMutation,
-    // Marking scheme hooks
-    useGetMarkingSchemesQuery,
-    useGetMarkingSchemeByIdQuery,
-    useGetMarkingSchemeByClassQuery,
-    useCreateMarkingSchemeMutation,
-    useUpdateMarkingSchemeMutation,
-    useDeleteMarkingSchemeMutation,
-    useAssignMarkingSchemeMutation,
-    // Grading scheme hooks
-    useGetGradingSystemQuery,
-    useGetGradingSystemByIdQuery,
-    useCreateGradingSystemMutation,
-    useUpdateGradingSystemMutation,
-    useDeleteGradingSystemMutation,
-    useAssignGradingSystemMutation,
-    // Assessment scheme hooks
-    useGetAssessmentSchemesQuery,
-    useGetAssessmentSchemeByIdQuery,
-    useCreateAssessmentSchemeMutation,
-    useUpdateAssessmentSchemeMutation,
-    useDeleteAssessmentSchemeMutation,
-    useAssignClassesToAssessmentSchemeMutation,    // Report settings hooks
-    useGetReportSettingsQuery,
-    useGetAllReportSettingsQuery,
-    useSaveReportSettingsMutation,
-    useBulkSaveReportSettingsMutation,
+  useRegisterMutation,
+  useLoginMutation,
+  useGetProfileQuery,
+  useSetViewAsMutation,
+  useLogoutMutation,
+  useGetSchoolsQuery,
+  useGetSchoolByIdQuery,
+  useCreateSchoolMutation,
+  useUpdateSchoolMutation,
+  useDeleteSchoolMutation,
+  useToggleSchoolActiveMutation,
+  useGetUsersQuery,
+  useGetUserByIdQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+  useCreateSubroleMutation,
+  useUpdateSubroleMutation,
+  useDeleteSubroleMutation,
+  useGetSubrolesQuery,
+  useGetSubroleByIdQuery,
+  useGetPermissionsSchoolQuery,
+  useGetRolePermissionsQuery,
+  useUpdateRolePermissionsMutation,
+  useGetLogsQuery,
+  useAssignSubscriptionMutation,
+  // useGetSubscriptionsQuery,
+  useCreateSubscriptionPackageMutation,
+  useUpdateSubscriptionPackageMutation,
+  useUpdateSchoolConfigurationMutation,
+  useGetSchoolConfigurationQuery,
+  useUpdateSchoolStaffMutation,
+  useUpdateSystemSettingsMutation,
+  useGetSessionsQuery,
+  useGetSessionsPublicQuery,
+  useCreateSessionMutation,
+  useUpdateSessionMutation,
+  useDeleteSessionMutation,
+  useGetClassesQuery,
+  useGetClassesPublicQuery,
+  useAssignArmsMutation,
+  useGetClassArmsQuery,
+  useCreateClassArmsMutation,
+  useUpdateClassArmsMutation,
+  useDeleteClassArmsMutation,
+  useCreateClassMutation,
+  useUpdateClassMutation,
+  useDeleteClassMutation,
+  useGetSubjectQuery,
+  useCreateSubjectMutation,
+  useUpdateSubjectMutation,
+  useAssignSubjectMutation,
+  useDeleteSubjectMutation,
+  useManageAdmissionMutation,
+  useCreateStudentMutation,
+  useCreateAdmissionMutation,
+  useCreateAdmissionPublicMutation,
+  useGetAdmissionsQuery,
+  useGetAdmissionByIdQuery,
+  useGetClassClassArmsBySessionIdQuery,
+  // New attendance hooks
+  useGetAttendanceStudentsQuery,
+  useMarkAttendanceMutation,
+  // Marking scheme hooks
+  useGetMarkingSchemesQuery,
+  useGetMarkingSchemeByIdQuery,
+  useGetMarkingSchemeByClassQuery,
+  useCreateMarkingSchemeMutation,
+  useUpdateMarkingSchemeMutation,
+  useDeleteMarkingSchemeMutation,
+  useAssignMarkingSchemeMutation,
+  // Grading scheme hooks
+  useGetGradingSystemQuery,
+  useGetGradingSystemByIdQuery,
+  useCreateGradingSystemMutation,
+  useUpdateGradingSystemMutation,
+  useDeleteGradingSystemMutation,
+  useAssignGradingSystemMutation,
+  // Assessment scheme hooks
+  useGetAssessmentSchemesQuery,
+  useGetAssessmentSchemeByIdQuery,
+  useCreateAssessmentSchemeMutation,
+  useUpdateAssessmentSchemeMutation,
+  useDeleteAssessmentSchemeMutation,
+  useAssignClassesToAssessmentSchemeMutation, // Report settings hooks
+  useGetReportSettingsQuery,
+  useGetAllReportSettingsQuery,
+  useSaveReportSettingsMutation,
+  useBulkSaveReportSettingsMutation,
 
-    useGetClassCategoriesQuery,
-    useCreateClassCategoryMutation,
-    useUpdateClassCategoryMutation,
-    useDeleteClassCategoryMutation,
+  useGetClassCategoriesQuery,
+  useCreateClassCategoryMutation,
+  useUpdateClassCategoryMutation,
+  useDeleteClassCategoryMutation,
 
-    // Payment/Subscription hooks
-    useGetSubscriptionPackagesQuery,
-    useGetSubscriptionPackageByIdQuery,
-    useSubscribeSchoolMutation,
-    useExtendSubscriptionMutation,
-    useGetSubscriptionAnalyticsQuery,
-    useCreatePaymentMutation,
-    useVerifyPaymentMutation,
-    useGetPaymentLogsQuery,
-    useGetStudentPaymentSummaryQuery,
-    useGetOfflinePaymentsQuery,
-    useGetCurrentSubscriptionQuery,
-    useCreateSubscriptionPaymentMutation,
-    useGetSchoolPlanQuery,
-    useGetTermsQuery, useGetSessionTermsQuery,
-    useGetSessionClassesQuery,
-    useGetClassSubjectsQuery,
+  // Payment/Subscription hooks
+  useGetSubscriptionPackagesQuery,
+  useGetSubscriptionPackageByIdQuery,
+  useSubscribeSchoolMutation,
+  useExtendSubscriptionMutation,
+  useGetSubscriptionAnalyticsQuery,
+  useCreatePaymentMutation,
+  useVerifyPaymentMutation,
+  useGetPaymentLogsQuery,
+  useGetStudentPaymentSummaryQuery,
+  useGetOfflinePaymentsQuery,
+  useGetCurrentSubscriptionQuery,
+  useCreateSubscriptionPaymentMutation,
+  useGetSchoolPlanQuery,
+  useGetTermsQuery,
+  useGetSessionTermsQuery,
+  useGetSessionClassesQuery,
+  useGetClassSubjectsQuery,
 
-    // Score management hooks
-    useGetStudentsQuery,
-    useGetClassMarkingSchemeQuery,
-    useGetStudentScoresQuery,
-    useSubmitStudentScoresMutation,
+  // Score management hooks
+  useGetStudentsQuery,
+  useGetClassMarkingSchemeQuery,
+  useGetStudentScoresQuery,
+  useSubmitStudentScoresMutation,
 
-    useGetResultsQuery,
-    useComputeResultMutation,
-    useApproveResultMutation,
-    useGetResultByIdQuery,
-    useGetBroadsheetResultByIdQuery,
-    useGetTranscriptQuery,
-    useGetStudentsPromotionQuery,
-    usePromoteStudentsMutation,
-    useGetClassDetailsBySessionIdQuery,
+  useGetResultsQuery,
+  useComputeResultMutation,
+  useApproveResultMutation,
+  useGetResultByIdQuery,
+  useGetBroadsheetResultByIdQuery,
+  useGetTranscriptQuery,
+  useGetStudentsPromotionQuery,
+  usePromoteStudentsMutation,
+  useGetClassDetailsBySessionIdQuery,
 
-    useGetClassArmDetailsBySessionIdQuery,
-    useGetStudentByIdQuery,
-    useAssignTeacherToClassArmMutation,
-    useGetClassArmTeachersQuery,
-    useGetTeachersQuery,
-    useGetAttendanceSummaryQuery,
+  useGetClassArmDetailsBySessionIdQuery,
+  useGetStudentByIdQuery,
+  useAssignTeacherToClassArmMutation,
+  useGetClassArmTeachersQuery,
+  useGetTeachersQuery,
+  useGetAttendanceSummaryQuery,
 
-    useGetAllParentsQuery,
-    useGetParentByIdQuery,
-    useCreateParentMutation,
-    useUpdateParentMutation,
-    useDeleteParentMutation,
-    useGetAllStaffQuery,
-    useGetStaffByIdQuery,
-    useCreateStaffMutation,
-    useUpdateStaffMutation,
-    useDeleteStaffMutation,
-    useUpdateStudentMutation,
-    useDeleteStudentMutation,
-    useLinkParentStudentMutation,
-    useAssignTeacherToSubjectMutation,
+  useGetAllParentsQuery,
+  useGetParentByIdQuery,
+  useCreateParentMutation,
+  useUpdateParentMutation,
+  useDeleteParentMutation,
+  useGetAllStaffQuery,
+  useGetStaffByIdQuery,
+  useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
+  useUpdateStudentMutation,
+  useDeleteStudentMutation,
+  useLinkParentStudentMutation,
+  useAssignTeacherToSubjectMutation,
 
-    useCreateInvoiceMutation,
-    useUpdateInvoiceMutation,
-    useDeleteInvoiceMutation,
-    useGetInvoiceByCodeQuery,
-    useGetInvoiceByIdQuery,
-    useGetInvoicesQuery,
-    useGetStudentsByInvoiceQuery,
+  useCreateInvoiceMutation,
+  useUpdateInvoiceMutation,
+  useDeleteInvoiceMutation,
+  useGetInvoiceByCodeQuery,
+  useGetInvoiceByIdQuery,
+  useGetInvoicesQuery,
+  useGetStudentsByInvoiceQuery,
 
-    useCreateDiscountMutation,
-    useUpdateDiscountMutation,
-    useDeleteDiscountMutation,
-    useGetDiscountsQuery,
-    useGetDiscountByIdQuery,
-    useApproveDiscountMutation,
-    useGetPaymentSummaryQuery,
+  useCreateDiscountMutation,
+  useUpdateDiscountMutation,
+  useDeleteDiscountMutation,
+  useGetDiscountsQuery,
+  useGetDiscountByIdQuery,
+  useApproveDiscountMutation,
+  useGetPaymentSummaryQuery,
+useGetSchoolSummaryQuery,
+useGetSchoolClassSummaryQuery,
+useGetSchoolAttendanceSummaryQuery,
+  // Offline payment hooks
+  useGetOfflinePaymentByIdQuery,
+  useCreateOfflinePaymentMutation,
+  useProcessOfflinePaymentMutation,
 
-    // Offline payment hooks
-    useGetOfflinePaymentByIdQuery,
-    useCreateOfflinePaymentMutation,
-    useProcessOfflinePaymentMutation,
+  // Event management hooks
+  useGetEventsQuery,
+  useGetEventByIdQuery,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useDeleteEventMutation,
 
-    // Event management hooks
-    useGetEventsQuery,
-    useGetEventByIdQuery,
-    useCreateEventMutation,
-    useUpdateEventMutation,
-    useDeleteEventMutation,
-
-    // question managent hooks
-    useGetQuestionsQuery,
-    useUpdateQuestionsMutation,
-    useDeleteQuestionsMutation,
-
+  // question managent hooks
+  useGetQuestionsQuery,
+  useUpdateQuestionsMutation,
+  useDeleteQuestionsMutation,
 } = api;
 
 export type AppApi = typeof api;

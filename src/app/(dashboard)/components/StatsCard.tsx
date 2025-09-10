@@ -65,10 +65,10 @@ const StatsCard = ({
           <div>
             <a
               href={url}
-              className='inline-flex items-center mt-2 text-blue-600 hover:underline'
+              className='inline-flex items-center mt-2 text-blue-600 hover:underline text-sm'
             >
               View Details
-              <ChevronsRight className='w-5 h-5 ml-1' />
+              <ChevronsRight className='w-4 h-4 ml-1' />
             </a>
           </div>
         )}

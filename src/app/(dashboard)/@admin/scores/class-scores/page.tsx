@@ -52,21 +52,17 @@ import SubjectCard from "../(components)/SubjectCard";
 
 // Enhanced interface definitions
 interface Student {
-  student: {
     id: string;
     firstname: string;
     lastname: string;
     email: string;
-    regNo: string;
-  };
+    studentRegNo: string;
 }
 
 interface Subject {
-  subject: {
     id: string;
     name: string;
     code: string;
-  };
 }
 
 interface SubComponent {
@@ -222,10 +218,10 @@ export default function ClassScoresPage() {
 
     return students.filter((student) => {
       const fullName =
-        `${student.student.firstname} ${student.student.lastname}`.toLowerCase();
+        `${student?.firstname} ${student?.lastname}`.toLowerCase();
       return (
         fullName.includes(searchTerm.toLowerCase()) ||
-        student.student.regNo?.toLowerCase().includes(searchTerm.toLowerCase())
+        student?.studentRegNo?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
   }, [students, searchTerm]);
@@ -242,7 +238,7 @@ export default function ClassScoresPage() {
       classArmId,
       termId,
       // subjectId: "all",
-      studentId: currentStudent?.student?.id,
+      studentId: currentStudent?.id,
     },
     { skip: !hasRequiredParams || !currentStudent }
   );
@@ -293,11 +289,11 @@ export default function ClassScoresPage() {
   useEffect(() => {
     if (existingScoresData?.data?.additionalData && currentStudent) {
       const additionalData = existingScoresData.data.additionalData.find(
-        (data: any) => data.studentId === currentStudent.student.id
+        (data: any) => data.studentId === currentStudent?.id
       );
 
       if (additionalData) {
-        const studentId = currentStudent.student.id;
+        const studentId = currentStudent?.id;
 
         // Helper function to convert underscore format back to display format
         const formatBehaviorValue = (value: string) => {
@@ -359,7 +355,7 @@ export default function ClassScoresPage() {
       }
     } else if (currentStudent) {
       // Reset additional data when changing student if no existing data
-      const studentId = currentStudent.student.id;
+      const studentId = currentStudent?.id;
       setBehaviorScores((prev) => ({ ...prev, [studentId]: {} }));
       setAttendanceScores((prev) => ({
         ...prev,
@@ -456,7 +452,7 @@ export default function ClassScoresPage() {
   // Navigate directly to a specific student
   const navigateToStudent = (studentId: string) => {
     const studentIndex = filteredStudents.findIndex(
-      (s) => s.student.id === studentId
+      (s) => s?.id === studentId
     );
     if (studentIndex !== -1 && studentIndex !== currentStudentIndex) {
       setIsChangingStudent(true);
@@ -470,7 +466,7 @@ export default function ClassScoresPage() {
   //   if (currentStudent) {
   //     setIsChangingStudent(true);
   //   }
-  // }, [currentStudent?.student?.id]);
+  // }, [currentStudent?.id]);
   // Submit scores for current student
   const handleSubmitCurrentStudent = async () => {
     if (!markingScheme?.components || !currentStudent) {
@@ -482,7 +478,7 @@ export default function ClassScoresPage() {
 
     try {
       // Prepare additional data for the current student (only once)
-      const studentId = currentStudent.student.id;
+      const studentId = currentStudent?.id;
       const additionalData = {
         studentId,
         // Behavioral ratings (convert to lowercase with underscores, only if they exist)
@@ -537,10 +533,10 @@ export default function ClassScoresPage() {
           if (component.subComponents.length > 0) {
             component.subComponents.forEach((subComp) => {
               const key = `${component.id}_${subComp.id}`;
-              const score = scores[subject.subject.id]?.[key] || 0;
+              const score = scores[subject?.id]?.[key] || 0;
 
               scoresArray.push({
-                studentId: currentStudent.student.id,
+                studentId: currentStudent?.id,
                 componentId: subComp.id,
                 subComponentId: subComp.id,
                 parentComponentId: component.id,
@@ -550,10 +546,10 @@ export default function ClassScoresPage() {
               });
             });
           } else {
-            const score = scores[subject.subject.id]?.[component.id] || 0;
+            const score = scores[subject?.id]?.[component.id] || 0;
 
             scoresArray.push({
-              studentId: currentStudent.student.id,
+              studentId: currentStudent?.id,
               componentId: component.id,
               score,
               maxScore: component.score,
@@ -568,7 +564,7 @@ export default function ClassScoresPage() {
             classId,
             classArmId,
             termId,
-            subjectId: subject.subject.id,
+            subjectId: subject?.id,
             scores: scoresArray,
             // Only include additionalData for the first subject to avoid duplication
             ...(subjects.indexOf(subject) === 0 && {
@@ -582,7 +578,7 @@ export default function ClassScoresPage() {
             classId,
             classArmId,
             termId,
-            subjectId: subject.subject.id,
+            subjectId: subject?.id,
             scores: scoresArray,
             // Only include additionalData for the first subject to avoid duplication
             ...(subjects.indexOf(subject) === 0 && {
@@ -594,11 +590,11 @@ export default function ClassScoresPage() {
 
       // Mark student as submitted
       // setSubmittedStudents((prev) =>
-      //   new Set(prev).add(currentStudent.student.id)
+      //   new Set(prev).add(currentStudent?.id)
       // );
 
       toast.success(
-        `Scores submitted successfully for ${currentStudent.student.firstname} ${currentStudent.student.lastname}!`
+        `Scores submitted successfully for ${currentStudent?.firstname} ${currentStudent?.lastname}!`
       );
 
       // Auto-navigate to next student if not the last one
@@ -712,7 +708,7 @@ export default function ClassScoresPage() {
   // const progressPercentage =
   //   ((currentStudentIndex + 1) / filteredStudents.length) * 100;
   // const isStudentSubmitted = submittedStudents.has(
-  //   currentStudent?.student?.id || ""
+  //   currentStudent?.id || ""
   // );
 
   console.log(currentStudent);
@@ -767,7 +763,7 @@ export default function ClassScoresPage() {
             </div>
             <div className='min-w-[200px]'>
               <Select
-                value={currentStudent?.student?.id || ""}
+                value={currentStudent?.id || ""}
                 onValueChange={(value) => navigateToStudent(value)}
               >
                 <SelectTrigger>
@@ -776,11 +772,11 @@ export default function ClassScoresPage() {
                 <SelectContent>
                   {filteredStudents.map((student) => (
                     <SelectItem
-                      key={student.student.id}
-                      value={student.student.id}
+                      key={student?.id}
+                      value={student?.id}
                     >
-                      {student.student.firstname} {student.student.lastname} (
-                      {student.student.regNo})
+                      {student?.firstname} {student?.lastname} (
+                      {student?.studentRegNo})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -798,13 +794,13 @@ export default function ClassScoresPage() {
               <div className='flex items-center gap-2'>
                 <div className='w-[60px] h-[60px] rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
                   <span className='text-xl font-semibold text-gray-600'>
-                    {currentStudent?.student?.firstname?.charAt(0)}
-                    {currentStudent?.student?.lastname?.charAt(0)}
+                    {currentStudent?.firstname?.charAt(0)}
+                    {currentStudent?.lastname?.charAt(0)}
                   </span>
                 </div>
                 <span className='text-lg font-semibold'>
-                  {currentStudent?.student?.firstname}{" "}
-                  {currentStudent?.student?.lastname}
+                  {currentStudent?.firstname}{" "}
+                  {currentStudent?.lastname}
                 </span>
                 {isStudentSubmitted && (
                   <Badge
@@ -816,7 +812,7 @@ export default function ClassScoresPage() {
                   </Badge>
                 )}
               </div>
-              <Badge variant='outline'>{currentStudent?.student?.regNo}</Badge>
+              <Badge variant='outline'>{currentStudent?.studentRegNo}</Badge>
             </div>
 
             <div className='flex items-center gap-3'>
@@ -859,8 +855,8 @@ export default function ClassScoresPage() {
         <CardHeader className='flex justify-between items-center'>
           <CardTitle className='flex items-center gap-2'>
             <BookOpen className='h-5 w-5' />
-            Score Entry - {currentStudent?.student?.firstname}{" "}
-            {currentStudent?.student?.lastname}
+            Score Entry - {currentStudent?.firstname}{" "}
+            {currentStudent?.lastname}
           </CardTitle>
           <div className='flex items-center gap-2'>
             <Button
@@ -907,12 +903,12 @@ export default function ClassScoresPage() {
                         </TableHead>
                         {subjects.map((subject) => (
                           <TableHead
-                            key={subject.subject.id}
+                            key={subject?.id}
                             className='text-center font-semibold text-gray-700 min-w-[120px] border-r'
                           >
-                            {subject.subject.name}
+                            {subject?.name}
                             <div className='text-xs font-normal text-gray-600'>
-                              ({subject.subject.code})
+                              ({subject?.code})
                             </div>
                           </TableHead>
                         ))}
@@ -932,11 +928,11 @@ export default function ClassScoresPage() {
                                 </TableCell>
                                 {subjects.map((subject) => (
                                   <TableCell
-                                    key={subject.subject.id}
+                                    key={subject?.id}
                                     className='text-center font-medium border-r'
                                   >
                                     {calculateComponentTotal(
-                                      subject.subject.id,
+                                      subject?.id,
                                       column.key
                                     )}
                                   </TableCell>
@@ -951,7 +947,7 @@ export default function ClassScoresPage() {
                                   </TableCell>
                                   {subjects.map((subject) => (
                                     <TableCell
-                                      key={subject.subject.id}
+                                      key={subject?.id}
                                       className='p-2 border-r'
                                     >
                                       <Input
@@ -959,13 +955,13 @@ export default function ClassScoresPage() {
                                         min='0'
                                         max={subCol.maxScore}
                                         value={
-                                          scores[subject.subject.id]?.[
+                                          scores[subject?.id]?.[
                                             subCol.key
                                           ] || ""
                                         }
                                         onChange={(e) =>
                                           handleScoreChange(
-                                            subject.subject.id,
+                                            subject?.id,
                                             subCol.key,
                                             e.target.value
                                           )
@@ -986,7 +982,7 @@ export default function ClassScoresPage() {
                               </TableCell>
                               {subjects.map((subject) => (
                                 <TableCell
-                                  key={subject.subject.id}
+                                  key={subject?.id}
                                   className='p-2 border-r'
                                 >
                                   <Input
@@ -994,13 +990,13 @@ export default function ClassScoresPage() {
                                     min='0'
                                     max={column.maxScore}
                                     value={
-                                      scores[subject.subject.id]?.[
+                                      scores[subject?.id]?.[
                                         column.key
                                       ] || ""
                                     }
                                     onChange={(e) =>
                                       handleScoreChange(
-                                        subject.subject.id,
+                                        subject?.id,
                                         column.key,
                                         e.target.value
                                       )
@@ -1022,10 +1018,10 @@ export default function ClassScoresPage() {
                         </TableCell>
                         {subjects.map((subject) => (
                           <TableCell
-                            key={subject.subject.id}
+                            key={subject?.id}
                             className='text-center text-lg border-r'
                           >
-                            {calculateSubjectTotal(subject.subject.id)}
+                            {calculateSubjectTotal(subject?.id)}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -1091,16 +1087,16 @@ export default function ClassScoresPage() {
                                   <div className='flex justify-center'>
                                     <input
                                       type='radio'
-                                      name={`${currentStudent?.student?.id}-${criteria}`}
+                                      name={`${currentStudent?.id}-${criteria}`}
                                       value={rating}
                                       checked={
                                         behaviorScores[
-                                          currentStudent?.student?.id || ""
+                                          currentStudent?.id || ""
                                         ]?.[criteria] === rating
                                       }
                                       onChange={(e) => {
                                         const studentId =
-                                          currentStudent?.student?.id || "";
+                                          currentStudent?.id || "";
                                         setBehaviorScores((prev) => ({
                                           ...prev,
                                           [studentId]: {
@@ -1143,19 +1139,19 @@ export default function ClassScoresPage() {
                                 min='0'
                                 value={
                                   attendanceScores[
-                                    currentStudent?.student?.id || ""
+                                    currentStudent?.id || ""
                                   ]?.present || ""
                                 }
                                 onChange={(e) =>
                                   setAttendanceScores((prev) => ({
                                     ...prev,
-                                    [currentStudent?.student?.id || ""]: {
+                                    [currentStudent?.id || ""]: {
                                       ...prev[
-                                        currentStudent?.student?.id || ""
+                                        currentStudent?.id || ""
                                       ],
                                       present: parseInt(e.target.value) || 0,
                                       absent:
-                                        prev[currentStudent?.student?.id || ""]
+                                        prev[currentStudent?.id || ""]
                                           ?.absent || 0,
                                     },
                                   }))
@@ -1175,19 +1171,19 @@ export default function ClassScoresPage() {
                                 min='0'
                                 value={
                                   attendanceScores[
-                                    currentStudent?.student?.id || ""
+                                    currentStudent?.id || ""
                                   ]?.absent || ""
                                 }
                                 onChange={(e) =>
                                   setAttendanceScores((prev) => ({
                                     ...prev,
-                                    [currentStudent?.student?.id || ""]: {
+                                    [currentStudent?.id || ""]: {
                                       ...prev[
-                                        currentStudent?.student?.id || ""
+                                        currentStudent?.id || ""
                                       ],
                                       absent: parseInt(e.target.value) || 0,
                                       present:
-                                        prev[currentStudent?.student?.id || ""]
+                                        prev[currentStudent?.id || ""]
                                           ?.present || 0,
                                     },
                                   }))
@@ -1213,16 +1209,16 @@ export default function ClassScoresPage() {
                   <Textarea
                     placeholder='Enter class teacher comment...'
                     value={
-                      comments[currentStudent?.student?.id || ""]?.teacher || ""
+                      comments[currentStudent?.id || ""]?.teacher || ""
                     }
                     onChange={(e) =>
                       setComments((prev) => ({
                         ...prev,
-                        [currentStudent?.student?.id || ""]: {
-                          ...prev[currentStudent?.student?.id || ""],
+                        [currentStudent?.id || ""]: {
+                          ...prev[currentStudent?.id || ""],
                           teacher: e.target.value,
                           principal:
-                            prev[currentStudent?.student?.id || ""]
+                            prev[currentStudent?.id || ""]
                               ?.principal || "",
                         },
                       }))
@@ -1238,17 +1234,17 @@ export default function ClassScoresPage() {
                   <Textarea
                     placeholder='Enter principal comment...'
                     value={
-                      comments[currentStudent?.student?.id || ""]?.principal ||
+                      comments[currentStudent?.id || ""]?.principal ||
                       ""
                     }
                     onChange={(e) =>
                       setComments((prev) => ({
                         ...prev,
-                        [currentStudent?.student?.id || ""]: {
-                          ...prev[currentStudent?.student?.id || ""],
+                        [currentStudent?.id || ""]: {
+                          ...prev[currentStudent?.id || ""],
                           principal: e.target.value,
                           teacher:
-                            prev[currentStudent?.student?.id || ""]?.teacher ||
+                            prev[currentStudent?.id || ""]?.teacher ||
                             "",
                         },
                       }))

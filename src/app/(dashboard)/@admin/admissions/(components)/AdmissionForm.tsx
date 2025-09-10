@@ -361,7 +361,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                 )}
               </div>
             </div>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4 w-full'>
               <FormField
                 control={form.control}
                 name='sessionId'
@@ -374,7 +374,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger className='w-full'>
-                          <SelectValue placeholder='Select academic year' />
+                          <SelectValue placeholder='choose...' />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -385,7 +385,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                         ) : (
                           sessionsData?.data?.map((session: any) => (
                             <SelectItem key={session.id} value={session.id}>
-                              {session.name}
+                              {session.name.slice(0, 9)}
                             </SelectItem>
                           ))
                         )}
@@ -407,7 +407,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger className='w-full'>
-                          <SelectValue placeholder='Select present class' />
+                          <SelectValue placeholder='choose...' />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -440,7 +440,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                     >
                       <FormControl>
                         <SelectTrigger className='w-full'>
-                          <SelectValue placeholder='Select class applying for' />
+                          <SelectValue placeholder='choose...' />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -902,7 +902,7 @@ const AdmissionForm: React.FC<AdmissionFormProps> = ({
                   Processing...
                 </>
               ) : (
-                <>{isEditMode ? "Update" : "Create"} Student</>
+                <>{isEditMode ? "Update" : "Submit"} Application</>
               )}
             </Button>
           </div>

@@ -466,7 +466,7 @@ const AdmissionPublicForm: React.FC<AdmissionPublicFormProps> = ({
                           ) : (
                             sessionsData?.data?.map((session: any) => (
                               <SelectItem key={session.id} value={session.id}>
-                                {session.name}
+                                {session.name.slice(0, 9)}
                               </SelectItem>
                             ))
                           )}
@@ -992,7 +992,7 @@ const AdmissionPublicForm: React.FC<AdmissionPublicFormProps> = ({
                     Processing...
                   </>
                 ) : (
-                  <>{isEditMode ? "Update" : "Create"} Student</>
+                  <>{isEditMode ? "Update" : "Submit"} Application</>
                 )}
               </Button>
             </div>

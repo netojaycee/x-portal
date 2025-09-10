@@ -207,13 +207,13 @@ export function ScoreForm({ onClose }: ScoreFormProps) {
       (a: ClassArm) => a.id === values.classArmId
     );
     const selectedSubject = availableSubjects.find(
-      (s: any) => s.subject.id === values.subjectId
+      (s: any) => s?.id === values.subjectId
     );
 
     // Build context object with both IDs and names
     const context: ScoreContext = {
       subjectId: values.subjectId || "",
-      subjectName: selectedSubject?.subject.name || "",
+      subjectName: selectedSubject?.name || "",
       sessionId: values.sessionId,
       sessionName: selectedSession?.name || "",
       classArmId: values.classArmId,
@@ -484,10 +484,10 @@ export function ScoreForm({ onClose }: ScoreFormProps) {
                     ) : availableSubjects.length > 0 ? (
                       availableSubjects.map((subject: any) => (
                         <SelectItem
-                          key={subject.subject.id}
-                          value={subject.subject.id}
+                          key={subject?.id}
+                          value={subject?.id}
                         >
-                          {subject.subject.name} ({subject.subject.code})
+                          {subject?.name} ({subject?.code})
                         </SelectItem>
                       ))
                     ) : (

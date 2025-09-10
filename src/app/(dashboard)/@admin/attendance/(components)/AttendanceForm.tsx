@@ -153,7 +153,7 @@ export function AttendanceForm({ onClose }: AttendanceFormProps) {
       term: values.term,
       classId: values.classId,
       classArmId: values.classArmId,
-      //   date: values.date.toISOString(),
+      date: values.date.toISOString(),
     });
 
     router.push(`/attendance/take?${queryParams.toString()}`);

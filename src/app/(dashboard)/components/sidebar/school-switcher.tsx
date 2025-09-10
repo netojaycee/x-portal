@@ -77,6 +77,7 @@ export function SchoolSwitcher() {
   ) => {
     if (!user) return;
     try {
+      // console.log("Toggling view to:", value, schoolId, schoolSlug);
       await setViewAs({ view_as: value, schoolId, schoolSlug }).unwrap();
       // window.location.href = "/dashboard"; // Force reload
     } catch (error) {
@@ -102,6 +103,7 @@ export function SchoolSwitcher() {
 
   // Switch to a school (view_as: ADMIN)
   const switchToSchool = (school: School) => {
+    console.log("Switching to school:", school);
     setActiveSchool(school);
     handleToggle(ENUM_ROLE.ADMIN, school.id, school.slug);
     setOpen(false);

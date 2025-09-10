@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StudentBio from "../../(components)/StudentBio";
 import LoaderComponent from "@/components/local/LoaderComponent";
 import { useGetStudentByIdQuery } from "@/redux/api";
-import { ResultListTabContent } from "../../../class/(components)/ResultListTabContent";
+import { ResultListTabContent } from "../../class/(components)/ResultListTabContent";
 
 export default function Main({ id }: { id: string }) {
   const { data, isLoading } = useGetStudentByIdQuery(id, { skip: !id });

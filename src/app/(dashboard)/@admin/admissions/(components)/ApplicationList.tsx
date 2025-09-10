@@ -34,8 +34,7 @@ export default function ApplicationList() {
     const admissionsDataFromApi = data?.data || [];
     const totalItems = data?.total || admissionsDataFromApi.length;
 
-  
-
+    console.log("admissionsDataFromApi", admissionsDataFromApi);
   const openModal = (type: Exclude<ModalType, "">, row: User) => {
     setModal({ type, data: row });
   };
@@ -93,7 +92,7 @@ export default function ApplicationList() {
           { key: "sn", label: "SN", sortable: false },
           { key: "imageUrl", label: "Photo", sortable: false }, // Assuming photo is an image URL
           { key: "fullname", label: "Name" },
-          { key: "date", label: "Date of Birth" },
+          { key: "dateOfBirth", label: "Date of Birth" },
           { key: "gender", label: "Gender" },
           { key: "session", label: "Session" },
           { key: "adClass", label: "Class" },

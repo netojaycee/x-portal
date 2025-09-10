@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useGetSchoolAttendanceSummaryQuery } from "@/redux/api";
 import { AttendanceStats } from "./(components)/AttendanceStats";
 import { CustomModal } from "../../components/modals/CustomModal";
 import { AttendanceForm } from "./(components)/AttendanceForm";
@@ -8,6 +9,7 @@ import { ENUM_MODULES } from "@/lib/types/enums";
 
 export default function Attendance() {
   const [openModal, setOpenModal] = useState(false);
+  const { data: schoolAttendanceSummary } = useGetSchoolAttendanceSummaryQuery({});
 
   const handleMarkAttendance = () => {
     setOpenModal(true);
@@ -18,18 +20,18 @@ export default function Attendance() {
       <h1 className='text-2xl font-bold'>Attendance Management</h1>
 
       <AttendanceStats
-        totalStudents={400}
-        presentCount={250}
-        absentCount={0}
-        lateCount={0}
-        notTakenCount={0}
+        totalStudents={schoolAttendanceSummary?.totalStudents ?? 0}
+        presentCount={schoolAttendanceSummary?.present ?? 0}
+        absentCount={schoolAttendanceSummary?.absent ?? 0}
+        lateCount={schoolAttendanceSummary?.late ?? 0}
+        notTakenCount={schoolAttendanceSummary?.notTaken ?? 0}
         onMarkAttendance={handleMarkAttendance}
       />
 
       <CustomModal
         open={openModal}
         onOpenChange={setOpenModal}
-        type={ENUM_MODULES.ATTENDANCE} // You might need to add this to your CustomModal types
+        type={ENUM_MODULES.ATTENDANCE}
         status='mark'
         title='Mark Attendance'
         description='Please fill out the form to mark attendance for students.'

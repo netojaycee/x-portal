@@ -508,7 +508,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                     ) : column.key === "submittedBy" ? (
                       row.createdBy?.name || "--"
                     ) : column.key === "session" ? (
-                      row.session?.name || "--"
+                      row.session?.name || row.session.slice(0, 9) || "--"
                     ) : column.key === "term" ? (
                       row.termDefinition?.name || row.term?.name || "--"
                     ) : column.key === "reference" ? (
